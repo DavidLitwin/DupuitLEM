@@ -16,8 +16,6 @@ from landlab.io.netcdf import write_raster_netcdf
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID'])
 job_id = os.environ['SLURM_ARRAY_JOB_ID'])
-Bashcommand = "git rev-parse HEAD > id.txt"
-os.system(Bashcommand)
 
 # Set parameters
 R = 1.5/(365*24*3600)  # steady, uniform recharge rate, in m/s
@@ -27,15 +25,16 @@ m = 0.5 #Exponent on A []
 n = 1.0 #Exponent on S []
 K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
 D = 0.005/(365*24*3600) #m2/s
-w0 = 2E-4/(365*24*3600) #max rate of soil production
+w0 = 5E-4/(365*24*3600) #max rate of soil production
 dc = 2 #m characteristic soil depth
 dt_h = 1E5
 T = 25000*(365*24*3600)
-MSF_all = np.array([50,500,1000,5000,10000])
+MSF_all = np.array([100,500,1000,5000,10000])
 MSF = MSF_all[int(task_id)]
 dt_m = MSF*dt_h
 N = T//dt_m
 N = N.astype('int')
+output_interval = N//100
 
 
 # Set output options
@@ -101,13 +100,6 @@ for i in range(N):
     elev[elev<base] = base[elev<base]
 
     if i % output_interval == 0:
-        gw_flux[:] = gdp.calc_gw_flux_at_node()
-
-        filename = './data/grid_' + job_id + '_' + str(MSF) + '_' + str(i) '.nc'
-        filenames.append(filename)
-        time_list.append(i*dt_m/(365*24*3600))
-        write_raster_netcdf(
-                filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
 
 t1 = time.time()
@@ -115,41 +107,16 @@ t1 = time.time()
 tot_time = t1-t0
 
 # collect output and save
+gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-# open all files as a xarray dataset
-ds = xr.open_mfdataset(
-    filenames,
-    combine='nested',
-    concat_dim="nt",
-    engine="netcdf4",
-    data_vars=output_fields)
+filename = './data/' + job_id + '_' + str(MSF) + '_grid' + '.nc'
+write_raster_netcdf(filename, grid, names=output_fields, format="NETCDF4")
 
-# add a time dimension
-time_array = np.asarray(time_list)
-time_xr = xr.DataArray(
-    time_array,
-    dims=("nt"),
-    attrs={"units": time_unit,
-        "standard_name": "time"},
-        )
+filename = './data/' + job_id + '_' + str(MSF) + '_time' + '.nc'
+np.savetxt(filename,tot_time)
 
-# dimensions and coordinates
-ds["time"] = time_xr
-ds = ds.set_coords(["x", "y", "time"])
-ds = ds.rename(name_dict={"ni": "x", "nj": "y", "nt": "time"})
-ds["x"] = xr.DataArray(ds.x, dims=("x"), attrs={"units": space_unit})
-ds["y"] = xr.DataArray(ds.y, dims=("y"), attrs={"units": space_unit})
-
-# write output
-filename = './data/grid_collected_' + job_id + '_' + str(MSF) + '.nc'
-ds.to_netcdf(filename, engine="netcdf4", format="NETCDF4")
-ds.close()
-
-try:
-    for f in filenames:
-        os.remove(f)
-except:
-    print("Cannot remove files")
+filename = './data/' + job_id + '_' + str(MSF) + '_substeps' + '.nc'
+np.savetxt(filename,num_substeps)
 
 #%% Pickle results
 

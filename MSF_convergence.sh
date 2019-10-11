@@ -15,6 +15,10 @@ conda activate
 conda activate landlab_dev
 mkdir ~/data/dlitwin3/$SLURM_JOBID
 mkdir ~/data/dlitwin3/$SLURM_JOBID/data
+cd ~/data/dlitwin3/DupuitLEMScripts
+git rev-parse HEAD > ~/data/dlitwin3/$SLURM_JOBID/script_id.txt
+cd ~/data/dlitwin3/landlab
+git rev-parse HEAD > ~/data/dlitwin3/$SLURM_JOBID/gdp_id.txt
 cp ~/data/dlitwin3/DupuitLEMScripts/DupuitLEMTestMSFConverge.py ~/data/dlitwin3/$SLURM_JOBID
 cd ~/data/dlitwin3/$SLURM_JOBID
 python DupuitLEMTestMSFConverge.py

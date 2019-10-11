@@ -22,11 +22,11 @@ m = 0.5 #Exponent on A []
 n = 1.0 #Exponent on S []
 K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
 D = 0.005/(365*24*3600) #m2/s
-w0 = 2E-4/(365*24*3600) #max rate of soil production
+w0 = 2E-3/(365*24*3600) #max rate of soil production
 dc = 2 #m characteristic soil depth
 N = 50000
 dt_h = 1E5
-dt_m = 1000*dt_h
+dt_m = 500*dt_h
 
 # Set output options
 output_fields = [
