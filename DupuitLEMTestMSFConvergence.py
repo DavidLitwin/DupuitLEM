@@ -14,8 +14,8 @@ from landlab import RasterModelGrid, FIXED_VALUE_BOUNDARY, CLOSED_BOUNDARY
 from landlab.components import GroundwaterDupuitPercolator, FlowAccumulator, FastscapeEroder, LinearDiffuser
 from landlab.io.netcdf import write_raster_netcdf
 
-task_id = os.environ['SLURM_ARRAY_TASK_ID'])
-job_id = os.environ['SLURM_ARRAY_JOB_ID'])
+task_id = os.environ['SLURM_ARRAY_TASK_ID']
+job_id = os.environ['SLURM_ARRAY_JOB_ID']
 
 # Set parameters
 R = 1.5/(365*24*3600)  # steady, uniform recharge rate, in m/s
