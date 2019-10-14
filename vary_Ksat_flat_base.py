@@ -7,7 +7,6 @@ Created on Mon Sep 30 16:49:06 2019
 import os
 import time
 import numpy as np
-import pickle
 
 from landlab import RasterModelGrid, FIXED_VALUE_BOUNDARY, CLOSED_BOUNDARY
 from landlab.components import (
@@ -47,8 +46,7 @@ output_fields = [
             "aquifer_base__elevation",
             "water_table__elevation",
             "surface_water__discharge",
-            "groundwater__specific_discharge_node",
-            "drainge_area"
+            "groundwater__specific_discharge_node"
             ]
 time_unit="years",
 reference_time="model start",

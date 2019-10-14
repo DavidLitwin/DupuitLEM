@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "vary_Ksat_flat_base.py", line 121, in <module>
+    filename, grid, names=output_fields, format="NETCDF4")
+  File "/data/charman1/dlitwin3/landlab/landlab/io/netcdf/write.py", line 789, in write_raster_netcdf
+    raise ValueError("values must be on either cells or nodes, not both")
+ValueError: values must be on either cells or nodes, not both
