@@ -1,0 +1,7 @@
+mkdir: cannot create directory '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM/37158997': No such file or directory
+mkdir: cannot create directory '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM/37158997/data': No such file or directory
+/var/spool/slurm//job37158997/slurm_script: line 19: /home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM/37158997/script_id.txt: No such file or directory
+/var/spool/slurm//job37158997/slurm_script: line 21: /home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM/37158997/gdp_id.txt: No such file or directory
+cp: cannot create regular file '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM/37158997': No such file or directory
+/var/spool/slurm//job37158997/slurm_script: line 23: cd: /home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM/37158997: No such file or directory
+python: can't open file 'DupuitLEMTestMSFConvergence.py': [Errno 2] No such file or directory
