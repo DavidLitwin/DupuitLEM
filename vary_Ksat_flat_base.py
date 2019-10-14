@@ -38,8 +38,8 @@ T = 250000*(365*24*3600)
 MSF = 10000
 dt_m = MSF*dt_h
 N = T//dt_m
-N = N.astype('int')
-output_interval = N//1000
+N = int(N)
+output_interval = 500
 
 # Set output options
 output_fields = [
