@@ -1,0 +1,21 @@
+/data/charman1/dlitwin3/landlab/landlab/components/groundwater/dupuit_percolator.py:553: RuntimeWarning: invalid value encountered in less
+  self._thickness[self._thickness < 0] = 0.0
+/data/charman1/dlitwin3/landlab/landlab/grid/mappers.py:484: RuntimeWarning: invalid value encountered in greater
+  out[:] = np.where(tail_control > head_control, tail_vals, head_vals)
+/data/charman1/dlitwin3/landlab/landlab/components/groundwater/dupuit_percolator.py:27: RuntimeWarning: invalid value encountered in greater_equal
+  return u * np.greater_equal(u, 0)
+/data/charman1/dlitwin3/landlab/landlab/components/groundwater/dupuit_percolator.py:387: RuntimeWarning: invalid value encountered in less
+  gw_out = -np.sum(gw * (gw < 0), axis=1)
+Completed loop 0
+Completed loop 500
+Completed loop 1000
+Completed loop 1500
+Completed loop 2000
+Completed loop 2500
+NaN in thickness
+Traceback (most recent call last):
+  File "vary_Ksat_flat_base.py", line 133, in <module>
+    np.savetxt(filename,tot_time)
+  File "/software/apps/anaconda/5.2/python/3.7/lib/python3.7/site-packages/numpy/lib/npyio.py", line 1335, in savetxt
+    "Expected 1D or 2D array, got %dD array instead" % X.ndim)
+ValueError: Expected 1D or 2D array, got 0D array instead
