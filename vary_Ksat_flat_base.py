@@ -29,12 +29,12 @@ uplift_rate = 1E-4/(365*24*3600) #m/s
 m = 0.5 #Exponent on A []
 n = 1.0 #Exponent on S []
 K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
-D = 0.005/(365*24*3600) #m2/s
+D = 0.01/(365*24*3600) #m2/s
 w0 = 5E-4/(365*24*3600) #max rate of soil production
 dc = 2 #m characteristic soil depth
 dt_h = 1E5
 T = 250000*(365*24*3600)
-MSF = 10000
+MSF = 5000
 dt_m = MSF*dt_h
 N = T//dt_m
 N = int(N)
@@ -130,7 +130,9 @@ filename = './data/' + job_id + '_' + str(Kiso) + '_grid_end' + '.nc'
 write_raster_netcdf(filename, grid, names=output_fields, format="NETCDF4")
 
 filename = './data/' + job_id + '_' + str(Kiso) + '_time' + '.txt'
-np.savetxt(filename,tot_time)
+timefile = open(filename,'w')
+timefile.write('Run time: ' + str(tot_time))
+timefile.close()
 
 filename = './data/' + job_id + '_' + str(Kiso) + '_substeps' + '.txt'
 np.savetxt(filename,num_substeps)

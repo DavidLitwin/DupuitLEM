@@ -26,7 +26,7 @@ grid_500 = read_netcdf('./output/37205954/data/37205951_500_grid.nc')
 grid_1000 = read_netcdf('./output/37205955/data/37205951_1000_grid.nc')
 grid_5000 = read_netcdf('./output/37205956/data/37205951_5000_grid.nc')
 
-grid = grid_10000
+grid = grid_5000
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
