@@ -38,7 +38,7 @@ MSF = 5000
 dt_m = MSF*dt_h
 N = T//dt_m
 N = int(N)
-output_interval = 500
+output_interval = 250
 
 # Set output options
 output_fields = [
@@ -78,8 +78,10 @@ ld = LinearDiffuser(grid, linear_diffusivity=D)
 
 # Run model forward
 num_substeps = np.zeros(N)
+max_rel_change = np.zeros(N)
 t0 = time.time()
 for i in range(N):
+    elev0 = elev.copy()
 
     gdp.run_with_adaptive_time_step_solver(dt_h,courant_coefficient=0.02)
     num_substeps[i] = gdp._num_substeps
@@ -119,6 +121,8 @@ for i in range(N):
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
 
+    max_rel_change[i] = np.max(abs(elev-elev0)/elev0)
+
 t1 = time.time()
 
 tot_time = t1-t0
@@ -136,3 +140,6 @@ timefile.close()
 
 filename = './data/' + job_id + '_' + str(Kiso) + '_substeps' + '.txt'
 np.savetxt(filename,num_substeps)
+
+filename = './data/' + job_id + '_' + str(Kiso) + '_max_rel_change' + '.txt'
+np.savetxt(filename,max_rel_change)
