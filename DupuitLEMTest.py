@@ -62,7 +62,16 @@ fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',
 sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_name='surface_water__discharge')
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
+<<<<<<< Updated upstream
 # Run model forward
+=======
+#%% Run model forward
+t0 = time.time()
+
+N = 1000
+dt_h = 1E5
+dt_m = 500*dt_h
+>>>>>>> Stashed changes
 num_substeps = np.zeros(N)
 filenames = []
 time_list = []
@@ -143,4 +152,9 @@ except:
 
 #%% Pickle results
 
+<<<<<<< Updated upstream
 # pickle.dump(grid, open('./Dupuit_LEM_results/grid_'+str(time.time())+'.p','wb'))
+=======
+pickle.dump(grid, open('../Dupuit_LEM_results/grid_'+str(time.time())+'.p','wb'))
+    
+>>>>>>> Stashed changes
