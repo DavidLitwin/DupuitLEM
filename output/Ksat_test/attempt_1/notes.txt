@@ -1,0 +1,1 @@
+Attempt 1 uses a domain with a flat base, but did not yet have a method for dealing with nans in thickness. All runs failed for this reason.
