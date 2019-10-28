@@ -1,7 +1,0 @@
-Completed loop 0
-Traceback (most recent call last):
-  File "DupuitLEMTestMSFConvergence.py", line 116, in <module>
-    np.savetxt(filename,tot_time)
-  File "/software/apps/anaconda/5.2/python/3.7/lib/python3.7/site-packages/numpy/lib/npyio.py", line 1335, in savetxt
-    "Expected 1D or 2D array, got %dD array instead" % X.ndim)
-ValueError: Expected 1D or 2D array, got 0D array instead

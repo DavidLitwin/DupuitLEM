@@ -1,1 +1,0 @@
-Flat base of grid with three hydraulic conductivities that vary over two orders of magnitude. For this reason, the highest hydraulic conductivity had virtually no surface drainage, and was cancelled because it ran over time.

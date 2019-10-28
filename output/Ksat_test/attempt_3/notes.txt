@@ -1,1 +1,0 @@
-flat base code with three hydraulic conductivities varying over one order of magnitude. All ran to completion, but soil production outpaces other processes and the result is actually retreating channel heads, not advancing channel heads.

@@ -19,6 +19,6 @@ cd ~/data/dlitwin3/DupuitLEMScripts
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/vary_Ksat_flat_base.py ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID
+cp ~/data/dlitwin3/DupuitLEMScripts/vary_Ksat_depth_dep.py ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID
 cd ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID
 python vary_Ksat_depth_dep.py
