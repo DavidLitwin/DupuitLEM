@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=DupuitLEMTest
-#SBATCH --time=18:0:0
+#SBATCH --time=12:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
-#SBATCH --ntasks-per-node=24
+#SBATCH --ntasks-per-node=18
 #SBATCH --mail-type=begin,end
 #SBATCH --mail-user=dlitwin3@jhu.edu
 #### load and unload modules you may need
@@ -13,12 +13,14 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
-mkdir ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID
-mkdir ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID/data
+mkdir ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
+mkdir ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/data
 cd ~/data/dlitwin3/DupuitLEMScripts
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID/script_id.txt
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/vary_Ksat_depth_dep.py ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID
-cd ~/data/dlitwin3/DupuitLEMScripts/output/Ksat_test/$SLURM_JOBID
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/gdp_id.txt
+cp ~/data/dlitwin3/DupuitLEMScripts/vary_Ksat_depth_dep.py ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
+cd ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
 python vary_Ksat_depth_dep.py
+cd ~/data/dlitwin3/DupuitLEMResults/
+mv ./$SLURM_ARRAY_JOB_ID-* ~/data/dlitwin3/DupuitLEMResults/Ksat_test/attempt_5

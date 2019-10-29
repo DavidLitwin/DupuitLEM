@@ -48,26 +48,26 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 job_id = os.environ['SLURM_ARRAY_JOB_ID']
 
 # Set parameters
+uplift_rate = 1E-4/(365*24*3600) # uniform uplift [m/s]
 R = 1.5/(365*24*3600)  # steady, uniform recharge rate [m/s]
-Ks_all = np.array([0.5, 1, 5])/(3600)  # hydraulic conductivity at the surface [m/s]
-w0_all = np.array([2E-4,5E-4])/(365*24*3600) #max rate of soil production [m/s]
-di_rel_all = np.array([0.5,1,1.5,2]) # initial depth relative to steady state depth [-]
+Ks_all = np.array([0.5, 1])/(3600)  # hydraulic conductivity at the surface [m/s]
+w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
 d_k = 2 # characteristic depth for hydraulic conductivity [m]
 d_s = 2 # characteristic soil production depth [m]
-uplift_rate = 1E-4/(365*24*3600) # uniform uplift [m/s]
 m = 0.5 #Exponent on Q []
 n = 1.0 #Exponent on S []
 K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
-D = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
+di = -d_s*np.log(uplift_rate/w0) # initial depth relative to steady state depth [-]
+D_all = np.array([0.001,0.005,0.01])/(365*24*3600) # hillslope diffusivity [m2/s]
+wt0_rel_all = np.array([0.25,0.5,1.0]) #initial relative degree of saturation
 
-params = np.array(list(product(Ks_all,w0_all,di_rel_all)))
-params[:,2] = params[:,2]*(-d_s*np.log(uplift_rate/params[:,1])) # calculate initial soil thickness
+params = np.array(list(product(Ks_all,D_all,wt0_rel_all)))
 
 id = int(task_id)
 Ks = params[id,0] # hydraulic conductivity
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
-w0 = params[id,1] # max soil production rate
-di = params[id,2] # initial permeable thickness
+D = float(params[id,1]) # max soil production rate
+wt0_rel = params[id,2] # initial permeable thickness
 
 dt_h = 1E5 # hydrological timestep [s]
 T = 250000*(365*24*3600) # total simulation time [s]
@@ -102,7 +102,7 @@ sf.run_one_step()
 
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
-wt[:] = elev
+wt[:] = base + wt0_rel*(elev-base)
 gw_flux = grid.add_zeros('node', 'groundwater__specific_discharge_node')
 Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-averaged hydraulic conductivity
 
@@ -177,7 +177,7 @@ tot_time = t1-t0
 # collect output and save
 gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-filename = './data/' + job_id + '_' + task_id + '_grid_end' + '.nc'
+filename = './data/' + job_id + '_' + task_id + '_grid_' + str(i) + '.nc'
 write_raster_netcdf(filename, grid, names=output_fields, format="NETCDF4")
 
 filename = './data/' + job_id + '_' + task_id + '_time' + '.txt'
