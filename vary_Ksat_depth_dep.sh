@@ -23,4 +23,3 @@ cp ~/data/dlitwin3/DupuitLEMScripts/vary_Ksat_depth_dep.py ~/data/dlitwin3/Dupui
 cd ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
 python vary_Ksat_depth_dep.py
 cd ~/data/dlitwin3/DupuitLEMResults/
-mv ./$SLURM_ARRAY_JOB_ID-* ~/data/dlitwin3/DupuitLEMResults/Ksat_test/attempt_5

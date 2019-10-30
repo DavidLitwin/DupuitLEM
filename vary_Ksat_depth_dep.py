@@ -158,6 +158,8 @@ for i in range(N):
     ld.run_one_step(dt_m)
 
     elev[elev<base] = base[elev<base]
+    wt[wt>elev] = elev[wt>elev]
+    grid.at_node['aquifer__thickness'] = wt - base
 
     if i % output_interval == 0:
         gw_flux[:] = gdp.calc_gw_flux_at_node()
