@@ -74,8 +74,7 @@ d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
 
 T = 10000*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
-dt_m_event = MSF*dt_event
-dt_m_interevent = MSF*dt_interevent
+dt_m = MSF*(dt_event+dt_interevent)
 N = T//(dt_m_event+dt_m_interevent)
 N = int(N)
 output_interval = 2500
@@ -134,19 +133,11 @@ for i in range(N):
                                      )
     #run gw model
     gdp.recharge = R_event
-    gdp.run_with_adaptive_time_step_solver(dt_event,courant_coefficient=0.3)
+    gdp.run_with_adaptive_time_step_solver(dt_event,courant_coefficient=0.2)
     num_substeps[i,0] = gdp.number_of_substeps
 
     fa.run_one_step()
-
-    grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m_event
-    grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m_event - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m_event
-
-    sp.run_one_step(dt_m_event)
-    ld.run_one_step(dt_m_event)
-
-    elev[elev<base] = base[elev<base]
-    wt[wt>elev] = elev[wt>elev]
+    Qevent = grid.at_node['surface_water__discharge'].copy()
 
 
     ################ Run interevent ####################
@@ -159,16 +150,18 @@ for i in range(N):
                                      )
     #run gw model
     gdp.recharge = 0.0
-    gdp.run_with_adaptive_time_step_solver(dt_interevent,courant_coefficient=0.3)
+    gdp.run_with_adaptive_time_step_solver(dt_interevent,courant_coefficient=0.2)
     num_substeps[i,1] = gdp.number_of_substeps
 
     fa.run_one_step()
+    Qinterevent = grid.at_node['surface_water__discharge'].copy()
 
-    grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m_interevent
-    grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m_interevent - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m_interevent
+    grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
+    grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
 
-    sp.run_one_step(dt_m_interevent)
-    ld.run_one_step(dt_m_interevent)
+    grid.at_node['surface_water__discharge'] = ((dt_event*Qevent**m+dt_interevent*Qinterevent**m)/(dt_event+dt_interevent))**(1/m)
+    sp.run_one_step(dt_m)
+    ld.run_one_step(dt_m)
 
     elev[elev<base] = base[elev<base]
     wt[wt>elev] = elev[wt>elev]
