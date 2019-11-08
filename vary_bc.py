@@ -61,7 +61,7 @@ D = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
 dt_h = 1E5 # hydrological timestep [s]
 T = 250000*(365*24*3600) # total simulation time [s]
-MSF = 500 # morphologic scaling factor [-]
+MSF = 100 # morphologic scaling factor [-]
 dt_m = MSF*dt_h
 N = T//dt_m
 N = int(N)
@@ -86,7 +86,7 @@ grid.set_status_at_node_on_edges(right=CLOSED_BOUNDARY, top=CLOSED_BOUNDARY, \
                               left=FIXED_VALUE_BOUNDARY, bottom=CLOSED_BOUNDARY)
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = d_i + 0.1*np.random.rand(len(elev))
-elev[grid.fixed_value_boundary_nodes] = d_i/2
+# elev[grid.fixed_value_boundary_nodes] = d_i/2
 
 sf = SinkFillerBarnes(grid, method='D8')
 sf.run_one_step()
