@@ -8,6 +8,8 @@ import os
 import time
 import numpy as np
 from itertools import product
+import pickle
+import pandas as pd
 
 from landlab import RasterModelGrid, FIXED_VALUE_BOUNDARY, CLOSED_BOUNDARY
 from landlab.components import (
@@ -75,7 +77,7 @@ d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
 T = 10000*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*(dt_event+dt_interevent)
-N = T//(dt_m_event+dt_m_interevent)
+N = T//dt_m
 N = int(N)
 output_interval = 2500
 
@@ -120,10 +122,13 @@ ld = LinearDiffuser(grid, linear_diffusivity=D)
 num_substeps = np.zeros((N,2))
 max_rel_change = np.zeros(N)
 perc90_rel_change = np.zeros(N)
+times = np.zeros((N,7))
 t0 = time.time()
 for i in range(N):
     elev0 = elev.copy()
     ############### Run event ####################
+
+    t1 = time.time()
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
@@ -136,9 +141,14 @@ for i in range(N):
     gdp.run_with_adaptive_time_step_solver(dt_event,courant_coefficient=0.2)
     num_substeps[i,0] = gdp.number_of_substeps
 
+    t2 = time.time()
+
     fa.run_one_step()
     Qevent = grid.at_node['surface_water__discharge'].copy()
 
+    t3 = time.time()
+    
+    wt[wt>elev] = elev[wt>elev]
 
     ################ Run interevent ####################
 
@@ -153,18 +163,29 @@ for i in range(N):
     gdp.run_with_adaptive_time_step_solver(dt_interevent,courant_coefficient=0.2)
     num_substeps[i,1] = gdp.number_of_substeps
 
+    t4 = time.time()
+
     fa.run_one_step()
     Qinterevent = grid.at_node['surface_water__discharge'].copy()
+
+    t5 = time.time()
 
     grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
     grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
 
+
+    t6 = time.time()
     grid.at_node['surface_water__discharge'] = ((dt_event*Qevent**m+dt_interevent*Qinterevent**m)/(dt_event+dt_interevent))**(1/m)
     sp.run_one_step(dt_m)
+
+    t7 = time.time()
+
     ld.run_one_step(dt_m)
 
     elev[elev<base] = base[elev<base]
     wt[wt>elev] = elev[wt>elev]
+
+    t8 = time.time()
 
     ############# record output ##############
 
@@ -180,8 +201,13 @@ for i in range(N):
     max_rel_change[i] = np.max(elev_diff)
     perc90_rel_change[i] = np.percentile(elev_diff,90)
 
-t1 = time.time()
-tot_time = t1-t0
+    times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
+
+tfin = time.time()
+tot_time = tfin-t0
+df_times = pd.DataFrame(times,columns=['gdp_s', 'fa_s', 'gdp_i', 'fa_i', 'up', 'sp', 'ld'])
+filename = './data/' + job_id + '_' + task_id + '_times.p'
+pickle.dump(df_times,open(filename,'wb'))
 
 # collect output and save
 gw_flux[:] = gdp.calc_gw_flux_at_node()
