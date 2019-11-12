@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=DupuitLEMStorms1
-#SBATCH --time=12:0:0
+#SBATCH --time=48:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node

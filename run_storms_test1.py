@@ -74,7 +74,7 @@ d_s = params[id,1] # characteristic soil production depth [m]
 d_k = d_s # characteristic depth for hydraulic conductivity [m]
 d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
 
-T = 10000*(365*24*3600) # total simulation time [s]
+T = 100000*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*(dt_event+dt_interevent)
 N = T//dt_m
@@ -132,8 +132,7 @@ for i in range(N):
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
-                                     grid.at_node['topographic__elevation']-
-                                     grid.at_node['aquifer_base__elevation'],
+                                     grid.at_node['regolith__thickness'],
                                      K0,Ks,d_k,
                                      )
     #run gw model
@@ -147,15 +146,12 @@ for i in range(N):
     Qevent = grid.at_node['surface_water__discharge'].copy()
 
     t3 = time.time()
-    
-    wt[wt>elev] = elev[wt>elev]
 
     ################ Run interevent ####################
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
-                                     grid.at_node['topographic__elevation']-
-                                     grid.at_node['aquifer_base__elevation'],
+                                     grid.at_node['regolith__thickness'],
                                      K0,Ks,d_k,
                                      )
     #run gw model
@@ -171,10 +167,10 @@ for i in range(N):
     t5 = time.time()
 
     grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
-    grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
-
+    grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(grid.at_node['regolith__thickness'][grid.core_nodes])/d_s)*dt_m
 
     t6 = time.time()
+
     grid.at_node['surface_water__discharge'] = ((dt_event*Qevent**m+dt_interevent*Qinterevent**m)/(dt_event+dt_interevent))**(1/m)
     sp.run_one_step(dt_m)
 
@@ -183,7 +179,6 @@ for i in range(N):
     ld.run_one_step(dt_m)
 
     elev[elev<base] = base[elev<base]
-    wt[wt>elev] = elev[wt>elev]
 
     t8 = time.time()
 
