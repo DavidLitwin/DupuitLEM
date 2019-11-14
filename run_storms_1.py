@@ -132,7 +132,8 @@ for i in range(N):
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
-                                     grid.at_node['regolith__thickness'],
+                                     grid.at_node['topographic__elevation']-
+                                     grid.at_node['aquifer_base__elevation'],
                                      K0,Ks,d_k,
                                      )
     #run gw model
@@ -151,7 +152,8 @@ for i in range(N):
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
-                                     grid.at_node['regolith__thickness'],
+                                     grid.at_node['topographic__elevation']-
+                                     grid.at_node['aquifer_base__elevation'],
                                      K0,Ks,d_k,
                                      )
     #run gw model
