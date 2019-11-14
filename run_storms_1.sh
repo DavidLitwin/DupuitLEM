@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=DupuitLEMStorms1
+#SBATCH --job-name=DupuitLEMStorms_1
 #SBATCH --time=48:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
@@ -19,6 +19,6 @@ cd ~/data/dlitwin3/DupuitLEMScripts
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/run_storms_test1.py ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
+cp ~/data/dlitwin3/DupuitLEMScripts/run_storms_1.py ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
 cd ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
-python run_storms_test1.py
+python run_storms_1.py
