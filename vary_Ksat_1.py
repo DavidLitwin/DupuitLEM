@@ -148,7 +148,7 @@ for i in range(N):
     max_rel_change[i] = np.max(elev_diff)
     perc90_rel_change[i] = np.percentile(elev_diff,90)
 
-    if perc90_rel_change[i] < 1e-5:
+    if perc90_rel_change[i] < 1e-6:
         break
 
 t1 = time.time()
@@ -158,7 +158,7 @@ tot_time = t1-t0
 # collect output and save
 gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-filename = './data/' + job_id + '_' + task_id + '_grid_' + str(i) + '.nc'
+filename = './data/' + job_id + '_' + task_id + '_grid_end_' + str(i) + '.nc'
 write_raster_netcdf(filename, grid, names=output_fields, format="NETCDF4")
 
 filename = './data/' + job_id + '_' + task_id + '_time' + '.txt'

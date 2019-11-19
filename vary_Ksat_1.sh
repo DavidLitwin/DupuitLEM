@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=DupuitLEMKsat_1
+#SBATCH --job-name=Ksat_1
 #SBATCH --time=48:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
@@ -13,12 +13,12 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
-mkdir ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
-mkdir ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/data
+mkdir ~/data/dlitwin3/DupuitLEMResults/vary_Ksat_1-$SLURM_ARRAY_TASK_ID
+mkdir ~/data/dlitwin3/DupuitLEMResults/vary_Ksat_1-$SLURM_ARRAY_TASK_ID/data
 cd ~/data/dlitwin3/DupuitLEMScripts
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/script_id.txt
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_Ksat_1-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/vary_Ksat_1.py ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
-cd ~/data/dlitwin3/DupuitLEMResults/$SLURM_ARRAY_JOB_ID-$SLURM_ARRAY_TASK_ID
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_Ksat_1-$SLURM_ARRAY_TASK_ID/gdp_id.txt
+cp ~/data/dlitwin3/DupuitLEMScripts/vary_Ksat_1.py ~/data/dlitwin3/DupuitLEMResults/vary_Ksat_1-$SLURM_ARRAY_TASK_ID
+cd ~/data/dlitwin3/DupuitLEMResults/vary_Ksat_1-$SLURM_ARRAY_TASK_ID
 python vary_Ksat_1.py
