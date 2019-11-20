@@ -10,9 +10,6 @@ Test of different characteristic soil depths, thus varying the other component o
 import os
 import time
 import numpy as np
-from itertools import product
-import pickle
-import pandas as pd
 
 from landlab import RasterModelGrid, FIXED_VALUE_BOUNDARY, CLOSED_BOUNDARY
 from landlab.components import (
@@ -53,28 +50,30 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 job_id = os.environ['SLURM_ARRAY_JOB_ID']
 
 # Set parameters
-events_per_year = 365 # number of storm events per year
-R_tot = 1.5  # annual recharge [m]
-dt_event = 1*3600 # event duration [s]
-dt_interevent = (365*24*3600-events_per_year*dt_event)/events_per_year
-R_event = R_tot/events_per_year/dt_event # event recharge rate [m/s]
-Ks_all = 1.0/(3600)  # hydraulic conductivity at the surface [m/s]
-K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
-w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
-d_i_rel = 1.0 # initial depth relative to steady state depth [-]
-d_s_all = np.linspace(.5,2.5,21) # characteristic soil production depth [m]
-d_s_all_print = np.linspace(.5,2.5,21).astype(str)
-d_k = d_s # characteristic depth for hydraulic conductivity [m]
-d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
 uplift_rate = 1E-4/(365*24*3600) # uniform uplift [m/s]
 m = 0.5 #Exponent on Q []
 n = 1.0 #Exponent on S []
 K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
 D = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
+events_per_year = 365 # number of storm events per year
+R_tot = 1.5  # annual recharge [m]
+dt_event = 1*3600 # event duration [s]
+dt_interevent = (365*24*3600-events_per_year*dt_event)/events_per_year
+R_event = R_tot/events_per_year/dt_event # event recharge rate [m/s]
+
+Ks = 1.0/(3600)  # hydraulic conductivity at the surface [m/s]
+K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
+w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
+d_i_rel = 1.0 # initial depth relative to steady state depth [-]
+d_s_all = np.linspace(.5,2.5,21) # characteristic soil production depth [m]
+d_s_all_print = np.linspace(.5,2.5,21).astype(str)
+
 ID = int(task_id)
 d_s_print = d_s_all_print[ID]
 d_s = d_s_all[ID] # hydraulic conductivity
+d_k = d_s # characteristic depth for hydraulic conductivity [m]
+d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
 
 T = 1e6*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
@@ -145,7 +144,7 @@ for i in range(N):
 
     # t2 = time.time()
 
-    qevent = grid.at_node['surface_water__specific_discharge'].copy()
+    qevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
     # t3 = time.time()
 
@@ -164,7 +163,7 @@ for i in range(N):
 
     # t4 = time.time()
 
-    qinterevent = grid.at_node['surface_water__specific_discharge'].copy()
+    qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
     # t5 = time.time()
 
@@ -174,7 +173,7 @@ for i in range(N):
 
     # t6 = time.time()
 
-    grid.at_node['surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
+    grid.at_node['average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
     fa.run_one_step()
     sp.run_one_step(dt_m)
 

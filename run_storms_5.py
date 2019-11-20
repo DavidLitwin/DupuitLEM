@@ -9,9 +9,6 @@ Test of different annual precipitation amounts. 0.5 < P < 3.0 m/yr
 import os
 import time
 import numpy as np
-from itertools import product
-import pickle
-import pandas as pd
 
 from landlab import RasterModelGrid, FIXED_VALUE_BOUNDARY, CLOSED_BOUNDARY
 from landlab.components import (
@@ -52,23 +49,25 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 job_id = os.environ['SLURM_ARRAY_JOB_ID']
 
 # Set parameters
+uplift_rate = 1E-4/(365*24*3600) # uniform uplift [m/s]
+m = 0.5 #Exponent on Q []
+n = 1.0 #Exponent on S []
+K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
+D = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
+
 events_per_year = 365 # number of storm events per year
 R_tot_all = np.linspace(0.5,3,21)  # annual recharge [m]
 R_tot_all_print = np.linspace(0.5,3,21).astype(str)
 dt_event = 1*3600 # event duration [s]
 dt_interevent = (365*24*3600-events_per_year*dt_event)/events_per_year
-Ks_all = 1.0/(3600)  # hydraulic conductivity at the surface [m/s]
+
+Ks = 1.0/(3600)  # hydraulic conductivity at the surface [m/s]
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
 d_i_rel = 1.0 # initial depth relative to steady state depth [-]
 d_s = 1.5 # characteristic soil production depth [m]
 d_k = d_s # characteristic depth for hydraulic conductivity [m]
 d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
-uplift_rate = 1E-4/(365*24*3600) # uniform uplift [m/s]
-m = 0.5 #Exponent on Q []
-n = 1.0 #Exponent on S []
-K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
-D = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
 ID = int(task_id)
 R_tot_print = R_tot_all_print[ID]
@@ -144,7 +143,7 @@ for i in range(N):
 
     # t2 = time.time()
 
-    qevent = grid.at_node['surface_water__specific_discharge'].copy()
+    qevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
     # t3 = time.time()
 
@@ -163,7 +162,7 @@ for i in range(N):
 
     # t4 = time.time()
 
-    qinterevent = grid.at_node['surface_water__specific_discharge'].copy()
+    qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
     # t5 = time.time()
 
@@ -173,7 +172,7 @@ for i in range(N):
 
     # t6 = time.time()
 
-    grid.at_node['surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
+    grid.at_node['average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
     fa.run_one_step()
     sp.run_one_step(dt_m)
 
