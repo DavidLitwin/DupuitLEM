@@ -67,7 +67,7 @@ K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
 d_i_rel = 1.0 # initial depth relative to steady state depth [-]
 d_s_all = np.linspace(.2,2.5,24) # characteristic soil production depth [m]
-d_s_all_print = np.linspace(.5,2.5,21).astype(str)
+d_s_all_print = np.linspace(.2,2.5,24).astype(str)
 
 ID = int(task_id)
 d_s_print = d_s_all_print[ID]
