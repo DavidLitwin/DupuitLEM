@@ -74,7 +74,7 @@ R_tot_print = R_tot_all_print[ID]
 R_tot = R_tot_all[ID] # hydraulic conductivity
 R_event = R_tot/events_per_year/dt_event # event recharge rate [m/s]
 
-T = 1e6*(365*24*3600) # total simulation time [s]
+T = 5e5*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*(dt_event+dt_interevent)
 N = T//dt_m
@@ -193,6 +193,15 @@ for i in range(N):
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
+
+        filename = './data/vary_Rtot_' + R_tot_print + '_substeps' + '.txt'
+        np.savetxt(filename,num_substeps)
+
+        filename = './data/vary_Rtot_' + R_tot_print + '_max_rel_change' + '.txt'
+        np.savetxt(filename,max_rel_change)
+
+        filename = './data/vary_Rtot_' + R_tot_print + '_90perc_rel_change' + '.txt'
+        np.savetxt(filename,perc90_rel_change)
 
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)

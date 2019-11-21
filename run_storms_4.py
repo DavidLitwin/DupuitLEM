@@ -3,7 +3,7 @@
 Created on 19 Nov 2019
 
 Test of different characteristic soil depths, thus varying the other component of transmissivity.
-0.5 < d_s < 2.5 m
+0.2 < d_s < 2.5 m
 
 @author: dgbli
 """
@@ -66,7 +66,7 @@ Ks = 1.0/(3600)  # hydraulic conductivity at the surface [m/s]
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
 d_i_rel = 1.0 # initial depth relative to steady state depth [-]
-d_s_all = np.linspace(.5,2.5,21) # characteristic soil production depth [m]
+d_s_all = np.linspace(.2,2.5,24) # characteristic soil production depth [m]
 d_s_all_print = np.linspace(.5,2.5,21).astype(str)
 
 ID = int(task_id)
@@ -75,7 +75,7 @@ d_s = d_s_all[ID] # hydraulic conductivity
 d_k = d_s # characteristic depth for hydraulic conductivity [m]
 d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
 
-T = 1e6*(365*24*3600) # total simulation time [s]
+T = 5e5*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*(dt_event+dt_interevent)
 N = T//dt_m
@@ -194,6 +194,15 @@ for i in range(N):
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
+
+        filename = './data/vary_ds_' + d_s_print + '_substeps' + '.txt'
+        np.savetxt(filename,num_substeps)
+
+        filename = './data/vary_ds_' + d_s_print + '_max_rel_change' + '.txt'
+        np.savetxt(filename,max_rel_change)
+
+        filename = './data/vary_ds_' + d_s_print + '_90perc_rel_change' + '.txt'
+        np.savetxt(filename,perc90_rel_change)
 
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)

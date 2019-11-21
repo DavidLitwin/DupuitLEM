@@ -73,7 +73,7 @@ Ks_print = Ks_print_all[ID]
 Ks = Ks_all[ID] # hydraulic conductivity
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 
-T = 1e6*(365*24*3600) # total simulation time [s]
+T = 5e5*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*(dt_event+dt_interevent)
 N = T//dt_m
@@ -192,6 +192,15 @@ for i in range(N):
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
+
+        filename = './data/vary_Ksat_' + Ks_print + '_substeps' + '.txt'
+        np.savetxt(filename,num_substeps)
+
+        filename = './data/vary_Ksat_' + Ks_print + '_max_rel_change' + '.txt'
+        np.savetxt(filename,max_rel_change)
+
+        filename = './data/vary_Ksat_' + Ks_print + '_90perc_rel_change' + '.txt'
+        np.savetxt(filename,perc90_rel_change)
 
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)
