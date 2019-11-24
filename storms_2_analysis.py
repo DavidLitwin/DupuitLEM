@@ -145,12 +145,12 @@ for i in range(len(paths)):
     # cross sections
     y_node = [100,500,900]
     fig,axs = plt.subplots(3,1,figsize=(8,6))
-    for i in range(3):
+    for k in range(3):
         middle_row = np.where(grid.x_of_node == y_node[2-i])[0][1:-1]
 
-        axs[i].fill_between(grid.y_of_node[middle_row],elev[middle_row],base[middle_row],facecolor=(198/256,155/256,126/256) )
-        axs[i].fill_between(grid.y_of_node[middle_row],wt[middle_row],base[middle_row],facecolor=(145/256,176/256,227/256), alpha=0.8 )
-        axs[i].fill_between(grid.y_of_node[middle_row],base[middle_row],np.zeros_like(base[middle_row]),facecolor=(111/256,111/256,111/256) )
+        axs[k].fill_between(grid.y_of_node[middle_row],elev[middle_row],base[middle_row],facecolor=(198/256,155/256,126/256) )
+        axs[k].fill_between(grid.y_of_node[middle_row],wt[middle_row],base[middle_row],facecolor=(145/256,176/256,227/256), alpha=0.8 )
+        axs[k].fill_between(grid.y_of_node[middle_row],base[middle_row],np.zeros_like(base[middle_row]),facecolor=(111/256,111/256,111/256) )
 
     axs[2].set_xlabel('Distance (m)')
     axs[2].set_ylabel('Elevation (m)')
@@ -174,7 +174,7 @@ for i in range(len(paths)):
     plt.ylabel('Relative elevation change')
     plt.xlabel('Time step')
     plt.legend()
-    plt.savefig('./figs/storms_2/log_rel_change_'+str(ID)+'.png')
+    plt.savefig('../DupuitLEMResults/figs/storms_2/log_rel_change_'+str(ID)+'.png')
     plt.close()
 
 
@@ -270,7 +270,7 @@ for i in range(len(paths)):
 
     q_sw_out = np.zeros(N)
     network_size = np.zeros(N)
-    for i in range(N):
+    for n in range(N):
         gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
                                          grid.at_node['topographic__elevation']-
                                          grid.at_node['aquifer_base__elevation'],
@@ -281,8 +281,8 @@ for i in range(len(paths)):
         gdp.run_with_adaptive_time_step_solver(dt,courant_coefficient=0.02)
         fa.run_one_step()
 
-        network_size[i] = sum(grid.at_node['surface_water__specific_discharge']>0)/grid.number_of_core_nodes
-        q_sw_out[i] = gdp.calc_sw_flux_out()
+        network_size[n] = sum(grid.at_node['surface_water__specific_discharge']>0)/grid.number_of_core_nodes
+        q_sw_out[n] = gdp.calc_sw_flux_out()
 
 
     t = np.array(np.arange(0,T,dt))/3600
