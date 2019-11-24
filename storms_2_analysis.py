@@ -6,7 +6,7 @@ Created on Nov 20, 2019
 """
 
 import numpy as np
-from itertools import product
+import pandas as pd
 import matplotlib.pyplot as plt
 import glob
 import re
@@ -86,18 +86,12 @@ d_s = 1.5 # characteristic soil production depth [m]
 d_k = d_s # characteristic depth for hydraulic conductivity [m]
 d_i = d_i_rel*(-d_s*np.log(uplift_rate/w0)) # initial permeable thickness
 
-
-# ID = int(task_id)
-# Ks_print = Ks_print_all[ID]
-# Ks = Ks_all[ID] # hydraulic conductivity
-# K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
-
 #######################
 
 mean_drainage_densities = np.zeros((len(Ks_all),2))
 recession_k = np.zeros((len(Ks_all),2))
 IDs = np.zeros(len(Ks_all))
-Ks = np.zeros(len(Ks_all))
+Ks_save = np.zeros(len(Ks_all))
 paths = glob.glob('../DupuitLEMResults/storms_2*')
 
 for i in range(len(paths)):
@@ -106,12 +100,15 @@ for i in range(len(paths)):
     files = glob.glob(paths[i]+'/data/*.nc')
     ID = int(re.sub("[^0-9]", "", paths[i][-2:]))
     IDs[i] = ID
-    Ks[i] = Ks_all[ID]*3600
+    Ks_save[i] = Ks_all[ID]*3600
+    Ks = Ks_all[ID]
+    K0 = 0.01*Ks
     max_num = 0
     for j in range(len(files)):
         num = int(re.sub("[^0-9]", "", files[j][-9:]))
 
         if num > max_num:
+            max_num = num
             max_file = files[j]
 
 
@@ -151,8 +148,9 @@ for i in range(len(paths)):
     for i in range(3):
         middle_row = np.where(grid.x_of_node == y_node[2-i])[0][1:-1]
 
-        axs[i].fill_between(grid.y_of_node[middle_row],elev[middle_row],base[middle_row],facecolor=colors['sienna'] )
-        axs[i].fill_between(grid.y_of_node[middle_row],wt[middle_row],base[middle_row],facecolor=colors['royalblue'] )
+        axs[i].fill_between(grid.y_of_node[middle_row],elev[middle_row],base[middle_row],facecolor=(198/256,155/256,126/256) )
+        axs[i].fill_between(grid.y_of_node[middle_row],wt[middle_row],base[middle_row],facecolor=(145/256,176/256,227/256), alpha=0.8 )
+        axs[i].fill_between(grid.y_of_node[middle_row],base[middle_row],np.zeros_like(base[middle_row]),facecolor=(111/256,111/256,111/256) )
 
     axs[2].set_xlabel('Distance (m)')
     axs[2].set_ylabel('Elevation (m)')
@@ -182,11 +180,8 @@ for i in range(len(paths)):
 
     ######################### drainage density
 
-    Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-averaged hydraulic conductivity
-
-
     # initialize model components
-    gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=Kavg, \
+    gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
                                       recharge_rate=0.0,regularization_f=0.01)
     fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                          depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
@@ -235,26 +230,24 @@ for i in range(len(paths)):
     mean_drainage_densities[i,1] = interevent_dd_mean
 
     plt.figure()
-    imshow_grid(grid,event_channels, plot_name='Maximum channel extent' allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
+    imshow_grid(grid,event_channels, plot_name='Maximum channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
     plt.savefig('../DupuitLEMResults/figs/storms_2/max_channels_'+str(ID) +'.png')
     plt.close()
 
     plt.figure()
-    imshow_grid(grid,interevent_channels, plot_name='Minimum channel extent' allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
+    imshow_grid(grid,interevent_channels, plot_name='Minimum channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
     plt.savefig('../DupuitLEMResults/figs/storms_2/min_channels_'+str(ID) +'.png')
     plt.close()
 
     ################################# Recession
 
-    grid = read_netcdf('max_file')
+    grid = read_netcdf(max_file)
     elev = grid.at_node['topographic__elevation']
     base = grid.at_node['aquifer_base__elevation']
     wt = grid.at_node['water_table__elevation']
-    Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-averaged hydraulic conductivity
-
 
     # initialize model components
-    gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=Kavg, \
+    gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
                                       recharge_rate=0.0,regularization_f=0.01)
     fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                          depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
@@ -303,7 +296,7 @@ for i in range(len(paths)):
     plt.figure()
     plt.plot(t, network_size*100)
     plt.xlabel('time [hr]')
-    plt.ylabel('% nodes contributing groundwater leakage')
+    plt.ylabel('% nodes contributing surface water discharge')
     plt.savefig('../DupuitLEMResults/figs/storms_2/recession_channels_'+str(ID) +'.png')
     plt.close()
 
@@ -320,6 +313,6 @@ for i in range(len(paths)):
     plt.savefig('../DupuitLEMResults/figs/storms_2/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
 
 
-data = {'ID':ID, 'Ks':Ks, 'DD_max':mean_drainage_densities[:,0], 'DD_min':mean_drainage_densities[:,1], 'rec_a':recession_k[:,0], 'rec_c':recession_ks[:,1] }
+data = {'ID':ID, 'Ks':Ks_save, 'DD_max':mean_drainage_densities[:,0], 'DD_min':mean_drainage_densities[:,1], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
 df = pd.DataFrame(data)
 pickle.dump(df,open('../DupuitLEMResults/figs/storms_2/data_processed.p','wb'))
