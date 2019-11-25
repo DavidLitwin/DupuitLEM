@@ -313,6 +313,6 @@ for i in range(len(paths)):
     plt.savefig('../DupuitLEMResults/figs/storms_2/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
     plt.close()
 
-data = {'ID':ID, 'Ks':Ks_save, 'DD_max':mean_drainage_densities[:,0], 'DD_min':mean_drainage_densities[:,1], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
+data = {'ID':IDs, 'Ks':Ks_save, 'DD_max':mean_drainage_densities[:,0], 'DD_min':mean_drainage_densities[:,1], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
 df = pd.DataFrame(data)
 pickle.dump(df,open('../DupuitLEMResults/figs/storms_2/data_processed.p','wb'))
