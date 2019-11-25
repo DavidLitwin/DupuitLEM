@@ -93,7 +93,7 @@ grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=CLOSED_BOUNDARY, top=CLOSED_BOUNDARY, \
                               left=FIXED_VALUE_BOUNDARY, bottom=CLOSED_BOUNDARY)
 elev = grid.add_zeros('node', 'topographic__elevation')
-elev[:] = di + 0.1*np.random.rand(len(elev))
+elev[:] = d_i + 0.1*np.random.rand(len(elev))
 
 sf = SinkFillerBarnes(grid, method='D8')
 sf.run_one_step()

@@ -93,7 +93,7 @@ grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=CLOSED_BOUNDARY, top=CLOSED_BOUNDARY, \
                               left=FIXED_VALUE_BOUNDARY, bottom=CLOSED_BOUNDARY)
 elev = grid.add_zeros('node', 'topographic__elevation')
-elev[:] = di + 0.1*np.random.rand(len(elev))
+elev[:] = d_i + 0.1*np.random.rand(len(elev))
 
 sf = SinkFillerBarnes(grid, method='D8')
 sf.run_one_step()
@@ -143,18 +143,18 @@ for i in range(N):
     if i % output_interval == 0:
         gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-        filename = './data/vary_ds_' + d_s_print + '_grid_' + str(i) + '.nc'
+        filename = './data/vary_Rtot_' + R_tot_print + '_grid_' + str(i) + '.nc'
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
 
-        filename = './data/vary_ds_' + d_s_print + '_substeps' + '.txt'
+        filename = './data/vary_Rtot_' + R_tot_print + '_substeps' + '.txt'
         np.savetxt(filename,num_substeps)
 
-        filename = './data/vary_ds_' + d_s_print + '_max_rel_change' + '.txt'
+        filename = './data/vary_Rtot_' + R_tot_print + '_max_rel_change' + '.txt'
         np.savetxt(filename,max_rel_change)
 
-        filename = './data/vary_ds_' + d_s_print + '_90perc_rel_change' + '.txt'
+        filename = './data/vary_Rtot_' + R_tot_print + '_90perc_rel_change' + '.txt'
         np.savetxt(filename,perc90_rel_change)
 
     elev_diff = abs(elev-elev0)/elev0
@@ -171,19 +171,19 @@ tot_time = tfin-t0
 # collect output and save
 gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-filename = './data/vary_ds_' + d_s_print + '_grid_' + str(i) + '.nc'
+filename = './data/vary_Rtot_' + R_tot_print + '_grid_' + str(i) + '.nc'
 write_raster_netcdf(filename, grid, names=output_fields, format="NETCDF4")
 
-filename = './data/vary_ds_' + d_s_print + '_time' + '.txt'
+filename = './data/vary_Rtot_' + R_tot_print + '_time' + '.txt'
 timefile = open(filename,'w')
 timefile.write('Run time: ' + str(tot_time))
 timefile.close()
 
-filename = './data/vary_ds_' + d_s_print + '_substeps' + '.txt'
+filename = './data/vary_Rtot_' + R_tot_print + '_substeps' + '.txt'
 np.savetxt(filename,num_substeps)
 
-filename = './data/vary_ds_' + d_s_print + '_max_rel_change' + '.txt'
+filename = './data/vary_Rtot_' + R_tot_print + '_max_rel_change' + '.txt'
 np.savetxt(filename,max_rel_change)
 
-filename = './data/vary_ds_' + d_s_print + '_90perc_rel_change' + '.txt'
+filename = './data/vary_Rtot_' + R_tot_print + '_90perc_rel_change' + '.txt'
 np.savetxt(filename,perc90_rel_change)
