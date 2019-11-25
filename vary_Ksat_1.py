@@ -49,6 +49,7 @@ job_id = os.environ['SLURM_ARRAY_JOB_ID']
 # Set parameters
 R = 1.5/(365*24*3600)  # steady, uniform recharge rate [m/s]
 Ks_all = np.linspace(0.1,2.4,24)/(3600)  # hydraulic conductivity at the surface [m/s]
+Ks_print_all = (Ks_all*3600).astype(str)
 w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
 d_k = 1.5 # characteristic depth for hydraulic conductivity [m]
 d_s = 1.5 # characteristic soil production depth [m]
@@ -59,12 +60,13 @@ n = 1.0 #Exponent on S []
 K = 5E-8 #erosivity coefficient [m-1/2 s−1/2]
 D = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
-id = int(task_id)
-Ks = Ks_all[id] # hydraulic conductivity
+ID = int(task_id)
+Ks_print = Ks_print_all[ID]
+Ks = Ks_all[ID] # hydraulic conductivity
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 
 dt_h = 1E5 # hydrological timestep [s]
-T = 1e6*(365*24*3600) # total simulation time [s]
+T = 5e5*(365*24*3600) # total simulation time [s]
 MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*dt_h
 N = T//dt_m
@@ -139,10 +141,19 @@ for i in range(N):
     if i % output_interval == 0:
         gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-        filename = './data/' + job_id + '_' + task_id + '_grid_' + str(i) + '.nc'
+        filename = './data/vary_Ksat_' + Ks_print + '_grid_' + str(i) + '.nc'
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
+
+        filename = './data/vary_Ksat_' + Ks_print + '_substeps' + '.txt'
+        np.savetxt(filename,num_substeps)
+
+        filename = './data/vary_Ksat_' + Ks_print + '_max_rel_change' + '.txt'
+        np.savetxt(filename,max_rel_change)
+
+        filename = './data/vary_Ksat_' + Ks_print + '_90perc_rel_change' + '.txt'
+        np.savetxt(filename,perc90_rel_change)
 
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)
@@ -151,26 +162,26 @@ for i in range(N):
     if perc90_rel_change[i] < 1e-6:
         break
 
-t1 = time.time()
 
-tot_time = t1-t0
+tfin = time.time()
+tot_time = tfin-t0
 
 # collect output and save
 gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-filename = './data/' + job_id + '_' + task_id + '_grid_end_' + str(i) + '.nc'
+filename = './data/vary_Ksat_' + Ks_print + '_grid_' + str(i) + '.nc'
 write_raster_netcdf(filename, grid, names=output_fields, format="NETCDF4")
 
-filename = './data/' + job_id + '_' + task_id + '_time' + '.txt'
+filename = './data/vary_Ksat_' + Ks_print + '_time' + '.txt'
 timefile = open(filename,'w')
 timefile.write('Run time: ' + str(tot_time))
 timefile.close()
 
-filename = './data/' + job_id + '_' + task_id + '_substeps' + '.txt'
+filename = './data/vary_Ksat_' + Ks_print + '_substeps' + '.txt'
 np.savetxt(filename,num_substeps)
 
-filename = './data/' + job_id + '_' + task_id + '_max_rel_change' + '.txt'
+filename = './data/vary_Ksat_' + Ks_print + '_max_rel_change' + '.txt'
 np.savetxt(filename,max_rel_change)
 
-filename = './data/' + job_id + '_' + task_id + '_90perc_rel_change' + '.txt'
+filename = './data/vary_Ksat_' + Ks_print + '_90perc_rel_change' + '.txt'
 np.savetxt(filename,perc90_rel_change)

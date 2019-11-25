@@ -14,4 +14,4 @@ module load python/3.7-anaconda
 conda activate
 conda activate landlab_dev
 cd ~/data/dlitwin3/DupuitLEMScripts
-python storms_3_analysis.py
+python storms_4_analysis.py

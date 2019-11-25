@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=Ksat_2
-#SBATCH --time=48:0:0
+#SBATCH --time=72:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
-#SBATCH --ntasks-per-node=24
+#SBATCH --ntasks-per-node=1
 #SBATCH --mail-type=begin,end
 #SBATCH --mail-user=dlitwin3@jhu.edu
 #### load and unload modules you may need
