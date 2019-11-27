@@ -1,0 +1,9 @@
+slurmstepd: error: task/cgroup: unable to add task[pid=25353] to memory cg '(null)'
+slurmstepd: error: xcgroup_instantiate: unable to create cgroup '/sys/fs/cgroup/memory/slurm/uid_3965' : No space left on device
+slurmstepd: error: jobacct_gather/cgroup: unable to instanciate user 3965 memory cgroup
+mkdir: cannot create directory '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMResults/vary_Rtot-6': File exists
+mkdir: cannot create directory '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMResults/vary_Rtot-6/data': File exists
+Traceback (most recent call last):
+  File "vary_Rtot.py", line 96, in <module>
+    elev[:] = di + 0.1*np.random.rand(len(elev))
+NameError: name 'di' is not defined

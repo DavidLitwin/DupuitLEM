@@ -1,0 +1,5 @@
+slurmstepd: error: task/cgroup: unable to add task[pid=23280] to memory cg '(null)'
+slurmstepd: error: xcgroup_instantiate: unable to create cgroup '/sys/fs/cgroup/memory/slurm/uid_3965' : No space left on device
+slurmstepd: error: jobacct_gather/cgroup: unable to instanciate user 3965 memory cgroup
+cp: cannot stat '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMScripts/run_vary_ds.py': No such file or directory
+python: can't open file 'vary_ds.py': [Errno 2] No such file or directory

@@ -1,0 +1,51 @@
+slurmstepd: error: task/cgroup: unable to add task[pid=22009] to memory cg '(null)'
+slurmstepd: error: xcgroup_instantiate: unable to create cgroup '/sys/fs/cgroup/memory/slurm/uid_3965' : No space left on device
+slurmstepd: error: jobacct_gather/cgroup: unable to instanciate user 3965 memory cgroup
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+storms_5_analysis.py:137: RuntimeWarning: divide by zero encountered in true_divide
+  imshow_grid(grid,(wt-base)/(elev-base), cmap='Blues', limits=(0,1), colorbar_label = 'Relative saturated thickness [-]', grid_units=('m','m'))
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+/data/charman1/dlitwin3/landlab/landlab/components/drainage_density/drainage_density.py:278: UserWarning: Existing channel__mask grid field was overwritten.
+  warn("Existing channel__mask grid field was overwritten.")
+Traceback (most recent call last):
+  File "storms_5_analysis.py", line 318, in <module>
+    data = {'ID':IDs, 'd_s':d_s_save, 'DD_max':mean_drainage_densities[:,0], 'DD_min':mean_drainage_densities[:,1], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
+NameError: name 'd_s_save' is not defined

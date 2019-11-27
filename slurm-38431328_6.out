@@ -1,0 +1,6 @@
+mkdir: cannot create directory '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMResults/vary_ds-6': File exists
+mkdir: cannot create directory '/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMResults/vary_ds-6/data': File exists
+Traceback (most recent call last):
+  File "vary_ds.py", line 96, in <module>
+    elev[:] = di + 0.1*np.random.rand(len(elev))
+NameError: name 'di' is not defined
