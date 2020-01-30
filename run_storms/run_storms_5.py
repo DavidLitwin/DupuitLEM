@@ -10,7 +10,7 @@ import os
 import time
 import numpy as np
 
-from landlab import RasterModelGrid, FIXED_VALUE_BOUNDARY, CLOSED_BOUNDARY
+from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
     FlowAccumulator,
@@ -97,8 +97,8 @@ space_unit="meters",
 # Set boundary and ititial conditions
 np.random.seed(2)
 grid = RasterModelGrid((100, 100), xy_spacing=10.0)
-grid.set_status_at_node_on_edges(right=CLOSED_BOUNDARY, top=CLOSED_BOUNDARY, \
-                              left=FIXED_VALUE_BOUNDARY, bottom=CLOSED_BOUNDARY)
+grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
+                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = d_i + 0.1*np.random.rand(len(elev))
 
@@ -116,7 +116,7 @@ gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=Kav
                                   recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.2)
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                      depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
-sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_name='surface_water__discharge')
+sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_field='surface_water__discharge')
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
 # Run model forward

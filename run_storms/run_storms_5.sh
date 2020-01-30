@@ -19,6 +19,6 @@ cd ~/data/dlitwin3/DupuitLEMScripts
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/storms_5_A-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/storms_5_A-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/run_storms_5.py ~/data/dlitwin3/DupuitLEMResults/storms_5_A-$SLURM_ARRAY_TASK_ID
+cp ~/data/dlitwin3/DupuitLEMScripts/run_storms/run_storms_5.py ~/data/dlitwin3/DupuitLEMResults/storms_5_A-$SLURM_ARRAY_TASK_ID
 cd ~/data/dlitwin3/DupuitLEMResults/storms_5_A-$SLURM_ARRAY_TASK_ID
 python run_storms_5.py
