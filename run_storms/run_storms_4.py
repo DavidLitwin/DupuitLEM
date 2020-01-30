@@ -88,6 +88,7 @@ output_fields = [
             "aquifer_base__elevation",
             "water_table__elevation",
             "surface_water__discharge",
+            "average_surface_water__specific_discharge",
             "groundwater__specific_discharge_node"
             ]
 time_unit="years",
@@ -113,7 +114,7 @@ Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-ave
 
 # initialize model components
 gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=Kavg, \
-                                  recharge_rate=0.0,regularization_f=0.01)
+                                  recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.2)
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                      depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
 sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_name='surface_water__discharge')
@@ -139,12 +140,12 @@ for i in range(N):
                                      )
     #run gw model
     gdp.recharge = R_event
-    gdp.run_with_adaptive_time_step_solver(dt_event,courant_coefficient=0.2)
+    gdp.run_with_adaptive_time_step_solver(dt_event)
     num_substeps[i,0] = gdp.number_of_substeps
 
     # t2 = time.time()
 
-    qevent = grid.at_node['average_surface_water__specific_discharge'].copy()
+    qevent = grid.at_node['surface_water__specific_discharge'].copy()
 
     # t3 = time.time()
 
@@ -158,12 +159,12 @@ for i in range(N):
                                      )
     #run gw model
     gdp.recharge = 0.0
-    gdp.run_with_adaptive_time_step_solver(dt_interevent,courant_coefficient=0.2)
+    gdp.run_with_adaptive_time_step_solver(dt_interevent)
     num_substeps[i,1] = gdp.number_of_substeps
 
     # t4 = time.time()
 
-    qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
+    qinterevent = grid.at_node['surface_water__specific_discharge'].copy()
 
     # t5 = time.time()
 
