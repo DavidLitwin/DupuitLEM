@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=Analysis_3
-#SBATCH --time=2:0:0
+#SBATCH --job-name=storms_analysis
+#SBATCH --time=4:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
@@ -14,4 +14,4 @@ module load python/3.7-anaconda
 conda activate
 conda activate landlab_dev
 cd ~/data/dlitwin3/DupuitLEMScripts
-python storms_4_analysis.py
+python storms_2_analysis.py
