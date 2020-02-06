@@ -185,7 +185,7 @@ for i in range(len(paths)):
 
     # initialize model components
     gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
-                                      recharge_rate=0.0,regularization_f=0.01)
+                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.02)
     fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                          depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
 
@@ -199,7 +199,7 @@ for i in range(len(paths)):
                                      )
     # run gw model
     gdp.recharge = R_event
-    gdp.run_with_adaptive_time_step_solver(dt_event,courant_coefficient=0.02)
+    gdp.run_with_adaptive_time_step_solver(dt_event)
     fa.run_one_step()
 
     Qevent = grid.at_node['surface_water__discharge'].copy()
@@ -213,7 +213,7 @@ for i in range(len(paths)):
                                      )
     # run gw model
     gdp.recharge = 0
-    gdp.run_with_adaptive_time_step_solver(dt_interevent,courant_coefficient=0.02)
+    gdp.run_with_adaptive_time_step_solver(dt_interevent)
     fa.run_one_step()
 
     Qinterevent = grid.at_node['surface_water__discharge'].copy()
@@ -251,7 +251,7 @@ for i in range(len(paths)):
 
     # initialize model components
     gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
-                                      recharge_rate=0.0,regularization_f=0.01)
+                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.02)
     fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                          depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
 
@@ -264,7 +264,7 @@ for i in range(len(paths)):
                                      )
     # run gw model
     gdp.recharge = R_event
-    gdp.run_with_adaptive_time_step_solver(dt_event,courant_coefficient=0.02)
+    gdp.run_with_adaptive_time_step_solver(dt_event)
 
     # Run recession
     T = 50*24*3600
@@ -281,7 +281,7 @@ for i in range(len(paths)):
                                          )
         #run gw model
         gdp.recharge = 0
-        gdp.run_with_adaptive_time_step_solver(dt,courant_coefficient=0.02)
+        gdp.run_with_adaptive_time_step_solver(dt)
         fa.run_one_step()
 
         network_size[n] = sum(grid.at_node['surface_water__specific_discharge']>0)/grid.number_of_core_nodes
