@@ -227,10 +227,10 @@ for i in range(len(paths)):
     interevent_channels = np.array(Qinterevent>= R_event*grid.dx*grid.dy, dtype=np.uint8)
 
     event_dd = DrainageDensity(grid,channel__mask=event_channels)
-    event_dd_mean = event_dd.calc_drainage_density()
+    event_dd_mean = event_dd.calculate_drainage_density()
 
     interevent_dd = DrainageDensity(grid,channel__mask=interevent_channels)
-    interevent_dd_mean = interevent_dd.calc_drainage_density()
+    interevent_dd_mean = interevent_dd.calculate_drainage_density()
 
     mean_drainage_densities[i,0] = event_dd_mean
     mean_drainage_densities[i,1] = interevent_dd_mean
