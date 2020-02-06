@@ -126,25 +126,25 @@ for i in range(len(paths)):
     # surface elevation
     plt.figure(figsize=(8,6))
     imshow_grid(grid,'topographic__elevation', cmap='gist_earth', colorbar_label = 'Elevation [m]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/storms_5/elev_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/elev_'+str(ID) +'.png')
     plt.close()
 
     # regolith thickness
     plt.figure(figsize=(8,6))
     imshow_grid(grid,grid.at_node['topographic__elevation'] - grid.at_node['aquifer_base__elevation'],cmap='YlOrBr', colorbar_label = 'Regolith thickness [m]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/storms_5/soil_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/soil_'+str(ID) +'.png')
     plt.close()
 
     # relative saturation
     plt.figure(figsize=(8,6))
     imshow_grid(grid,(wt-base)/(elev-base), cmap='Blues', limits=(0,1), colorbar_label = 'Relative saturated thickness [-]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/storms_5/rel_thickness_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/rel_thickness_'+str(ID) +'.png')
     plt.close()
 
     # surface water discharge
     plt.figure(figsize=(8,6))
     imshow_grid(grid,grid.at_node['surface_water__discharge'], cmap='plasma', colorbar_label = 'surface water discharge [m3/s]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/storms_5/surface_water_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/surface_water_'+str(ID) +'.png')
     plt.close()
 
     # cross sections
@@ -159,7 +159,7 @@ for i in range(len(paths)):
 
     axs[2].set_xlabel('Distance (m)')
     axs[2].set_ylabel('Elevation (m)')
-    plt.savefig('../DupuitLEMResults/figs/storms_5/cross_section_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/cross_section_'+str(ID) +'.png')
     plt.close()
 
 
@@ -179,7 +179,7 @@ for i in range(len(paths)):
     plt.ylabel('Relative elevation change')
     plt.xlabel('Time step')
     plt.legend()
-    plt.savefig('../DupuitLEMResults/figs/storms_5/log_rel_change_'+str(ID)+'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/log_rel_change_'+str(ID)+'.png')
     plt.close()
 
 
@@ -236,12 +236,12 @@ for i in range(len(paths)):
 
     plt.figure()
     imshow_grid(grid,event_channels, plot_name='Maximum channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/storms_5/max_channels_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/max_channels_'+str(ID) +'.png')
     plt.close()
 
     plt.figure()
     imshow_grid(grid,interevent_channels, plot_name='Minimum channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/storms_5/min_channels_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/min_channels_'+str(ID) +'.png')
     plt.close()
 
     ################################# Recession
@@ -295,14 +295,14 @@ for i in range(len(paths)):
     plt.plot(t,q_sw_out)
     plt.xlabel('time [hr]')
     plt.ylabel('Surface water discharge [$m^3/s$]')
-    plt.savefig('../DupuitLEMResults/figs/storms_5/recession_time_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/recession_time_'+str(ID) +'.png')
     plt.close()
 
     plt.figure()
     plt.plot(t, network_size*100)
     plt.xlabel('time [hr]')
     plt.ylabel('% nodes contributing surface water discharge')
-    plt.savefig('../DupuitLEMResults/figs/storms_5/recession_channels_'+str(ID) +'.png')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/recession_channels_'+str(ID) +'.png')
     plt.close()
 
     [a, c, Q_0_new, Q_1_new] = log_Recession_constant(q_sw_out) #a, c, Q_0_new, Q_1_new
@@ -315,9 +315,9 @@ for i in range(len(paths)):
     plt.loglog(10**(x),10**(y),'-',color = 'red')
     plt.xlabel('$Q_0 \, mm/hr$')
     plt.ylabel('$Q_1 \, mm/hr$')
-    plt.savefig('../DupuitLEMResults/figs/storms_5/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
+    plt.savefig('../../DupuitLEMResults/figs/storms_5/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
     plt.close()
 
 data = {'ID':IDs, 'd_s':d_s_save, 'DD_max':mean_drainage_densities[:,0], 'DD_min':mean_drainage_densities[:,1], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
 df = pd.DataFrame(data)
-pickle.dump(df,open('../DupuitLEMResults/figs/storms_5/data_processed.p','wb'))
+pickle.dump(df,open('../../DupuitLEMResults/figs/storms_5/data_processed.p','wb'))
