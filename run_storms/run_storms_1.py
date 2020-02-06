@@ -2,6 +2,8 @@
 """
 Created on Mon Sep 30 16:49:06 2019
 
+Test three values of ksat: 0.2, 1, 2 m/hr. 
+
 @author: dgbli
 """
 import os

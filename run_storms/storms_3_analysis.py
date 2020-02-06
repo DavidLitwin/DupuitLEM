@@ -2,6 +2,9 @@
 """
 Created on Nov 20, 2019
 
+Analysis of the output of storms_3_A. Make static plots, calculate drainage 
+density and recession constants.
+
 @author: dgbli
 """
 
@@ -92,7 +95,7 @@ mean_drainage_densities = np.zeros((len(Ks_all),2))
 recession_k = np.zeros((len(Ks_all),2))
 IDs = np.zeros(len(Ks_all))
 Ks_save = np.zeros(len(Ks_all))
-paths = glob.glob('../DupuitLEMResults/storms_3*')
+paths = glob.glob('../DupuitLEMResults/storms_3_A*')
 
 for i in range(len(paths)):
 

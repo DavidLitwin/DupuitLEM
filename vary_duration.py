@@ -58,7 +58,7 @@ events_per_year = 365 # number of storm events per year
 R_tot = 1.5  # annual recharge [m]
 dt_event_all = np.array([1,2,4,12,18,24])*3600 # event duration [s]
 
-Ks = 0.1/3600  # hydraulic conductivity at the surface [m/s]
+Ks = 2.4/3600  # hydraulic conductivity at the surface [m/s]
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 Ks_print = str(Ks*3600)
 w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
