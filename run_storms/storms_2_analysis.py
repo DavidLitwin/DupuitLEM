@@ -185,7 +185,7 @@ for i in range(len(paths)):
 
     # initialize model components
     gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
-                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.02)
+                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.2)
     fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                          depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
 
@@ -251,7 +251,7 @@ for i in range(len(paths)):
 
     # initialize model components
     gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
-                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.02)
+                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.2)
     fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                          depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
 
