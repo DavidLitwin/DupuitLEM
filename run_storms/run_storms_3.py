@@ -86,7 +86,7 @@ output_fields = [
             "aquifer_base__elevation",
             "water_table__elevation",
             "surface_water__discharge",
-            "average_surface_water__specific_discharge",
+            "storm_average_surface_water__specific_discharge",
             "groundwater__specific_discharge_node"
             ]
 time_unit="years",
@@ -114,7 +114,7 @@ Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-ave
 gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=Kavg, \
                                   recharge_rate=0.0,regularization_f=0.01, courant_coefficient=0.2)
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
-                     depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
+                     depression_finder = 'DepressionFinderAndRouter', runoff_rate='storm_average_surface_water__specific_discharge')
 sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_field='surface_water__discharge')
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
@@ -143,7 +143,7 @@ for i in range(N):
 
     # t2 = time.time()
 
-    qevent = grid.at_node['surface_water__specific_discharge'].copy()
+    qevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
     # t3 = time.time()
 
@@ -162,7 +162,7 @@ for i in range(N):
 
     # t4 = time.time()
 
-    qinterevent = grid.at_node['surface_water__specific_discharge'].copy()
+    qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
     # t5 = time.time()
 
@@ -172,7 +172,7 @@ for i in range(N):
 
     # t6 = time.time()
 
-    grid.at_node['average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
+    grid.at_node['storm_average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
     fa.run_one_step()
     sp.run_one_step(dt_m)
 
