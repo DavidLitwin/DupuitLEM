@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=storms_analysis
+#SBATCH --job-name=duration_analysis
 #SBATCH --time=4:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
@@ -13,4 +13,5 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
-python storms_2_analysis.py
+cd ~/data/dlitwin3/DupuitLEMScripts
+python vary_duration_analysis.py
