@@ -78,7 +78,7 @@ MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*(dt_event+dt_interevent)
 N = T//dt_m
 N = int(N)
-output_interval = 2500
+output_interval = 10000
 
 # Set output options
 output_fields = [
