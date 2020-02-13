@@ -106,6 +106,7 @@ sf.run_one_step()
 
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
+qavg_storm = grid.add_zeros('node', 'storm_average_surface_water__specific_discharge')
 wt[:] = elev.copy()
 gw_flux = grid.add_zeros('node', 'groundwater__specific_discharge_node')
 Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-averaged hydraulic conductivity
@@ -167,8 +168,7 @@ for i in range(N):
     # t5 = time.time()
 
     grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
-    # grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
-    grid.at_node['aquifer_base__elevation'][grid.core_nodes] = grid.at_node['topographic__elevation'][grid.core_nodes] - d_i
+    grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
 
     # t6 = time.time()
 
