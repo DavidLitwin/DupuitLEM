@@ -167,8 +167,8 @@ for i in range(N):
     # t5 = time.time()
 
     grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
-    grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
-
+    # grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
+    grid.at_node['aquifer_base__elevation'][grid.core_nodes] = grid.at_node['topographic__elevation'][grid.core_nodes] - d_i
 
     # t6 = time.time()
 
