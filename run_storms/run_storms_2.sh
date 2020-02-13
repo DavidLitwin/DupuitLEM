@@ -13,12 +13,12 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
-mkdir ~/data/dlitwin3/DupuitLEMResults/storms_2_B-$SLURM_ARRAY_TASK_ID
-mkdir ~/data/dlitwin3/DupuitLEMResults/storms_2_B-$SLURM_ARRAY_TASK_ID/data
+mkdir ~/data/dlitwin3/DupuitLEMResults/storms_2_C-$SLURM_ARRAY_TASK_ID
+mkdir ~/data/dlitwin3/DupuitLEMResults/storms_2_C-$SLURM_ARRAY_TASK_ID/data
 cd ~/data/dlitwin3/DupuitLEMScripts
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/storms_2_B-$SLURM_ARRAY_TASK_ID/script_id.txt
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/storms_2_C-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/storms_2_B-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/run_storms/run_storms_2.py ~/data/dlitwin3/DupuitLEMResults/storms_2_B-$SLURM_ARRAY_TASK_ID
-cd ~/data/dlitwin3/DupuitLEMResults/storms_2_B-$SLURM_ARRAY_TASK_ID
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/storms_2_C-$SLURM_ARRAY_TASK_ID/gdp_id.txt
+cp ~/data/dlitwin3/DupuitLEMScripts/run_storms/run_storms_2.py ~/data/dlitwin3/DupuitLEMResults/storms_2_C-$SLURM_ARRAY_TASK_ID
+cd ~/data/dlitwin3/DupuitLEMResults/storms_2_C-$SLURM_ARRAY_TASK_ID
 python run_storms_2.py
