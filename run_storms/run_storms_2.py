@@ -123,13 +123,13 @@ ld = LinearDiffuser(grid, linear_diffusivity=D)
 num_substeps = np.zeros((N,2))
 max_rel_change = np.zeros(N)
 perc90_rel_change = np.zeros(N)
-# times = np.zeros((N,7))
+times = np.zeros((N,7))
 t0 = time.time()
 for i in range(N):
     elev0 = elev.copy()
     ############### Run event ####################
 
-    # t1 = time.time()
+    t1 = time.time()
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
@@ -142,11 +142,11 @@ for i in range(N):
     gdp.run_with_adaptive_time_step_solver(dt_event)
     num_substeps[i,0] = gdp.number_of_substeps
 
-    # t2 = time.time()
+    t2 = time.time()
 
     qevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
-    # t3 = time.time()
+    t3 = time.time()
 
     ################ Run interevent ####################
 
@@ -161,28 +161,28 @@ for i in range(N):
     gdp.run_with_adaptive_time_step_solver(dt_interevent)
     num_substeps[i,1] = gdp.number_of_substeps
 
-    # t4 = time.time()
+    t4 = time.time()
 
     qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
-    # t5 = time.time()
+    t5 = time.time()
 
     grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
     grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
 
-    # t6 = time.time()
+    t6 = time.time()
 
     grid.at_node['storm_average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
     fa.run_one_step()
+
+    t7 = time.time()   
+    
     sp.run_one_step(dt_m)
-
-    # t7 = time.time()
-
     ld.run_one_step(dt_m)
 
     elev[elev<base] = base[elev<base]
 
-    # t8 = time.time()
+    t8 = time.time()
 
     ############# record output ##############
 
@@ -210,7 +210,7 @@ for i in range(N):
     if perc90_rel_change[i] < 1e-6:
         break
 
-    # times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
+    times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
 
 tfin = time.time()
 tot_time = tfin-t0
