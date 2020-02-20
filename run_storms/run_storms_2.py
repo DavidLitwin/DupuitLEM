@@ -3,6 +3,9 @@
 Created on 19 Nov 2019
 
 First of two tests running storms for a full range of Ksat values. This is the lower set, 0.1<Ksat<2.4 m/hr
+This script determines whether there are pits with a (relatively fast) method from DepressionFinderAndRouter,
+and if there are, uses the LakeMapperBarnes to fill pits. This should be significantly faster than
+running DepressionFinderAndRouter. 
 
 @author: dgbli
 """
@@ -16,7 +19,8 @@ from landlab.components import (
     FlowAccumulator,
     FastscapeEroder,
     LinearDiffuser,
-    SinkFillerBarnes,
+    LakeMapperBarnes,
+    DepressionFinderAndRouter,
     )
 from landlab.io.netcdf import write_raster_netcdf
 from landlab.grid.mappers import map_mean_of_link_nodes_to_link
@@ -78,7 +82,7 @@ MSF = 500 # morphologic scaling factor [-]
 dt_m = MSF*(dt_event+dt_interevent)
 N = T//dt_m
 N = int(N)
-output_interval = 10000
+output_interval = 5000
 
 # Set output options
 output_fields = [
@@ -115,9 +119,16 @@ Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-ave
 gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=Kavg, \
                                   recharge_rate=0.0,regularization_f=0.01, courant_coefficient=0.2)
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
-                     depression_finder = 'DepressionFinderAndRouter', runoff_rate='storm_average_surface_water__specific_discharge')
+                      runoff_rate='storm_average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
+                              surface='topographic__elevation',
+                              fill_surface='topographic__elevation',
+                              redirect_flow_steepest_descent=False,
+                              reaccumulate_flow=False,
+                              track_lakes=False)
 sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_field='surface_water__discharge')
 ld = LinearDiffuser(grid, linear_diffusivity=D)
+dfr = DepressionFinderAndRouter(grid)
 
 # Run model forward
 num_substeps = np.zeros((N,2))
@@ -127,9 +138,9 @@ times = np.zeros((N,7))
 t0 = time.time()
 for i in range(N):
     elev0 = elev.copy()
-    ############### Run event ####################
 
     t1 = time.time()
+    ############### Run event ####################
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
@@ -141,13 +152,9 @@ for i in range(N):
     gdp.recharge = R_event
     gdp.run_with_adaptive_time_step_solver(dt_event)
     num_substeps[i,0] = gdp.number_of_substeps
-
-    t2 = time.time()
-
     qevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
-    t3 = time.time()
-
+    t2 = time.time()
     ################ Run interevent ####################
 
     #set hydraulic conductivity based on depth
@@ -160,25 +167,28 @@ for i in range(N):
     gdp.recharge = 0.0
     gdp.run_with_adaptive_time_step_solver(dt_interevent)
     num_substeps[i,1] = gdp.number_of_substeps
-
-    t4 = time.time()
-
     qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
-    t5 = time.time()
+    grid.at_node['storm_average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
 
+    t3 = time.time()
+    #uplift and regolith production
     grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
     grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
 
-    t6 = time.time()
+    t4 = time.time()
+    dfr._find_pits()
 
-    grid.at_node['storm_average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
+    t5 = time.time()
+    if dfr._number_of_pits > 0:
+        lmb.run_one_step()
+
+    t6 = time.time()
     fa.run_one_step()
 
-    t7 = time.time()   
-    
-    sp.run_one_step(dt_m)
+    t7 = time.time()
     ld.run_one_step(dt_m)
+    sp.run_one_step(dt_m)
 
     elev[elev<base] = base[elev<base]
 
