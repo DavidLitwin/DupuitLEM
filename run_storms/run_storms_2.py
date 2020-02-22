@@ -5,7 +5,7 @@ Created on 19 Nov 2019
 First of two tests running storms for a full range of Ksat values. This is the lower set, 0.1<Ksat<2.4 m/hr
 This script determines whether there are pits with a (relatively fast) method from DepressionFinderAndRouter,
 and if there are, uses the LakeMapperBarnes to fill pits. This should be significantly faster than
-running DepressionFinderAndRouter. 
+running DepressionFinderAndRouter.
 
 @author: dgbli
 """
@@ -105,9 +105,6 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = d_i + 0.1*np.random.rand(len(elev))
 
-sf = SinkFillerBarnes(grid, method='D8')
-sf.run_one_step()
-
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 qavg_storm = grid.add_zeros('node', 'storm_average_surface_water__specific_discharge')
@@ -135,6 +132,7 @@ num_substeps = np.zeros((N,2))
 max_rel_change = np.zeros(N)
 perc90_rel_change = np.zeros(N)
 times = np.zeros((N,7))
+num_pits = np.zeros(N)
 t0 = time.time()
 for i in range(N):
     elev0 = elev.copy()
@@ -178,6 +176,7 @@ for i in range(N):
 
     t4 = time.time()
     dfr._find_pits()
+    num_pits[i] = dfr._number_of_pits
 
     t5 = time.time()
     if dfr._number_of_pits > 0:
@@ -247,3 +246,6 @@ np.savetxt(filename,max_rel_change)
 
 filename = './data/vary_Ksat_' + Ks_print + '_90perc_rel_change' + '.txt'
 np.savetxt(filename,perc90_rel_change)
+
+filename = './data/vary_Ksat_' + Ks_print + '_num_pits' + '.txt'
+np.savetxt(filename,num_pits)
