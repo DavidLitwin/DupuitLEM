@@ -219,9 +219,7 @@ for i in range(N):
         np.savetxt(filename,num_pits)
 
         filename = './data/vary_Ksat_' + Ks_print + '_time' + '.txt'
-        timefile = open(filename,'w')
-        timefile.write('Run time: ' + str(tot_time))
-        timefile.close()
+        np.savetxt(filename,times)
 
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)
@@ -259,3 +257,6 @@ np.savetxt(filename,perc90_rel_change)
 
 filename = './data/vary_Ksat_' + Ks_print + '_num_pits' + '.txt'
 np.savetxt(filename,num_pits)
+
+filename = './data/vary_Ksat_' + Ks_print + '_time' + '.txt'
+np.savetxt(filename,times)
