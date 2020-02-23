@@ -122,7 +122,8 @@ lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
                               fill_surface='topographic__elevation',
                               redirect_flow_steepest_descent=False,
                               reaccumulate_flow=False,
-                              track_lakes=False)
+                              track_lakes=False,
+                              ignore_overfill=True)
 sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_field='surface_water__discharge')
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 dfr = DepressionFinderAndRouter(grid)
