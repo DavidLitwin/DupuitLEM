@@ -208,19 +208,19 @@ for i in range(N):
         print('Completed loop %d' % i)
 
         filename = './data/vary_Ksat_' + Ks_print + '_substeps' + '.txt'
-        np.savetxt(filename,num_substeps)
+        np.savetxt(filename,num_substeps, fmt='%.1f')
 
         filename = './data/vary_Ksat_' + Ks_print + '_max_rel_change' + '.txt'
-        np.savetxt(filename,max_rel_change)
+        np.savetxt(filename,max_rel_change, fmt='%.4e')
 
         filename = './data/vary_Ksat_' + Ks_print + '_90perc_rel_change' + '.txt'
-        np.savetxt(filename,perc90_rel_change)
+        np.savetxt(filename,perc90_rel_change, fmt='%.4e')
 
         filename = './data/vary_Ksat_' + Ks_print + '_num_pits' + '.txt'
-        np.savetxt(filename,num_pits)
+        np.savetxt(filename,num_pits, fmt='%.1f')
 
         filename = './data/vary_Ksat_' + Ks_print + '_time' + '.txt'
-        np.savetxt(filename,times)
+        np.savetxt(filename,times, fmt='%.4e')
 
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)
@@ -248,16 +248,16 @@ timefile.write('Run time: ' + str(tot_time))
 timefile.close()
 
 filename = './data/vary_Ksat_' + Ks_print + '_substeps' + '.txt'
-np.savetxt(filename,num_substeps)
+np.savetxt(filename,num_substeps, fmt='%.1f')
 
 filename = './data/vary_Ksat_' + Ks_print + '_max_rel_change' + '.txt'
-np.savetxt(filename,max_rel_change)
+np.savetxt(filename,max_rel_change, fmt='%.4e')
 
 filename = './data/vary_Ksat_' + Ks_print + '_90perc_rel_change' + '.txt'
-np.savetxt(filename,perc90_rel_change)
+np.savetxt(filename,perc90_rel_change, fmt='%.4e')
 
 filename = './data/vary_Ksat_' + Ks_print + '_num_pits' + '.txt'
-np.savetxt(filename,num_pits)
+np.savetxt(filename,num_pits, fmt='%.1f')
 
 filename = './data/vary_Ksat_' + Ks_print + '_time' + '.txt'
-np.savetxt(filename,times)
+np.savetxt(filename,times, fmt='%.4e')
