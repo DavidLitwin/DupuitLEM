@@ -132,8 +132,8 @@ dfr = DepressionFinderAndRouter(grid)
 num_substeps = np.zeros((N,2))
 max_rel_change = np.zeros(N)
 perc90_rel_change = np.zeros(N)
-times = np.zeros((N,7))
-num_pits = np.zeros(N)
+times = np.zeros((N//100,7))
+num_pits = np.zeros(N//100)
 t0 = time.time()
 for i in range(N):
     elev0 = elev.copy()
@@ -177,7 +177,6 @@ for i in range(N):
 
     t4 = time.time()
     dfr._find_pits()
-    num_pits[i] = dfr._number_of_pits
 
     t5 = time.time()
     if dfr._number_of_pits > 0:
@@ -194,7 +193,9 @@ for i in range(N):
 
     t8 = time.time()
 
-    times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
+    if i%100 == 0:
+        num_pits[i//100] = dfr._number_of_pits
+        times[i//100,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
 
     ############# record output ##############
 
