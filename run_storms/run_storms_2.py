@@ -194,6 +194,8 @@ for i in range(N):
 
     t8 = time.time()
 
+    times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
+
     ############# record output ##############
 
     if i % output_interval == 0:
@@ -213,6 +215,14 @@ for i in range(N):
         filename = './data/vary_Ksat_' + Ks_print + '_90perc_rel_change' + '.txt'
         np.savetxt(filename,perc90_rel_change)
 
+        filename = './data/vary_Ksat_' + Ks_print + '_num_pits' + '.txt'
+        np.savetxt(filename,num_pits)
+
+        filename = './data/vary_Ksat_' + Ks_print + '_time' + '.txt'
+        timefile = open(filename,'w')
+        timefile.write('Run time: ' + str(tot_time))
+        timefile.close()
+
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)
     perc90_rel_change[i] = np.percentile(elev_diff,90)
@@ -220,7 +230,6 @@ for i in range(N):
     if perc90_rel_change[i] < 1e-6:
         break
 
-    times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
 
 tfin = time.time()
 tot_time = tfin-t0
