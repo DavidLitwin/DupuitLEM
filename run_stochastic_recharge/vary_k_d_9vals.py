@@ -28,9 +28,10 @@ from landlab.components import (
     FlowAccumulator,
     FastscapeEroder,
     LinearDiffuser,
-    SinkFillerBarnes,
+    LakeMapperBarnes,
+    DepressionFinderAndRouter,
+    PrecipitationDistribution,
     )
-from landlab.components.uniform_precip import PrecipitationDistribution
 from landlab.io.netcdf import write_raster_netcdf
 from landlab.grid.mappers import map_mean_of_link_nodes_to_link
 
@@ -68,7 +69,7 @@ MSF = 1000 # morphologic scaling factor [-]
 T_h_unique = 1*365*24*3600 # the total duration of uniqe recharge events (1 year, then repeat)
 
 #recharge parameters
-storm_dt = 1*3600 # mean recharge duration [s]
+storm_dt = 3*3600 # mean recharge duration [s]
 interstorm_dt = 24*3600 # mean duration between recharge events [s]
 depth = 0.01 # mean depth of recharge [m]
 
@@ -113,10 +114,6 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = d_i + 0.1*np.random.rand(len(elev))
-
-sf = SinkFillerBarnes(grid, method='D8')
-sf.run_one_step()
-
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
@@ -128,9 +125,17 @@ Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-ave
 gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=Kavg, \
                                   recharge_rate=0.0,regularization_f=0.01, courant_coefficient=0.2)
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
-                     depression_finder = 'DepressionFinderAndRouter', runoff_rate='storm_average_surface_water__specific_discharge')
+                      runoff_rate='storm_average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
+                              surface='topographic__elevation',
+                              fill_surface='topographic__elevation',
+                              redirect_flow_steepest_descent=False,
+                              reaccumulate_flow=False,
+                              track_lakes=False,
+                              ignore_overfill=True)
 sp = FastscapeEroder(grid,K_sp = K,m_sp = m, n_sp=n,discharge_field='surface_water__discharge')
 ld = LinearDiffuser(grid, linear_diffusivity=D)
+dfr = DepressionFinderAndRouter(grid)
 precip = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
     mean_interstorm_duration=interstorm_dt, mean_storm_depth=depth,
     total_t=T_h_unique)
@@ -153,7 +158,8 @@ N = len(all_intensities)
 num_substeps = np.zeros((N,2))
 max_rel_change = np.zeros(N)
 perc90_rel_change = np.zeros(N)
-# times = np.zeros((N,7))
+times = np.zeros((N//100,7))
+num_pits = np.zeros(N//100)
 t0 = time.time()
 for i in range(N):
     R_event = all_intensities[i]
@@ -227,24 +233,24 @@ for i in range(N):
     if i % output_interval == 0:
         gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-        filename = './data/vary_k_d_' + Ks_print + '_grid_' + str(i) + '.nc'
+        filename = './data/vary_k_d_' + str(task_id) + '_grid_' + str(i) + '.nc'
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
 
-        filename = './data/vary_k_d_' + Ks_print + '_substeps' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_substeps' + '.txt'
         np.savetxt(filename,num_substeps, fmt='%.1f')
 
-        filename = './data/vary_k_d_' + Ks_print + '_max_rel_change' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_max_rel_change' + '.txt'
         np.savetxt(filename,max_rel_change, fmt='%.4e')
 
-        filename = './data/vary_k_d_' + Ks_print + '_90perc_rel_change' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_90perc_rel_change' + '.txt'
         np.savetxt(filename,perc90_rel_change, fmt='%.4e')
 
-        filename = './data/vary_k_d_' + Ks_print + '_num_pits' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_num_pits' + '.txt'
         np.savetxt(filename,num_pits, fmt='%.1f')
 
-        filename = './data/vary_k_d_' + Ks_print + '_time' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_time' + '.txt'
         np.savetxt(filename,times, fmt='%.4e')
 
     elev_diff = abs(elev-elev0)/elev0
