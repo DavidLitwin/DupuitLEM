@@ -162,9 +162,9 @@ for i in range(N):
     dt_m = (dt_event + dt_interevent)*MSF
 
     elev0 = elev.copy()
-    ############### Run event ####################
 
-    # t1 = time.time()
+    t1 = time.time()
+    ############### Run event ####################
 
     #set hydraulic conductivity based on depth
     gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
@@ -176,13 +176,9 @@ for i in range(N):
     gdp.recharge = R_event
     gdp.run_with_adaptive_time_step_solver(dt_event)
     num_substeps[i,0] = gdp.number_of_substeps
-
-    # t2 = time.time()
-
     qevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
-    # t3 = time.time()
-
+    t2 = time.time()
     ################ Run interevent ####################
 
     #set hydraulic conductivity based on depth
@@ -195,49 +191,61 @@ for i in range(N):
     gdp.recharge = 0.0
     gdp.run_with_adaptive_time_step_solver(dt_interevent)
     num_substeps[i,1] = gdp.number_of_substeps
-
-    # t4 = time.time()
-
     qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
-    # t5 = time.time()
+    grid.at_node['storm_average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
 
+    t3 = time.time()
+    #uplift and regolith production
     grid.at_node['topographic__elevation'][grid.core_nodes] += uplift_rate*dt_m
     grid.at_node['aquifer_base__elevation'][grid.core_nodes] += uplift_rate*dt_m - w0*np.exp(-(elev[grid.core_nodes]-base[grid.core_nodes])/d_s)*dt_m
 
+    t4 = time.time()
+    dfr._find_pits()
 
-    # t6 = time.time()
+    t5 = time.time()
+    if dfr._number_of_pits > 0:
+        lmb.run_one_step()
 
-    grid.at_node['storm_average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
+    t6 = time.time()
     fa.run_one_step()
-    sp.run_one_step(dt_m)
 
-    # t7 = time.time()
-
+    t7 = time.time()
     ld.run_one_step(dt_m)
+    sp.run_one_step(dt_m)
 
     elev[elev<base] = base[elev<base]
 
-    # t8 = time.time()
+    t8 = time.time()
+
+    if i%100 == 0:
+        num_pits[i//100] = dfr._number_of_pits
+        times[i//100,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
 
     ############# record output ##############
 
     if i % output_interval == 0:
         gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-        filename = './data/vary_Ksat_' + str(task_id) + '_grid_' + str(i) + '.nc'
+        filename = './data/vary_k_d_' + Ks_print + '_grid_' + str(i) + '.nc'
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
 
-        filename = './data/vary_Ksat_' + str(task_id) + '_substeps' + '.txt'
-        np.savetxt(filename,num_substeps)
+        filename = './data/vary_k_d_' + Ks_print + '_substeps' + '.txt'
+        np.savetxt(filename,num_substeps, fmt='%.1f')
 
-        filename = './data/vary_Ksat_' + str(task_id) + '_max_rel_change' + '.txt'
-        np.savetxt(filename,max_rel_change)
+        filename = './data/vary_k_d_' + Ks_print + '_max_rel_change' + '.txt'
+        np.savetxt(filename,max_rel_change, fmt='%.4e')
 
-        filename = './data/vary_Ksat_' + str(task_id) + '_90perc_rel_change' + '.txt'
-        np.savetxt(filename,perc90_rel_change)
+        filename = './data/vary_k_d_' + Ks_print + '_90perc_rel_change' + '.txt'
+        np.savetxt(filename,perc90_rel_change, fmt='%.4e')
+
+        filename = './data/vary_k_d_' + Ks_print + '_num_pits' + '.txt'
+        np.savetxt(filename,num_pits, fmt='%.1f')
+
+        filename = './data/vary_k_d_' + Ks_print + '_time' + '.txt'
+        np.savetxt(filename,times, fmt='%.4e')
 
     elev_diff = abs(elev-elev0)/elev0
     max_rel_change[i] = np.max(elev_diff)
@@ -245,8 +253,6 @@ for i in range(N):
 
     # if perc90_rel_change[i] < 1e-6:
     #     break
-
-    # times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
 
 tfin = time.time()
 tot_time = tfin-t0
@@ -257,19 +263,19 @@ tot_time = tfin-t0
 # collect output and save
 gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-filename = './data/vary_Ksat_' + str(task_id) + '_grid_' + str(i) + '.nc'
+filename = './data/vary_k_d_' + str(task_id) + '_grid_' + str(i) + '.nc'
 write_raster_netcdf(filename, grid, names=output_fields, format="NETCDF4")
 
-filename = './data/vary_Ksat_' + str(task_id) + '_time' + '.txt'
+filename = './data/vary_k_d_' + str(task_id) + '_time' + '.txt'
 timefile = open(filename,'w')
 timefile.write('Run time: ' + str(tot_time))
 timefile.close()
 
-filename = './data/vary_Ksat_' + str(task_id) + '_substeps' + '.txt'
+filename = './data/vary_k_d_' + str(task_id) + '_substeps' + '.txt'
 np.savetxt(filename,num_substeps)
 
-filename = './data/vary_Ksat_' + str(task_id) + '_max_rel_change' + '.txt'
+filename = './data/vary_k_d_' + str(task_id) + '_max_rel_change' + '.txt'
 np.savetxt(filename,max_rel_change)
 
-filename = './data/vary_Ksat_' + str(task_id) + '_90perc_rel_change' + '.txt'
+filename = './data/vary_k_d_' + str(task_id) + '_90perc_rel_change' + '.txt'
 np.savetxt(filename,perc90_rel_change)

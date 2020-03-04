@@ -13,12 +13,12 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
-mkdir ~/data/dlitwin3/DupuitLEMResults/vary_k_3vals-$SLURM_ARRAY_TASK_ID
-mkdir ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals-$SLURM_ARRAY_TASK_ID/data
+mkdir ~/data/dlitwin3/DupuitLEMResults/vary_k_9vals_stoch-$SLURM_ARRAY_TASK_ID
+mkdir ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID/data
 cd ~/data/dlitwin3/DupuitLEMScripts
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals-$SLURM_ARRAY_TASK_ID/script_id.txt
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/vary_k_d_9vals.py ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals-$SLURM_ARRAY_TASK_ID
-cd ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals-$SLURM_ARRAY_TASK_ID
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID/gdp_id.txt
+cp ~/data/dlitwin3/DupuitLEMScripts/vary_k_d_9vals.py ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID
+cd ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID
 python vary_k_d_9vals.py
