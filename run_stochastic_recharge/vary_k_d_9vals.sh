@@ -19,6 +19,6 @@ cd ~/data/dlitwin3/DupuitLEMScripts
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/vary_k_d_9vals.py ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID
+cp ~/data/dlitwin3/DupuitLEMScripts/run_storms/vary_k_d_9vals.py ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID
 cd ~/data/dlitwin3/DupuitLEMResults/vary_k_d_9vals_stoch-$SLURM_ARRAY_TASK_ID
 python vary_k_d_9vals.py
