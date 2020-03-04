@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=vary_k_d_9vals
-#SBATCH --time=72:0:0
+#SBATCH --time=24:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node

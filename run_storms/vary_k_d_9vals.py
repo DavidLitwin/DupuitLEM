@@ -53,7 +53,7 @@ job_id = os.environ['SLURM_ARRAY_JOB_ID']
 # Set parameters
 events_per_year = 365 # number of storm events per year
 R_tot = 1.5  # annual recharge [m]
-dt_event = 1*3600 # event duration [s]
+dt_event = 3*3600 # event duration [s]
 dt_interevent = (365*24*3600-events_per_year*dt_event)/events_per_year
 R_event = R_tot/events_per_year/dt_event # event recharge rate [m/s]
 Ks_all = np.array([0.2, 1, 2])/(3600)  # hydraulic conductivity at the surface [m/s]
