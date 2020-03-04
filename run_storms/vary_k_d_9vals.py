@@ -9,6 +9,7 @@ Test three values of ksat: 0.2, 1, 2 m/hr, and three values of d_s: 0.5, 1.0, 2.
 import os
 import time
 import numpy as np
+from itertools import product
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -105,6 +106,7 @@ base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 gw_flux = grid.add_zeros('node', 'groundwater__specific_discharge_node')
+_ = grid.add_zeros('node', 'storm_average_surface_water__specific_discharge')
 Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-averaged hydraulic conductivity
 
 # initialize model components
@@ -127,7 +129,8 @@ dfr = DepressionFinderAndRouter(grid)
 num_substeps = np.zeros((N,2))
 max_rel_change = np.zeros(N)
 perc90_rel_change = np.zeros(N)
-# times = np.zeros((N,7))
+times = np.zeros((N,7))
+num_pits = np.zeros(N)
 t0 = time.time()
 for i in range(N):
     elev0 = elev.copy()
@@ -196,24 +199,24 @@ for i in range(N):
     if i % output_interval == 0:
         gw_flux[:] = gdp.calc_gw_flux_at_node()
 
-        filename = './data/vary_k_d_' + Ks_print + '_grid_' + str(i) + '.nc'
+        filename = './data/vary_k_d_' + str(task_id) + '_grid_' + str(i) + '.nc'
         write_raster_netcdf(
                 filename, grid, names=output_fields, format="NETCDF4")
         print('Completed loop %d' % i)
 
-        filename = './data/vary_k_d_' + Ks_print + '_substeps' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_substeps' + '.txt'
         np.savetxt(filename,num_substeps, fmt='%.1f')
 
-        filename = './data/vary_k_d_' + Ks_print + '_max_rel_change' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_max_rel_change' + '.txt'
         np.savetxt(filename,max_rel_change, fmt='%.4e')
 
-        filename = './data/vary_k_d_' + Ks_print + '_90perc_rel_change' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_90perc_rel_change' + '.txt'
         np.savetxt(filename,perc90_rel_change, fmt='%.4e')
 
-        filename = './data/vary_k_d_' + Ks_print + '_num_pits' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_num_pits' + '.txt'
         np.savetxt(filename,num_pits, fmt='%.1f')
 
-        filename = './data/vary_k_d_' + Ks_print + '_time' + '.txt'
+        filename = './data/vary_k_d_' + str(task_id) + '_time' + '.txt'
         np.savetxt(filename,times, fmt='%.4e')
 
     elev_diff = abs(elev-elev0)/elev0
