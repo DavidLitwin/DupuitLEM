@@ -220,10 +220,8 @@ for i in range(N):
     max_rel_change[i] = np.max(elev_diff)
     perc90_rel_change[i] = np.percentile(elev_diff,90)
 
-    if perc90_rel_change[i] < 1e-6:
-        break
-
-    # times[i,:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5, t7-t6, t8-t7]
+    # if perc90_rel_change[i] < 1e-6:
+    #     break
 
 tfin = time.time()
 tot_time = tfin-t0
