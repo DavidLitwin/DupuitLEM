@@ -106,7 +106,7 @@ base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 gw_flux = grid.add_zeros('node', 'groundwater__specific_discharge_node')
-_ = grid.add_zeros('node', 'storm_average_surface_water__specific_discharge')
+q = grid.add_zeros('node', 'storm_average_surface_water__specific_discharge')
 Kavg = avg_hydraulic_conductivity(grid,wt-base,elev-base,K0,Ks,d_k ) # depth-averaged hydraulic conductivity
 
 # initialize model components
@@ -165,7 +165,7 @@ for i in range(N):
     num_substeps[i,1] = gdp.number_of_substeps
     qinterevent = grid.at_node['average_surface_water__specific_discharge'].copy()
 
-    grid.at_node['storm_average_surface_water__specific_discharge'] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
+    q[:] = (qevent*dt_event + qinterevent*dt_interevent)/(dt_event+dt_interevent)
 
     t3 = time.time()
     #uplift and regolith production
