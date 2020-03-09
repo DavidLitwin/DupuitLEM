@@ -333,6 +333,6 @@ for i in range(len(paths)):
     plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
     plt.close()
 
-data = {'ID':IDs, 'Ks':Ks_save, 'ds':params[:,2], 'DD_steady':mean_drainage_densities[:,0], 'DD_1':mean_drainage_densities[:,1], 'DD_30':mean_drainage_densities[:,2], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
+data = {'ID':IDs, 'Ks':Ks_save, 'ds':params[:,1], 'DD_steady':mean_drainage_densities[:,0], 'DD_1':mean_drainage_densities[:,1], 'DD_30':mean_drainage_densities[:,2], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
 df = pd.DataFrame(data)
 pickle.dump(df,open('../DupuitLEMResults/figs/vary_k_d_stoch/data_processed.p','wb'))
