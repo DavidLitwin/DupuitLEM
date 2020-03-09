@@ -2,8 +2,9 @@
 """
 Created on Mar 9, 2020
 
-Analysis of the output of steady recharge version of vary_k_d. Make static plots,
-calculate drainage density and recession constants.
+Analysis of the output of stochastic vary_k_d. Make static plots, calculate drainage
+density and recession constants. Calculates drainage density from average
+intensity, event time, and interevent time. Recession is calculated for 30 day drought.
 
 @author: dgbli
 """
@@ -71,8 +72,22 @@ def log_Recession_constant(X_0):
     return a, c, Q_0_new, Q_1_new
 
 ###################### initialize
-# Set parameters
-R = 1.5/(365*24*3600)  # steady, uniform recharge rate [m/s]
+# time parameters
+T_m_yr = 5e5 # total morphological time [yr]
+T_m = T_m_yr*(365*24*3600) # total simulation time [s]
+MSF = 1000 # morphologic scaling factor [-]
+T_h_unique = 1*365*24*3600 # the total duration of uniqe recharge events (1 year, then repeat)
+
+#recharge parameters
+storm_dt = 3*3600 # mean recharge duration [s]
+interstorm_dt = 24*3600 # mean duration between recharge events [s]
+depth = 0.01 # mean depth of recharge [m]
+#params for running model
+R_event = depth/storm_dt
+dt_event = storm_dt
+dt_interevent = interstorm_dt
+
+# hydro and geomorph parameters
 Ks_all = np.array([0.2, 1, 2])/(3600)  # hydraulic conductivity at the surface [m/s]
 w0 = 2E-4/(365*24*3600) #max rate of soil production [m/s]
 d_i_rel = 1.0 # initial depth relative to steady state depth [-]
@@ -87,11 +102,11 @@ params = np.array(list(product(Ks_all,d_s_all)))
 
 #######################
 
-mean_drainage_densities = np.zeros((len(params),3))
+mean_drainage_densities = np.zeros((len(params),2))
 recession_k = np.zeros((len(params),2))
 IDs = np.zeros(len(params))
 Ks_save = np.zeros(len(params))
-paths = glob.glob('../DupuitLEMResults/vary_k_d/vary_k_d_9vals_steady*')
+paths = glob.glob('../DupuitLEMResults/vary_k_d/vary_k_d_9vals_stoch*')
 
 for i in range(len(paths)):
 
@@ -115,6 +130,8 @@ for i in range(len(paths)):
 
     # import
     grid = read_netcdf(max_file)
+    grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
+                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
     elev = grid.at_node['topographic__elevation']
     base = grid.at_node['aquifer_base__elevation']
     wt = grid.at_node['water_table__elevation']
@@ -122,25 +139,25 @@ for i in range(len(paths)):
     # surface elevation
     plt.figure(figsize=(8,6))
     imshow_grid(grid,'topographic__elevation', cmap='gist_earth', colorbar_label = 'Elevation [m]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/elev_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/elev_'+str(ID) +'.png')
     plt.close()
 
     # regolith thickness
     plt.figure(figsize=(8,6))
     imshow_grid(grid,grid.at_node['topographic__elevation'] - grid.at_node['aquifer_base__elevation'],cmap='YlOrBr', colorbar_label = 'Regolith thickness [m]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/soil_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/soil_'+str(ID) +'.png')
     plt.close()
 
     # relative saturation
     plt.figure(figsize=(8,6))
     imshow_grid(grid,(wt-base)/(elev-base), cmap='Blues', limits=(0,1), colorbar_label = 'Relative saturated thickness [-]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/rel_thickness_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/rel_thickness_'+str(ID) +'.png')
     plt.close()
 
     # surface water discharge
     plt.figure(figsize=(8,6))
     imshow_grid(grid,grid.at_node['surface_water__discharge'], cmap='plasma', colorbar_label = 'surface water discharge [m3/s]', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/surface_water_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/surface_water_'+str(ID) +'.png')
     plt.close()
 
     # cross sections
@@ -155,7 +172,7 @@ for i in range(len(paths)):
 
     axs[2].set_xlabel('Distance (m)')
     axs[2].set_ylabel('Elevation (m)')
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/cross_section_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/cross_section_'+str(ID) +'.png')
     plt.close()
 
 
@@ -175,10 +192,72 @@ for i in range(len(paths)):
     plt.ylabel('Relative elevation change')
     plt.xlabel('Time step')
     plt.legend()
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/log_rel_change_'+str(ID)+'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/log_rel_change_'+str(ID)+'.png')
     plt.close()
 
-    ################################# Recession and drainage density
+
+    ######################### drainage density
+
+    # initialize model components
+    gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
+                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.2)
+    fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
+                         depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
+
+
+    # Run event (using the imported water table as an initial condition makes sense, because model records output at the end of interstorm)
+
+    gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
+                                     grid.at_node['topographic__elevation']-
+                                     grid.at_node['aquifer_base__elevation'],
+                                     K0,Ks,d_k,
+                                     )
+    # run gw model
+    gdp.recharge = R_event
+    gdp.run_with_adaptive_time_step_solver(dt_event)
+    fa.run_one_step()
+
+    Qevent = grid.at_node['surface_water__discharge'].copy()
+
+    # Run interevent
+
+    gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
+                                     grid.at_node['topographic__elevation']-
+                                     grid.at_node['aquifer_base__elevation'],
+                                     K0,Ks,d_k,
+                                     )
+    # run gw model
+    gdp.recharge = 0
+    gdp.run_with_adaptive_time_step_solver(dt_interevent)
+    fa.run_one_step()
+
+    Qinterevent = grid.at_node['surface_water__discharge'].copy()
+
+
+    # calculate drainage densities
+    event_channels = np.array(Qevent>= R_event*grid.dx*grid.dy, dtype=np.uint8)
+    interevent_channels = np.array(Qinterevent>= R_event*grid.dx*grid.dy, dtype=np.uint8)
+
+    event_dd = DrainageDensity(grid,channel__mask=event_channels)
+    event_dd_mean = event_dd.calculate_drainage_density()
+
+    interevent_dd = DrainageDensity(grid,channel__mask=interevent_channels)
+    interevent_dd_mean = interevent_dd.calculate_drainage_density()
+
+    mean_drainage_densities[i,0] = event_dd_mean
+    mean_drainage_densities[i,1] = interevent_dd_mean
+
+    plt.figure()
+    imshow_grid(grid,event_channels, plot_name='Maximum channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/max_channels_'+str(ID) +'.png')
+    plt.close()
+
+    plt.figure()
+    imshow_grid(grid,interevent_channels, plot_name='Minimum channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/min_channels_'+str(ID) +'.png')
+    plt.close()
+
+    ################################# Recession
 
     grid = read_netcdf(max_file)
     grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
@@ -186,13 +265,23 @@ for i in range(len(paths)):
     elev = grid.at_node['topographic__elevation']
     base = grid.at_node['aquifer_base__elevation']
     wt = grid.at_node['water_table__elevation']
-    Q_steady = grid.at_node['surface_water__discharge'].copy()
 
     # initialize model components
-    gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, \
-                                      recharge_rate=0.0,regularization_f=0.01)
+    gdp = GroundwaterDupuitPercolator(grid, porosity=0.2, hydraulic_conductivity=0.1, \
+                                      recharge_rate=0.0,regularization_f=0.01,courant_coefficient=0.2)
     fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8',  \
                          depression_finder = 'DepressionFinderAndRouter', runoff_rate='average_surface_water__specific_discharge')
+
+
+    # Run event (using the imported water table as an initial condition makes sense, because model records output at the end of interstorm)
+    gdp.K = avg_hydraulic_conductivity(grid,grid.at_node['aquifer__thickness'],
+                                     grid.at_node['topographic__elevation']-
+                                     grid.at_node['aquifer_base__elevation'],
+                                     K0,Ks,d_k,
+                                     )
+    # run gw model
+    gdp.recharge = R_event
+    gdp.run_with_adaptive_time_step_solver(dt_event)
 
     # Run recession
     T = 30*24*3600
@@ -215,26 +304,20 @@ for i in range(len(paths)):
         network_size[n] = sum(grid.at_node['surface_water__specific_discharge']>0)/grid.number_of_core_nodes
         q_sw_out[n] = gdp.calc_sw_flux_out()
 
-        # active drainage network after 1 day
-        if n == 12:
-            Q_recession_1 = grid.at_node['surface_water__discharge'].copy()
-
-    # active drainage network after 30 days
-    Q_recession_30 = grid.at_node['surface_water__discharge'].copy()
 
     t = np.array(np.arange(0,T,dt))/3600
     plt.figure()
     plt.plot(t,q_sw_out)
     plt.xlabel('time [hr]')
     plt.ylabel('Surface water discharge [$m^3/s$]')
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/recession_time_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/recession_time_'+str(ID) +'.png')
     plt.close()
 
     plt.figure()
     plt.plot(t, network_size*100)
     plt.xlabel('time [hr]')
     plt.ylabel('% nodes contributing surface water discharge')
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/recession_channels_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/recession_channels_'+str(ID) +'.png')
     plt.close()
 
     [a, c, Q_0_new, Q_1_new] = log_Recession_constant(q_sw_out) #a, c, Q_0_new, Q_1_new
@@ -247,37 +330,9 @@ for i in range(len(paths)):
     plt.loglog(10**(x),10**(y),'-',color = 'red')
     plt.xlabel('$Q_0 \, mm/hr$')
     plt.ylabel('$Q_1 \, mm/hr$')
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
-    plt.close()
-
-    # calculate drainage densities
-    steady_channels = np.array(Q_steady>= R*grid.dx*grid.dy, dtype=np.uint8)
-    recession_channels_1 = np.array(Q_recession_1>= R*grid.dx*grid.dy, dtype=np.uint8)
-    recession_channels_30 = np.array(Q_recession_30>= R*grid.dx*grid.dy, dtype=np.uint8)
-
-    steady_dd = DrainageDensity(grid,channel__mask=steady_channels)
-    steady_dd_mean = steady_dd.calculate_drainage_density()()
-
-    recession_dd_1 = DrainageDensity(grid,channel__mask=recession_channels_1)
-    recession_dd_mean_1 = recession_dd_1.calculate_drainage_density()()
-
-    recession_dd_30 = DrainageDensity(grid,channel__mask=recession_channels_30)
-    recession_dd_mean_30 = recession_dd_30.calculate_drainage_density()()
-
-    mean_drainage_densities[i,0] = steady_dd_mean
-    mean_drainage_densities[i,1] = recession_dd_mean_1
-    mean_drainage_densities[i,2] = recession_dd_mean_30
-
-    plt.figure()
-    imshow_grid(grid,steady_channels, plot_name='Steady channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/steady_channels_'+str(ID) +'.png')
-    plt.close()
-
-    plt.figure()
-    imshow_grid(grid,recession_channels_30, plot_name='30 day recession channel extent', allow_colorbar=False, cmap='Blues', grid_units=('m','m'))
-    plt.savefig('../DupuitLEMResults/figs/vary_k_d_steady/min_channels_'+str(ID) +'.png')
+    plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
     plt.close()
 
 data = {'ID':IDs, 'Ks':Ks_save, 'ds':params[:,2], 'DD_steady':mean_drainage_densities[:,0], 'DD_1':mean_drainage_densities[:,1], 'DD_30':mean_drainage_densities[:,2], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
 df = pd.DataFrame(data)
-pickle.dump(df,open('../DupuitLEMResults/figs/vary_k_d_steady/data_processed.p','wb'))
+pickle.dump(df,open('../DupuitLEMResults/figs/vary_k_d_stoch/data_processed.p','wb'))

@@ -249,6 +249,8 @@ for i in range(len(paths)):
     ################################# Recession
 
     grid = read_netcdf(max_file)
+    grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
+                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
     elev = grid.at_node['topographic__elevation']
     base = grid.at_node['aquifer_base__elevation']
     wt = grid.at_node['water_table__elevation']
