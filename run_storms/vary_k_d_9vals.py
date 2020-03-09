@@ -3,6 +3,7 @@
 Created on 19 Nov 2019
 
 Test three values of ksat: 0.2, 1, 2 m/hr, and three values of d_s: 0.5, 1.0, 2.0
+Recharge is regular, but intermittent.
 
 @author: dgbli
 """
