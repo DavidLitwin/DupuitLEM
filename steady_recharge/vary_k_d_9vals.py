@@ -85,7 +85,6 @@ output_fields = [
             "aquifer_base__elevation",
             "water_table__elevation",
             "surface_water__discharge",
-            "storm_average_surface_water__specific_discharge",
             "groundwater__specific_discharge_node"
             ]
 time_unit="years",
