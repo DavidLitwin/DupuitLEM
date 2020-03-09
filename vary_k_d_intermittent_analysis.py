@@ -103,12 +103,11 @@ for i in range(len(paths)):
     files = glob.glob(paths[i]+'/data/*.nc')
     ID = int(re.sub("[^0-9]", "", paths[i][-2:]))
     IDs[i] = ID
-    Ks_save[i] = params[ID]*3600
-    Ks = params[ID]
+    Ks_save[i] = params[ID,0]*3600
+    Ks = params[ID,0]
     K0 = 0.01*Ks
-    d_s = d_s_all[ID]
+    d_s = params[ID,1]
     d_k = d_s
-
     max_num = 0
     for j in range(len(files)):
         num = int(re.sub("[^0-9]", "", files[j][-9:]))

@@ -2,6 +2,9 @@
 """
 Created on Mar 9, 2020
 
+Analysis of the output of steady recharge version of vary_k_d. Make static plots,
+calculate drainage density and recession constants.
+
 @author: dgbli
 """
 
@@ -96,10 +99,10 @@ for i in range(len(paths)):
     files = glob.glob(paths[i]+'/data/*.nc')
     ID = int(re.sub("[^0-9]", "", paths[i][-2:]))
     IDs[i] = ID
-    Ks_save[i] = params[ID]*3600
-    Ks = params[ID]
+    Ks_save[i] = params[ID,0]*3600
+    Ks = params[ID,0]
     K0 = 0.01*Ks
-    d_s = params[ID]
+    d_s = params[ID,1]
     d_k = d_s
     max_num = 0
     for j in range(len(files)):
