@@ -306,7 +306,7 @@ for i in range(len(paths)):
 
     # calculate drainage density after 30 days recession
     Q_recession_30 = grid.at_node['surface_water__discharge'].copy()
-    recession_channels_30 = np.array(Q_recession_30>= R*grid.dx*grid.dy, dtype=np.uint8)
+    recession_channels_30 = np.array(Q_recession_30>= R_event*grid.dx*grid.dy, dtype=np.uint8)
     recession_dd_30 = DrainageDensity(grid,channel__mask=recession_channels_30)
     recession_dd_mean_30 = recession_dd_30.calculate_drainage_density()
     mean_drainage_densities[i,2] = recession_dd_mean_30
