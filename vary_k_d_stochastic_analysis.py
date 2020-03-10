@@ -102,7 +102,7 @@ params = np.array(list(product(Ks_all,d_s_all)))
 
 #######################
 
-mean_drainage_densities = np.zeros((len(params),2))
+mean_drainage_densities = np.zeros((len(params),3))
 recession_k = np.zeros((len(params),2))
 IDs = np.zeros(len(params))
 Ks_save = np.zeros(len(params))
@@ -304,6 +304,12 @@ for i in range(len(paths)):
         network_size[n] = sum(grid.at_node['surface_water__specific_discharge']>0)/grid.number_of_core_nodes
         q_sw_out[n] = gdp.calc_sw_flux_out()
 
+    # calculate drainage density after 30 days recession
+    Q_recession_30 = grid.at_node['surface_water__discharge'].copy()
+    recession_channels_30 = np.array(Q_recession_30>= R*grid.dx*grid.dy, dtype=np.uint8)
+    recession_dd_30 = DrainageDensity(grid,channel__mask=recession_channels_30)
+    recession_dd_mean_30 = recession_dd_30.calculate_drainage_density()
+    mean_drainage_densities[i,2] = recession_dd_mean_30
 
     t = np.array(np.arange(0,T,dt))/3600
     plt.figure()
@@ -333,6 +339,6 @@ for i in range(len(paths)):
     plt.savefig('../DupuitLEMResults/figs/vary_k_d_stoch/recession_plot_'+str(ID) +'.png', bbox_inches = 'tight')
     plt.close()
 
-data = {'ID':IDs, 'Ks':Ks_save, 'ds':params[:,1], 'DD_steady':mean_drainage_densities[:,0], 'DD_1':mean_drainage_densities[:,1], 'DD_30':mean_drainage_densities[:,2], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
+data = {'ID':IDs, 'Ks':Ks_save, 'ds':params[:,1], 'DD_event':mean_drainage_densities[:,0], 'DD_interevent':mean_drainage_densities[:,1], 'DD_30':mean_drainage_densities[:,2], 'rec_a':recession_k[:,0], 'rec_c':recession_k[:,1] }
 df = pd.DataFrame(data)
 pickle.dump(df,open('../DupuitLEMResults/figs/vary_k_d_stoch/data_processed.p','wb'))
