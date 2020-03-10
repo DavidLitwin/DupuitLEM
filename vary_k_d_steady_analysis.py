@@ -256,13 +256,13 @@ for i in range(len(paths)):
     recession_channels_30 = np.array(Q_recession_30>= R*grid.dx*grid.dy, dtype=np.uint8)
 
     steady_dd = DrainageDensity(grid,channel__mask=steady_channels)
-    steady_dd_mean = steady_dd.calculate_drainage_density()()
+    steady_dd_mean = steady_dd.calculate_drainage_density()
 
     recession_dd_1 = DrainageDensity(grid,channel__mask=recession_channels_1)
-    recession_dd_mean_1 = recession_dd_1.calculate_drainage_density()()
+    recession_dd_mean_1 = recession_dd_1.calculate_drainage_density()
 
     recession_dd_30 = DrainageDensity(grid,channel__mask=recession_channels_30)
-    recession_dd_mean_30 = recession_dd_30.calculate_drainage_density()()
+    recession_dd_mean_30 = recession_dd_30.calculate_drainage_density()
 
     mean_drainage_densities[i,0] = steady_dd_mean
     mean_drainage_densities[i,1] = recession_dd_mean_1
