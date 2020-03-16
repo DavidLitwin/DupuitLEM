@@ -31,7 +31,7 @@ def SimpleSteadyRecharge(class):
 
     """
 
-    def __init__(self,params):
+    def __init__(self,params,save_output=True):
 
         self._grid = params.pop("grid"))
         self._cores = self._grid.core_nodes
@@ -59,15 +59,15 @@ def SimpleSteadyRecharge(class):
         self.dt_m = self.MSF*self.dt_h
         self.N = int(self.T//self.dt_m)
 
-
         self._elev = self._grid.at_node("topographic__elevation")
         self._base = self._grid.at_node("aquifer_base__elevation")
         self._wt = self._grid.at_node("water_table__elevation")
         self._gw_flux = self._grid.add_zeros('node', 'groundwater__specific_discharge_node')
 
-        self._output_interval = params.pop("output_interval")
-        self._output_fields = params.pop("output_fields")
-        self._track_times = params.pop("track_times")
+        if save_output:
+            self._output_interval = params.pop("output_interval")
+            self._output_fields = params.pop("output_fields")
+            self._track_times = params.pop("track_times")
 
 
         # initialize model components
