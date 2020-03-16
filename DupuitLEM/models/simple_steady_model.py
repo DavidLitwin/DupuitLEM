@@ -21,7 +21,7 @@ from landlab.components import (
 from DupuitLEM.grid_functions.grid_funcs import calc_avg_hydraulic_conductivity
 
 
-def SimpleSteadyRecharge(class):
+class SimpleSteadyRecharge:
 
     """
     Simple groundwater landscape evolution model with constant uplift/baselevel
