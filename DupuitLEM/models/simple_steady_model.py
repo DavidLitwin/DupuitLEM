@@ -60,10 +60,10 @@ def SimpleSteadyRecharge(class):
         self.N = int(self.T//self.dt_m)
 
 
-        self._elev = grid.at_node("topographic__elevation")
-        self._base = grid.at_node("aquifer_base__elevation")
-        self._wt = grid.at_node("water_table__elevation")
-        self._gw_flux = grid.add_zeros('node', 'groundwater__specific_discharge_node')
+        self._elev = self._grid.at_node("topographic__elevation")
+        self._base = self._grid.at_node("aquifer_base__elevation")
+        self._wt = self._grid.at_node("water_table__elevation")
+        self._gw_flux = self._grid.add_zeros('node', 'groundwater__specific_discharge_node')
 
         self._output_interval = params.pop("output_interval")
         self._output_fields = params.pop("output_fields")
