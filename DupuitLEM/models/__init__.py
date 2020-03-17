@@ -4,3 +4,4 @@ of landlab.
 """
 
 from .simple_steady_model import SimpleSteadyRecharge
+from .stochastic_model import StochasticRechargeShearStress
