@@ -9,7 +9,6 @@ Author: David Litwin
 import time
 import numpy as np
 
-from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
     FlowAccumulator,
@@ -33,10 +32,10 @@ class SimpleSteadyRecharge:
 
     def __init__(self,params,save_output=True):
 
-        self._grid = params.pop("grid"))
+        self._grid = params.pop("grid")
         self._cores = self._grid.core_nodes
 
-        self.R = params.pop("recharge_rate")) #[m/s]
+        self.R = params.pop("recharge_rate") #[m/s]
         self.Ks = params.pop("hydraulic_conductivity") #[m/s]
         self.K0 = params.pop("min_hydraulic_conductivity")  #[m/s]
         self.d_k = params.pop("characteristic_k_depth")
@@ -59,9 +58,9 @@ class SimpleSteadyRecharge:
         self.dt_m = self.MSF*self.dt_h
         self.N = int(self.T//self.dt_m)
 
-        self._elev = self._grid.at_node("topographic__elevation")
-        self._base = self._grid.at_node("aquifer_base__elevation")
-        self._wt = self._grid.at_node("water_table__elevation")
+        self._elev = self._grid.at_node["topographic__elevation"]
+        self._base = self._grid.at_node["aquifer_base__elevation"]
+        self._wt = self._grid.at_node["water_table__elevation"]
         self._gw_flux = self._grid.add_zeros('node', 'groundwater__specific_discharge_node')
 
         if save_output:
@@ -105,7 +104,7 @@ class SimpleSteadyRecharge:
 
             t1 = time.time()
             #set hydraulic conductivity based on depth
-            self.gdp.K = calc_avg_hydraulic_conductivity(self._grid,grid.at_node['aquifer__thickness'],
+            self.gdp.K = calc_avg_hydraulic_conductivity(self._grid,self._grid.at_node['aquifer__thickness'],
                                              self._elev-self._base,
                                              self.K0,self.Ks,self.d_k,
                                              )
@@ -127,8 +126,8 @@ class SimpleSteadyRecharge:
             self.fa.run_one_step()
 
             t5 = time.time()
-            self.ld.run_one_step(dt_m)
-            self.sp.run_one_step(dt_m)
+            self.ld.run_one_step(self.dt_m)
+            self.sp.run_one_step(self.dt_m)
             self._elev[self._elev<self._base] = self._base[self._elev<self._base]
 
             t6 = time.time()

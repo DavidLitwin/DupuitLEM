@@ -7,8 +7,8 @@ Date: 16 Mar 2020
 
 import numpy as np
 
-from DupuitLEM import SimpleSteadyRecharge
 from landlab import RasterModelGrid
+from DupuitLEM import SimpleSteadyRecharge
 
 
 #parameters
@@ -40,10 +40,13 @@ grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
+d_i = -params["characteristic_w_depth"]*np.log(params["uplift_rate"]/params["permeability_production_rate"])
 elev[:] = d_i + 0.1*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
+
+params["grid"] = grid
 
 mdl = SimpleSteadyRecharge(params,save_output=False)
 
