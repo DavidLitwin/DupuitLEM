@@ -9,14 +9,16 @@ import numpy as np
 
 from landlab import RasterModelGrid
 from DupuitLEM import SimpleSteadyRecharge
+from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 
 #parameters
 params = {}
 params["recharge_rate"] = 1.5/(365*24*3600) #[m/s]
-params["hydraulic_conductivity"] = 1/3600 #[m/s]
-params["min_hydraulic_conductivity"] = 0.01/3600 #[m/s]
-params["characteristic_k_depth"] = 1 #m
+Ks = 1/3600 #[m/s]
+K0 = 0.01/3600 #[m/s]
+d_k = 1 #m
+params["hydraulic_conductivity"] = bind_avg_hydraulic_conductivity(Ks,K0,d_k)
 params["porosity"] = 0.2 #[]
 params["regularization_factor"] = 0.01
 params["courant_coefficient"] = 0.5

@@ -17,7 +17,6 @@ from landlab.components import (
     LakeMapperBarnes,
     DepressionFinderAndRouter,
     )
-from DupuitLEM.grid_functions.grid_funcs import calc_avg_hydraulic_conductivity
 
 
 class SimpleSteadyRecharge:
@@ -36,9 +35,7 @@ class SimpleSteadyRecharge:
         self._cores = self._grid.core_nodes
 
         self.R = params.pop("recharge_rate") #[m/s]
-        self.Ks = params.pop("hydraulic_conductivity") #[m/s]
-        self.K0 = params.pop("min_hydraulic_conductivity")  #[m/s]
-        self.d_k = params.pop("characteristic_k_depth")
+        self.Ksat = params.pop("hydraulic_conductivity") #[m/s]
         self.n = params.pop("porosity")
         self.r = params.pop("regularization_factor")
         self.c = params.pop("courant_coefficient")
@@ -49,7 +46,7 @@ class SimpleSteadyRecharge:
         self.U = params.pop("uplift_rate") # uniform uplift [m/s]
         self.m = params.pop("m_sp") #Exponent on Q []
         self.n = params.pop("n_sp") #Exponent on S []
-        self.K = params.pop("k_sp") #erosivity coefficient [m-1/2 s−1/2]
+        self.Ksp = params.pop("k_sp") #erosivity coefficient [m-1/2 s−1/2]
         self.D = params.pop("hillslope_diffusivity") # hillslope diffusivity [m2/s]
 
         self.dt_h = params.pop("hydrological_timestep") # hydrological timestep [s]
@@ -70,7 +67,7 @@ class SimpleSteadyRecharge:
 
 
         # initialize model components
-        self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, \
+        self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat\
                                           recharge_rate=self.R, regularization_f=self.r, \
                                           courant_coefficient=self.c, vn_coefficient = self.vn)
         self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director='D8',  \
@@ -82,7 +79,7 @@ class SimpleSteadyRecharge:
                                       reaccumulate_flow=False,
                                       track_lakes=False,
                                       ignore_overfill=True)
-        self.sp = FastscapeEroder(self._grid, K_sp = self.K, m_sp = self.m, n_sp=self.n, discharge_field='surface_water__discharge')
+        self.sp = FastscapeEroder(self._grid, K_sp = self.Ksp, m_sp = self.m, n_sp=self.n, discharge_field='surface_water__discharge')
         self.ld = LinearDiffuser(self._grid, linear_diffusivity = self.D)
         self.dfr = DepressionFinderAndRouter(self._grid)
 
@@ -103,11 +100,7 @@ class SimpleSteadyRecharge:
             elev0 = self._elev.copy()
 
             t1 = time.time()
-            #set hydraulic conductivity based on depth
-            self.gdp.K = calc_avg_hydraulic_conductivity(self._grid,self._grid.at_node['aquifer__thickness'],
-                                             self._elev-self._base,
-                                             self.K0,self.Ks,self.d_k,
-                                             )
+
             #run gw model
             self.gdp.run_with_adaptive_time_step_solver(self.dt_h)
             num_substeps[i] = self.gdp.number_of_substeps
