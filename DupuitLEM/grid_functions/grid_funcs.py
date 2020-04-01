@@ -17,10 +17,13 @@ def bind_avg_hydraulic_conductivity(ks,k0,dk):
             dk = characteristic depth
 
         """
-        h = grid.at_node['aquifer__thickness'],
-        b = grid.at_node['topographic__elevation']-grid.at_node['aquifer_base__elevation']
-        blink = map_mean_of_link_nodes_to_link(grid,b)
-        hlink = map_mean_of_link_nodes_to_link(grid,h)
+        h = grid.at_node["aquifer__thickness"]
+        b = (
+            grid.at_node["topographic__elevation"]
+            - grid.at_node["aquifer_base__elevation"]
+        )
+        blink = map_mean_of_link_nodes_to_link(grid, b)
+        hlink = map_mean_of_link_nodes_to_link(grid, h)
         b1 = blink[hlink>0.0]
         h1 = hlink[hlink>0.0]
         kavg = np.zeros_like(hlink)
@@ -62,7 +65,7 @@ def calc_shear_stress_at_node(grid, n_manning=0.05, rho = 1000, g = 9.81):
     Q = grid.at_node["surface_water__discharge"][grid.core_nodes]
 
     tau = np.zeros(grid.number_of_nodes)
-    tau[grid.core_nodes] = (rho * g * S_node * ( (n_manning * Q)/(grid.dx * np.sqrt(S_node)) )**(3/5)
+    tau[grid.core_nodes] = rho * g * S_node * ( (n_manning * Q)/(grid.dx * np.sqrt(S_node)) )**(3/5)
     return tau
 
 
@@ -88,7 +91,7 @@ def calc_erosion_from_shear_stress(grid,tauc,K,b):
     tau = grid.at_node['surface_water__shear_stress']
 
     dzdt = np.zeros_like(tau)
-    dzdt[grid.core_nodes] = K*np.power((tau[grid.core_nodes]-tauc),b)
-    dzdt[dzdt<0.0] = 0.0
+    dzdt[grid.core_nodes] = -K*np.power((tau[grid.core_nodes]-tauc),b)
+    dzdt[dzdt>0.0] = 0.0
 
     return dzdt
