@@ -16,7 +16,7 @@ from landlab.components import (
     LakeMapperBarnes,
     DepressionFinderAndRouter,
     )
-from DupuitLEM.grid_functions.grid_funcs import calc_avg_hydraulic_conductivity, calc_shear_stress_at_node
+from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_at_node
 
 
 class StochasticRechargeShearStress:
@@ -103,4 +103,4 @@ class StochasticRechargeShearStress:
 
         return storm_dts, interstorm_dts, intensities
 
-    def run_exponential_recharge_model(self)
+#    def run_exponential_recharge_model(self)
