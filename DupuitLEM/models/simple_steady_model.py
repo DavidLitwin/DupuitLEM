@@ -67,7 +67,7 @@ class SimpleSteadyRecharge:
 
 
         # initialize model components
-        self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat\
+        self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat, \
                                           recharge_rate=self.R, regularization_f=self.r, \
                                           courant_coefficient=self.c, vn_coefficient = self.vn)
         self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director='D8',  \
