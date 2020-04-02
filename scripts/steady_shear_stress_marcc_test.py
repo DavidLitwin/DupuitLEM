@@ -37,6 +37,20 @@ params["hydrological_timestep"] = 1e5 # hydrological timestep [s]
 params["total_time"] = 1e5*(365*24*3600) # total simulation time [s]
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
 
+
+params["output_interval"] = 5000
+params["output_fields" = [
+            "topographic__elevation",
+            "aquifer_base__elevation",
+            "water_table__elevation",
+            "surface_water__discharge",
+            "storm_average_surface_water__specific_discharge",
+            "groundwater__specific_discharge_node"
+            ]
+params["base_output_path"] = './data/steady_ss_test_'
+params["run_id"] = 0 #make this task_id if multiple runs
+
+
 #initialize grid
 np.random.seed(2)
 grid = RasterModelGrid((100, 100), xy_spacing=10.0)
@@ -51,6 +65,6 @@ wt[:] = elev.copy()
 
 params["grid"] = grid
 
-mdl = SteadyRechargeShearStress(params,save_output=False)
+mdl = SteadyRechargeShearStress(params,save_output=True)
 
 mdl.run_model()
