@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --mail-type=begin,end
 #SBATCH --mail-user=dlitwin3@jhu.edu
-#SBATCH --output=~/data/dlitwin3/DupuitLEMResults/slurm/slurm-$SLURM_JOBID.out
+#SBATCH -o ../../DupuitLEMResults/slurm/slurm-%A_%a.out
 #### load and unload modules you may need
 script=steady_shear_stress_marcc_test.py
 output_folder=steady_ss
