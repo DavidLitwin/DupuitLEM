@@ -11,6 +11,7 @@ import numpy as np
 
 from landlab.components import (
     GroundwaterDupuitPercolator,
+    FlowDirectorD8,
     FlowAccumulator,
     LinearDiffuser,
     LakeMapperBarnes,
@@ -26,18 +27,18 @@ def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
     c2 = np.logical_and(tau0<tauc,tau1>tauc)
     c3 = np.logical_and(tau0>tauc,tau1<tauc)
     #c4 = np.logical_and(tau0<tauc,tau1<tauc) #implied
-    tauint1[c1] = 0.5*tr*(tau0+tau1-2*tauc)
-    tauint1[c2] = 0.5*tr*(tau1-tauc)*((tau1-tauc)/(tau1-tau0))
-    tauint1[c3] = 0.5*tr*(tau0-tauc)*((tau0-tauc)/(tau0-tau1))
+    tauint1[c1] = 0.5*tr*(tau0+tau1-2*tauc)[c1]
+    tauint1[c2] = 0.5*tr*((tau1-tauc)*((tau1-tauc)/(tau1-tau0)))[c2]
+    tauint1[c3] = 0.5*tr*((tau0-tauc)*((tau0-tauc)/(tau0-tau1)))[c3]
     #tauint1[c4] = 0.0 #implied
 
     c1 = np.logical_and(tau1>tauc,tau2>tauc)
     c2 = np.logical_and(tau1<tauc,tau2>tauc)
     c3 = np.logical_and(tau1>tauc,tau2<tauc)
     #c4 = np.logical_and(tau1<tauc,tau2<tauc) #implied
-    tauint2[c1] = 0.5*td*(tau1+tau2-2*tauc)
-    tauint2[c2] = 0.5*td*(tau2-tauc)*((tau2-tauc)/(tau2-tau1))
-    tauint2[c3] = 0.5*td*(tau1-tauc)*((tau1-tauc)/(tau1-tau2))
+    tauint2[c1] = 0.5*td*(tau1+tau2-2*tauc)[c1]
+    tauint2[c2] = 0.5*td*((tau2-tauc)*((tau2-tauc)/(tau2-tau1)))[c2]
+    tauint2[c3] = 0.5*td*((tau1-tauc)*((tau1-tauc)/(tau1-tau2)))[c3]
     #tauint2[c4] = 0.0 #implied
 
     taueff = (tauint1+tauint2)/(tr+td) + tauc
@@ -133,10 +134,16 @@ class StochasticRechargeShearStress:
             interstorm_dts.append(interstorm_dt)
             intensities.append(float(grid.at_grid['rainfall__flux']))
 
-        return storm_dts, interstorm_dts, intensities
+        self.storm_dts = storm_dts
+        self.interstorm_dts = interstorm_dts
+        self.intensities = intensities
 
-    def run_hydrological_model(self):
+    def run_hydrological_step(self):
+        """"
+        Run hydrological model for series of event-interevent pairs, calculate shear stresses
+        and calculate effective erosion rate over the total_hydrological_time
 
+        """
         #update flow directions
         self.fd.run_one_step()
 
@@ -145,7 +152,7 @@ class StochasticRechargeShearStress:
         if self.dfr._number_of_pits > 0:
             self.lmb.run_one_step()
 
-        dzdt_eff = np.zeros_like(self._tau)
+        self.dzdt_eff = np.zeros_like(self._tau)
         tau2 = self._tau.copy()
         for i in range(len(self.storm_dts)):
             tau0 = tau2.copy() #save prev end of interstorm shear stress
@@ -163,28 +170,29 @@ class StochasticRechargeShearStress:
             tau2 = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
 
             #calculate effective shear stress across event-interevent pair
-            taueff = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
+            self._tau = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
 
             #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-            dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
+            self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
 
     def run_model(self):
+
+        #generate storm series to use each time
+        self.generate_exp_precip()
 
         N = self.N
         max_rel_change = np.zeros(N)
         perc90_rel_change = np.zeros(N)
-        times = np.zeros((N,5))
+        times = np.zeros((N,3))
 
         # Run model forward
         for i in range(N):
             elev0 = self._elev.copy()
 
             t1 = time.time()
-            #run gw model
-            self.run_hydrological_model()
-
-
+            #run gw model, calculate erosion rate
+            self.run_hydrological_step()
 
             t2 = time.time()
             #uplift and regolith production
@@ -192,21 +200,14 @@ class StochasticRechargeShearStress:
             self._base[self._cores] += self.U*self.dt_m - self.w0*np.exp(-(self._elev[self._cores]-self._base[self._cores])/self.d_s)*self.dt_m
 
             t3 = time.time()
-            t4 = time.time()
-            t5 = time.time()
-            #run linear diffusion
+            #run linear diffusion, erosion
             self.ld.run_one_step(self.dt_m)
-
-            #calc shear stress and erosion
-            self._tau = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
-            dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-            self._elev += dzdt*self.dt_m
-
+            self._elev += self.dzdt_eff*self.dt_m
             #check for places where erosion to bedrock occurs
             self._elev[self._elev<self._base] = self._base[self._elev<self._base]
 
-            t6 = time.time()
-            times[i:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5]
+            t4 = time.time()
+            times[i:] = [t2-t1, t3-t2, t4-t3]
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
             perc90_rel_change[i] = np.percentile(elev_diff,90)
