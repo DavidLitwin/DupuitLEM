@@ -16,6 +16,7 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
+export PYTHONPATH="/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMScripts"
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder/data
 cd ~/data/dlitwin3/DupuitLEMScripts
