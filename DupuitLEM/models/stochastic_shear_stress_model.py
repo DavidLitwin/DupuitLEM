@@ -170,7 +170,7 @@ class StochasticRechargeShearStress:
             tau2 = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
 
             #calculate effective shear stress across event-interevent pair
-            self._tau = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
+            self._tau[:] = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
 
             #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
@@ -278,9 +278,11 @@ class StochasticRechargeShearStress:
             time_2[i] = time_1[i] + self.interstorm_dts[i]
 
             #calculate effective shear stress across event-interevent pair
-            self._tau = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
+            self._tau[:] = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
             tau_eff_all[i,:] = self._tau[nodes]
 
             #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
             self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
+
+        return tau_1_all, tau_2_all, tau_eff_all, time_1, time_2
