@@ -90,8 +90,11 @@ def calc_erosion_from_shear_stress(grid,tauc,K,b):
     """
     tau = grid.at_node['surface_water__shear_stress']
 
+    core = grid.status_at_node == 0
+    thresh = tau > tauc
+    update = np.logical_and(core,thresh)
+
     dzdt = np.zeros_like(tau)
-    dzdt[grid.core_nodes] = -K*np.power((tau[grid.core_nodes]-tauc),b)
-    dzdt[dzdt>0.0] = 0.0
+    dzdt[update] = -K*np.power((tau[update]-tauc),b)
 
     return dzdt
