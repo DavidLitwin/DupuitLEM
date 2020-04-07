@@ -16,8 +16,10 @@ from landlab.components import (
     LinearDiffuser,
     LakeMapperBarnes,
     DepressionFinderAndRouter,
+    PrecipitationDistribution,
     )
-from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_at_node
+from landlab.io.netcdf import write_raster_netcdf
+from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_at_node, calc_erosion_from_shear_stress
 
 def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
     tauint1 = np.zeros_like(tau0)
@@ -27,21 +29,21 @@ def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
     c2 = np.logical_and(tau0<tauc,tau1>tauc)
     c3 = np.logical_and(tau0>tauc,tau1<tauc)
     #c4 = np.logical_and(tau0<tauc,tau1<tauc) #implied
-    tauint1[c1] = 0.5*tr*(tau0+tau1-2*tauc)[c1]
-    tauint1[c2] = 0.5*tr*((tau1-tauc)*((tau1-tauc)/(tau1-tau0)))[c2]
-    tauint1[c3] = 0.5*tr*((tau0-tauc)*((tau0-tauc)/(tau0-tau1)))[c3]
+    tauint1[c1] = 0.5*tr*(tau0[c1]+tau1[c1]-2*tauc)
+    tauint1[c2] = 0.5*tr*(tau1[c2]-tauc)*((tau1[c2]-tauc)/(tau1[c2]-tau0[c2]))
+    tauint1[c3] = 0.5*tr*(tau0[c3]-tauc)*((tau0[c3]-tauc)/(tau0[c3]-tau1[c3]))
     #tauint1[c4] = 0.0 #implied
 
     c1 = np.logical_and(tau1>tauc,tau2>tauc)
     c2 = np.logical_and(tau1<tauc,tau2>tauc)
     c3 = np.logical_and(tau1>tauc,tau2<tauc)
     #c4 = np.logical_and(tau1<tauc,tau2<tauc) #implied
-    tauint2[c1] = 0.5*td*(tau1+tau2-2*tauc)[c1]
-    tauint2[c2] = 0.5*td*((tau2-tauc)*((tau2-tauc)/(tau2-tau1)))[c2]
-    tauint2[c3] = 0.5*td*((tau1-tauc)*((tau1-tauc)/(tau1-tau2)))[c3]
+    tauint2[c1] = 0.5*tb*(tau1[c1]+tau2[c1]-2*tauc)
+    tauint2[c2] = 0.5*tb*(tau2[c2]-tauc)*((tau2[c2]-tauc)/(tau2[c2]-tau1[c2]))
+    tauint2[c3] = 0.5*tb*(tau1[c3]-tauc)*((tau1[c3]-tauc)/(tau1[c3]-tau2[c3]))
     #tauint2[c4] = 0.0 #implied
 
-    taueff = (tauint1+tauint2)/(tr+td) + tauc
+    taueff = (tauint1+tauint2)/(tr+tb) + tauc
     return taueff
 
 class StochasticRechargeShearStress:
@@ -59,7 +61,6 @@ class StochasticRechargeShearStress:
         self._grid = params.pop("grid")
         self._cores = self._grid.core_nodes
 
-        self.R = params.pop("recharge_rate") #[m/s]
         self.Ksat = params.pop("hydraulic_conductivity") #[m/s]
         self.n = params.pop("porosity")
         self.r = params.pop("regularization_factor")
@@ -81,8 +82,7 @@ class StochasticRechargeShearStress:
         self.dt_m = self.T_h*self.MSF
         self.N = int(self.T_m//self.dt_m)
 
-
-        self.p_seed = param.pop("precpitation_seed")
+        self.p_seed = params.pop("precipitation_seed")
         self.storm_dt = params.pop("mean_storm_duration")
         self.interstorm_dt = params.pop("mean_interstorm_duration")
         self.p = params.pop("mean_storm_depth")
@@ -104,7 +104,7 @@ class StochasticRechargeShearStress:
 
         # initialize model components
         self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat, \
-                                          recharge_rate=self.R, regularization_f=self.r, \
+                                          regularization_f=self.r, \
                                           courant_coefficient=self.c, vn_coefficient = self.vn)
         self.fd = FlowDirectorD8(self._grid)
         self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director=self.fd,  \
@@ -128,11 +128,11 @@ class StochasticRechargeShearStress:
         storm_dts = []
         interstorm_dts = []
         intensities = []
-        precip.seed_generator(seedval=self.p_seed)
+        self.pd.seed_generator(seedval=self.p_seed)
         for (storm_dt, interstorm_dt) in self.pd.yield_storms():
             storm_dts.append(storm_dt)
             interstorm_dts.append(interstorm_dt)
-            intensities.append(float(grid.at_grid['rainfall__flux']))
+            intensities.append(float(self._grid.at_grid['rainfall__flux']))
 
         self.storm_dts = storm_dts
         self.interstorm_dts = interstorm_dts
@@ -221,9 +221,6 @@ class StochasticRechargeShearStress:
                     write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
                     print('Completed loop %d' % i)
 
-                    filename = self.base_path + str(self.id) + '_substeps' + '.txt'
-                    np.savetxt(filename,num_substeps, fmt='%.1f')
-
                     filename = self.base_path + str(self.id) + '_max_rel_change' + '.txt'
                     np.savetxt(filename,max_rel_change, fmt='%.4e')
 
@@ -232,3 +229,58 @@ class StochasticRechargeShearStress:
 
                     filename = self.base_path + str(self.id) + '_time' + '.txt'
                     np.savetxt(filename,times, fmt='%.4e')
+
+    def visualize_run_hydrological_step(self,nodes):
+        """"
+        Run hydrological model for series of event-interevent pairs, calculate shear stresses
+        and calculate effective erosion rate over the total_hydrological_time
+
+        Visualize output
+
+        """
+
+        #generate storm series to use each time
+        self.generate_exp_precip()
+
+        #update flow directions
+        self.fd.run_one_step()
+
+        #find and route flow if there are pits
+        self.dfr._find_pits()
+        if self.dfr._number_of_pits > 0:
+            self.lmb.run_one_step()
+
+        tau_1_all = np.zeros((len(self.storm_dts),len(nodes)))
+        tau_2_all = np.zeros((len(self.storm_dts),len(nodes)))
+        tau_eff_all = np.zeros((len(self.storm_dts),len(nodes)))
+        time_1 = np.zeros(len(self.storm_dts))
+        time_2 = np.zeros(len(self.storm_dts))
+
+        self.dzdt_eff = np.zeros_like(self._tau)
+        tau2 = self._tau.copy()
+        for i in range(len(self.storm_dts)):
+            tau0 = tau2.copy() #save prev end of interstorm shear stress
+
+            #run event, accumulate flow, and calculate resulting shear stress
+            self.gdp.recharge_rate = self.intensities[i]
+            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            tau1 = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            tau_1_all[i,:] = tau1[nodes]
+            time_1[i] = time_2[i-1] + self.storm_dts[i]
+
+            #run interevent, accumulate flow, and calculate resulting shear stress
+            self.gdp.recharge_rate = 0.0
+            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            tau2 = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            tau_2_all[i,:] = tau2[nodes]
+            time_2[i] = time_1[i] + self.interstorm_dts[i]
+
+            #calculate effective shear stress across event-interevent pair
+            self._tau = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
+            tau_eff_all[i,:] = self._tau[nodes]
+
+            #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
+            dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
+            self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
