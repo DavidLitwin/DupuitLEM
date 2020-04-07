@@ -1,20 +1,19 @@
 
 """
-test of SteadyRechargeShearStress model, without saving output
+test of StochasticRechargeShearStress model, without saving output
 
-Date: 1 April 2020
+Date: 3 April 2020
 """
 
 import numpy as np
 
 from landlab import RasterModelGrid
-from DupuitLEM import SteadyRechargeShearStress
+from DupuitLEM import StochasticRechargeShearStress
 from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 
 #parameters
 params = {}
-params["recharge_rate"] = 1.5/(365*24*3600) #[m/s]
 Ks = 1/3600 #[m/s]
 K0 = 0.01/3600 #[m/s]
 d_k = 1 #m
@@ -33,9 +32,14 @@ params["shear_stress_threshold"] = 0.0 #threshold shear stress [N/m2]
 params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
-params["hydrological_timestep"] = 1e5 # hydrological timestep [s]
-params["total_time"] = 1e4*(365*24*3600) # total simulation time [s]
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
+params["total_hydrological_time"] = 30*24*3600 # total hydrological time
+params["total_morphological_time"] = 1e3*(365*24*3600) # total simulation time [s]
+
+params["precipitation_seed"] = 2
+params["mean_storm_duration"] = 2*3600
+params["mean_interstorm_duration"] = 24*3600
+params["mean_storm_depth"] = 0.01
 
 #initialize grid
 np.random.seed(2)
@@ -51,6 +55,6 @@ wt[:] = elev.copy()
 
 params["grid"] = grid
 
-mdl = SteadyRechargeShearStress(params,save_output=False)
+mdl = StochasticRechargeShearStress(params,save_output=False)
 
 mdl.run_model()
