@@ -138,19 +138,21 @@ class StochasticRechargeShearStress:
         self.interstorm_dts = interstorm_dts
         self.intensities = intensities
 
-    def run_hydrological_step(self):
+    def run_hydrological_step_integrate_shear_stress(self):
         """"
         Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time
+        at end of event and interevent. Use a trapezoidal integration to find effective
+        shear stress and erosion rate over the total_hydrological_time
 
+        Note: This method may overestimate shear stress and erosion rate during the recession period.
         """
-        #update flow directions
-        self.fd.run_one_step()
-
         #find and route flow if there are pits
         self.dfr._find_pits()
         if self.dfr._number_of_pits > 0:
             self.lmb.run_one_step()
+
+        #update flow directions
+        self.fd.run_one_step()
 
         self.dzdt_eff = np.zeros_like(self._tau)
         tau2 = self._tau.copy()
@@ -175,6 +177,48 @@ class StochasticRechargeShearStress:
             #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
             self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
+
+    def run_hydrological_step(self):
+        """"
+        Run hydrological model for series of event-interevent pairs, calculate
+        instantaneous shear stress and erosion at beginning and end of event.
+        Calculate average erosion rate *for event only* and average this over the
+        whole duration. This method assumes erosion is negligible during the
+        interevent periods.
+
+        """
+        #find and route flow if there are pits
+        self.dfr._find_pits()
+        if self.dfr._number_of_pits > 0:
+            self.lmb.run_one_step()
+
+        #update flow directions
+        self.fd.run_one_step()
+
+        self.dzdt_eff = np.zeros_like(self._tau)
+        dzdt2 = np.zeros_like(self._tau)
+        for i in range(len(self.storm_dts)):
+            dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
+
+            #run event, accumulate flow, and calculate resulting shear stress
+            self.gdp.recharge_rate = self.intensities[i]
+            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            dzdt1 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
+
+            #run interevent, accumulate flow, and calculate resulting shear stress
+            self.gdp.recharge_rate = 0.0
+            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            dzdt2 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
+
+            #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
+            #note that this only accounts for erosion during the storm period
+            deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
+            self.dzdt_eff += deltaz / self.T_h
+
 
     def run_model(self):
 

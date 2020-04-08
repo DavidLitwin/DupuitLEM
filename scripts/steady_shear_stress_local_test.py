@@ -29,7 +29,7 @@ params["characteristic_w_depth"] = 1 #m
 params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
 params["k_st"] = 5e-10 #shear stress erosion coefficient
-params["shear_stress_threshold"] = 1.0 #threshold shear stress [N/m2]
+params["shear_stress_threshold"] = 0.25 #threshold shear stress [N/m2]
 params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
