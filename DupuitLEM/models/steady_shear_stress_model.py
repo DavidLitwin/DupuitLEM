@@ -51,10 +51,11 @@ class SteadyRechargeShearStress:
         self.D = params.pop("hillslope_diffusivity") # hillslope diffusivity [m2/s]
 
         self.dt_h = params.pop("hydrological_timestep") # hydrological timestep [s]
-        self.T = params.pop("total_time") # total simulation time [s]
-        self.MSF = params.pop("morphologic_scaling_factor") # morphologic scaling factor [-]
-        self.dt_m = self.MSF*self.dt_h
-        self.N = int(self.T//self.dt_m)
+        self.T = params.pop("total_time",None) # total simulation time [s]
+        self.MSF = params.pop("morphologic_scaling_factor",None) # morphologic scaling factor [-]
+        if self.T and self.MSF:
+            self.dt_m = self.MSF*self.dt_h
+            self.N = int(self.T//self.dt_m)
 
         self._elev = self._grid.at_node["topographic__elevation"]
         self._base = self._grid.at_node["aquifer_base__elevation"]
@@ -87,6 +88,36 @@ class SteadyRechargeShearStress:
         self.ld = LinearDiffuser(self._grid, linear_diffusivity = self.D)
         self.dfr = DepressionFinderAndRouter(self._grid)
 
+    def run_step(self,dt_m):
+
+        #run gw model
+        self.gdp.run_with_adaptive_time_step_solver(self.dt_h)
+        self.number_substeps = self.gdp.number_of_substeps
+
+        #uplift and regolith production
+        self._elev[self._cores] += self.U*self.dt_m
+        self._base[self._cores] += self.U*self.dt_m - self.w0*np.exp(-(self._elev[self._cores]-self._base[self._cores])/self.d_s)*self.dt_m
+
+        #find pits for flow accumulation
+        self.dfr._find_pits()
+        if self.dfr._number_of_pits > 0:
+            self.lmb.run_one_step()
+
+        #run flow accumulation
+        self.fa.run_one_step()
+
+        #run linear diffusion
+        self.ld.run_one_step(self.dt_m)
+
+        #calc shear stress and erosion
+        self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+        dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
+        self._elev += dzdt*self.dt_m
+
+        #check for places where erosion to bedrock occurs
+        self._elev[self._elev<self._base] = self._base[self._elev<self._base]
+
+
 
     def run_model(self):
         """ run the model for the full duration"""
@@ -102,40 +133,9 @@ class SteadyRechargeShearStress:
         for i in range(N):
             elev0 = self._elev.copy()
 
-            t1 = time.time()
-            #run gw model
-            self.gdp.run_with_adaptive_time_step_solver(self.dt_h)
-            num_substeps[i] = self.gdp.number_of_substeps
+            self.run_step(self.dt_m)
 
-            t2 = time.time()
-            #uplift and regolith production
-            self._elev[self._cores] += self.U*self.dt_m
-            self._base[self._cores] += self.U*self.dt_m - self.w0*np.exp(-(self._elev[self._cores]-self._base[self._cores])/self.d_s)*self.dt_m
-
-            t3 = time.time()
-            #find pits for flow accumulation
-            self.dfr._find_pits()
-            if self.dfr._number_of_pits > 0:
-                self.lmb.run_one_step()
-
-            t4 = time.time()
-            #run flow accumulation
-            self.fa.run_one_step()
-
-            t5 = time.time()
-            #run linear diffusion
-            self.ld.run_one_step(self.dt_m)
-
-            #calc shear stress and erosion
-            self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
-            dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-            self._elev += dzdt*self.dt_m
-
-            #check for places where erosion to bedrock occurs
-            self._elev[self._elev<self._base] = self._base[self._elev<self._base]
-
-            t6 = time.time()
-            times[i:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5]
+            num_substeps[i] = self.number_substeps
             num_pits[i] = self.dfr._number_of_pits
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
@@ -161,6 +161,3 @@ class SteadyRechargeShearStress:
 
                     filename = self.base_path + str(self.id) + '_num_pits' + '.txt'
                     np.savetxt(filename,num_pits, fmt='%.1f')
-
-                    filename = self.base_path + str(self.id) + '_time' + '.txt'
-                    np.savetxt(filename,times, fmt='%.4e')

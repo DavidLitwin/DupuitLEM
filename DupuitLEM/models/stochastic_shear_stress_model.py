@@ -76,11 +76,12 @@ class StochasticRechargeShearStress:
         self.n_manning = params.pop("manning_n") #manning's n for flow depth calcualtion
         self.D = params.pop("hillslope_diffusivity") # hillslope diffusivity [m2/s]
 
-        self.MSF = params.pop("morphologic_scaling_factor") # morphologic scaling factor [-]
         self.T_h = params.pop("total_hydrological_time") #time to run hydrological model before updating topography [s]
-        self.T_m = params.pop("total_morphological_time") #total model time [s]
-        self.dt_m = self.T_h*self.MSF
-        self.N = int(self.T_m//self.dt_m)
+        self.MSF = params.pop("morphologic_scaling_factor", None) # morphologic scaling factor [-]
+        self.T_m = params.pop("total_morphological_time", None) #total model time [s]
+        if self.T_m and self.MSF:
+            self.dt_m = self.T_h*self.MSF
+            self.N = int(self.T_m//self.dt_m)
 
         self.p_seed = params.pop("precipitation_seed")
         self.storm_dt = params.pop("mean_storm_duration")
@@ -219,6 +220,20 @@ class StochasticRechargeShearStress:
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
             self.dzdt_eff += deltaz / self.T_h
 
+    def run_step(self, dt_m):
+        #run gw model, calculate erosion rate
+        self.run_hydrological_step()
+
+        #uplift and regolith production
+        self._elev[self._cores] += self.U*dt_m
+        self._base[self._cores] += self.U*dt_m - self.w0*np.exp(-(self._elev[self._cores]-self._base[self._cores])/self.d_s)*dt_m
+
+        #run linear diffusion, erosion
+        self.ld.run_one_step(dt_m)
+        self._elev += self.dzdt_eff*dt_m
+        #check for places where erosion to bedrock occurs
+        self._elev[self._elev<self._base] = self._base[self._elev<self._base]
+
 
     def run_model(self):
 
@@ -228,30 +243,12 @@ class StochasticRechargeShearStress:
         N = self.N
         max_rel_change = np.zeros(N)
         perc90_rel_change = np.zeros(N)
-        times = np.zeros((N,3))
 
         # Run model forward
         for i in range(N):
             elev0 = self._elev.copy()
+            self.run_step(self.dt_m)
 
-            t1 = time.time()
-            #run gw model, calculate erosion rate
-            self.run_hydrological_step()
-
-            t2 = time.time()
-            #uplift and regolith production
-            self._elev[self._cores] += self.U*self.dt_m
-            self._base[self._cores] += self.U*self.dt_m - self.w0*np.exp(-(self._elev[self._cores]-self._base[self._cores])/self.d_s)*self.dt_m
-
-            t3 = time.time()
-            #run linear diffusion, erosion
-            self.ld.run_one_step(self.dt_m)
-            self._elev += self.dzdt_eff*self.dt_m
-            #check for places where erosion to bedrock occurs
-            self._elev[self._elev<self._base] = self._base[self._elev<self._base]
-
-            t4 = time.time()
-            times[i:] = [t2-t1, t3-t2, t4-t3]
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
             perc90_rel_change[i] = np.percentile(elev_diff,90)
@@ -271,8 +268,6 @@ class StochasticRechargeShearStress:
                     filename = self.base_path + str(self.id) + '_90perc_rel_change' + '.txt'
                     np.savetxt(filename,perc90_rel_change, fmt='%.4e')
 
-                    filename = self.base_path + str(self.id) + '_time' + '.txt'
-                    np.savetxt(filename,times, fmt='%.4e')
 
     def visualize_run_hydrological_step(self,nodes):
         """"
