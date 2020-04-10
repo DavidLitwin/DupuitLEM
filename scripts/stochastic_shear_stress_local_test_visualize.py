@@ -10,12 +10,14 @@ import numpy as np
 from landlab import RasterModelGrid
 from DupuitLEM import StochasticRechargeShearStress
 from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
+from landlab import imshow_grid
+import matplotlib.pyplot as plt
 
 
 #parameters
 params = {}
-Ks = 1/3600 #[m/s]
-K0 = 0.01/3600 #[m/s]
+Ks = 0.1/3600 #[m/s]
+K0 = 0.001/3600 #[m/s]
 d_k = 1 #m
 params["hydraulic_conductivity"] = bind_avg_hydraulic_conductivity(Ks,K0,d_k)
 params["porosity"] = 0.2 #[]
@@ -34,11 +36,11 @@ params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
 params["total_hydrological_time"] = 30*24*3600 # total hydrological time
-params["total_morphological_time"] = 1e3*(365*24*3600) # total simulation time [s]
+params["total_morphological_time"] = 5e4*(365*24*3600) # total simulation time [s]
 
 params["precipitation_seed"] = 2
 params["mean_storm_duration"] = 2*3600
-params["mean_interstorm_duration"] = 24*3600
+params["mean_interstorm_duration"] = 48*3600
 params["mean_storm_depth"] = 0.01
 
 #initialize grid
@@ -57,5 +59,25 @@ params["grid"] = grid
 
 mdl = StochasticRechargeShearStress(params,save_output=False)
 
+#%% run the whole model
+
 mdl.run_model()
 
+#%% Run by step
+
+dzdt = np.zeros(mdl.N)
+mdl.generate_exp_precip()
+for i in range(mdl.N):
+    mdl.run_step(5e7)
+    dzdt[i] = max(-mdl.dzdt_eff)
+
+#%% plot some stuff
+
+plt.figure()
+imshow_grid(grid,elev)
+
+plt.figure()
+imshow_grid(grid,(wt-base)/(elev-base))
+
+plt.figure()
+imshow_grid(grid,elev-base)

@@ -1,22 +1,25 @@
 
 """
-test of SteadyRechargeShearStress model for marcc, saving output
+Use StochasticRechargeShearStress model to test different values of
+hydraulic conductivity. Save output.
 
-Date: 1 April 2020
+Date: 3 April 2020
 """
-
+import os
 import numpy as np
 
 from landlab import RasterModelGrid
-from DupuitLEM import SteadyRechargeShearStress
+from DupuitLEM import StochasticRechargeShearStress
 from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
+task_id = os.environ['SLURM_ARRAY_TASK_ID']
+ID = int(task_id)
 
 #parameters
 params = {}
-params["recharge_rate"] = 1.5/(365*24*3600) #[m/s]
-Ks = 1/3600 #[m/s]
-K0 = 0.01/3600 #[m/s]
+Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
+Ks = Ks_all[ID]
+K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 d_k = 1 #m
 params["hydraulic_conductivity"] = bind_avg_hydraulic_conductivity(Ks,K0,d_k)
 params["porosity"] = 0.2 #[]
@@ -29,15 +32,20 @@ params["characteristic_w_depth"] = 1 #m
 params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
 params["k_st"] = 1e-10 #shear stress erosion coefficient
-params["shear_stress_threshold"] = 0.0 #threshold shear stress [N/m2]
+params["shear_stress_threshold"] = 0.01 #threshold shear stress [N/m2]
 params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
-params["hydrological_timestep"] = 1e5 # hydrological timestep [s]
-params["total_time"] = 1e5*(365*24*3600) # total simulation time [s]
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
+params["total_hydrological_time"] = 30*24*3600 # total hydrological time
+params["total_morphological_time"] = 5e5*(365*24*3600) # total simulation time [s]
 
-params["output_interval"] = 5000
+params["precipitation_seed"] = 2
+params["mean_storm_duration"] = 2*3600
+params["mean_interstorm_duration"] = 48*3600
+params["mean_storm_depth"] = 0.01
+
+params["output_interval"] = 1000
 params["output_fields"] = [
         "topographic__elevation",
         "aquifer_base__elevation",
@@ -45,9 +53,8 @@ params["output_fields"] = [
         "surface_water__discharge",
         "groundwater__specific_discharge_node",
         ]
-params["base_output_path"] = './data/steady_ss_test_'
-params["run_id"] = 0 #make this task_id if multiple runs
-
+params["base_output_path"] = './data/stoch_vary_k_'
+params["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(2)
@@ -63,6 +70,6 @@ wt[:] = elev.copy()
 
 params["grid"] = grid
 
-mdl = SteadyRechargeShearStress(params,save_output=True)
+mdl = StochasticRechargeShearStress(params,save_output=True)
 
 mdl.run_model()
