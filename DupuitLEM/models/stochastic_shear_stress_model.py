@@ -21,6 +21,8 @@ from landlab.components import (
 from landlab.io.netcdf import write_raster_netcdf
 from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_at_node, calc_erosion_from_shear_stress
 
+verboseprint = print if verbose else lambda *a, **k: None
+
 def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
     tauint1 = np.zeros_like(tau0)
     tauint2 = np.zeros_like(tau0)
@@ -56,7 +58,7 @@ class StochasticRechargeShearStress:
     The shear stress that results from overland flow is tracked and averaged to update topography.
     """
 
-    def __init__(self,params,save_output=True):
+    def __init__(self,params,save_output=True,verbose=False):
 
         self._grid = params.pop("grid")
         self._cores = self._grid.core_nodes
@@ -102,6 +104,7 @@ class StochasticRechargeShearStress:
             self.id =  params.pop("run_id")
         else:
             self.save_output = False
+        verboseprint('Loaded parameters')
 
         # initialize model components
         self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat, \
@@ -122,7 +125,7 @@ class StochasticRechargeShearStress:
         self.pd = PrecipitationDistribution(self._grid, mean_storm_duration=self.storm_dt,
             mean_interstorm_duration=self.interstorm_dt, mean_storm_depth=self.p,
             total_t=self.T_h)
-
+        verboseprint('Initialized landlab components')
 
     def generate_exp_precip(self):
 
@@ -256,11 +259,11 @@ class StochasticRechargeShearStress:
             if self.save_output:
 
                 if i % self.output_interval == 0 or i==max(range(N)):
+                    verboseprint('Completed loop %d' % i)
+                    
                     self._gw_flux[:] = self.gdp.calc_gw_flux_at_node()
-
                     filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'
                     write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
-                    print('Completed loop %d' % i)
 
                     filename = self.base_path + str(self.id) + '_max_rel_change' + '.txt'
                     np.savetxt(filename,max_rel_change, fmt='%.4e')

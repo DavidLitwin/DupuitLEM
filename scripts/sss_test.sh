@@ -23,3 +23,5 @@ python -c "from landlab import RasterModelGrid"
 python -c "from DupuitLEM import SteadyRechargeShearStress"
 python -c "from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity"
 
+output_folder=test_1
+mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder/$SLURM_JOBID
