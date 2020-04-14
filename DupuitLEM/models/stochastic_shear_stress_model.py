@@ -250,6 +250,7 @@ class StochasticRechargeShearStress:
         for i in range(N):
             elev0 = self._elev.copy()
             self.run_step(self.dt_m)
+            self.verboseprint('Completed model loop %d' % i)
 
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
@@ -258,7 +259,6 @@ class StochasticRechargeShearStress:
             if self.save_output:
 
                 if i % self.output_interval == 0 or i==max(range(N)):
-                    self.verboseprint('Completed loop %d' % i)
 
                     self._gw_flux[:] = self.gdp.calc_gw_flux_at_node()
                     filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'

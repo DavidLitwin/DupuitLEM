@@ -58,7 +58,7 @@ wt[:] = elev.copy()
 
 params["grid"] = grid
 
-mdl = StochasticRechargeShearStress(params,save_output=False)
+mdl = StochasticRechargeShearStress(params,save_output=False,verbose=True)
 
 #%% run the whole model
 

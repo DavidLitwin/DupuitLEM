@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=stoch_ss
-#SBATCH --time=48:0:0
+#SBATCH --time=24:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
@@ -17,12 +17,12 @@ module load python/3.7-anaconda
 conda activate
 conda activate landlab_dev
 export PYTHONPATH="/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMScripts"
-mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder
-mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder/data
+mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/data
 cd ~/data/dlitwin3/DupuitLEMScripts
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder/script_id.txt
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
-git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/scripts/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder
-cd ~/data/dlitwin3/DupuitLEMResults/$output_folder
+git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/gdp_id.txt
+cp ~/data/dlitwin3/DupuitLEMScripts/scripts/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+cd ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 python $script
