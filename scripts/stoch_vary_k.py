@@ -36,7 +36,7 @@ params["shear_stress_threshold"] = 0.01 #threshold shear stress [N/m2]
 params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
-params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
+params["morphologic_scaling_factor"] = 100 # morphologic scaling factor [-]
 params["total_hydrological_time"] = 30*24*3600 # total hydrological time
 params["total_morphological_time"] = 5e5*(365*24*3600) # total simulation time [s]
 
@@ -53,7 +53,7 @@ params["output_fields"] = [
         "surface_water__discharge",
         "groundwater__specific_discharge_node",
         ]
-params["base_output_path"] = './data/stoch_vary_k_'
+params["base_output_path"] = './data/MSF100_stoch_vary_k_'
 params["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid

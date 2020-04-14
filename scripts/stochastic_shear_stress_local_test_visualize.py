@@ -16,10 +16,11 @@ import matplotlib.pyplot as plt
 
 #parameters
 params = {}
-Ks = 0.1/3600 #[m/s]
-K0 = 0.001/3600 #[m/s]
+Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
+Ks = Ks_all[0]
+K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 d_k = 1 #m
-params["hydraulic_conductivity"] = bind_avg_hydraulic_conductivity(Ks,K0,d_k)
+params["hydraulic_conductivity"] = 1/3600 #bind_avg_hydraulic_conductivity(Ks,K0,d_k)
 params["porosity"] = 0.2 #[]
 params["regularization_factor"] = 0.01
 params["courant_coefficient"] = 0.5
@@ -36,7 +37,7 @@ params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
 params["total_hydrological_time"] = 30*24*3600 # total hydrological time
-params["total_morphological_time"] = 5e4*(365*24*3600) # total simulation time [s]
+params["total_morphological_time"] = 1e4*(365*24*3600) # total simulation time [s]
 
 params["precipitation_seed"] = 2
 params["mean_storm_duration"] = 2*3600
@@ -49,7 +50,7 @@ grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
-d_i = 1.0 #m
+d_i = -params["characteristic_w_depth"]*np.log(params["uplift_rate"]/params["permeability_production_rate"])
 elev[:] = d_i + 0.1*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
