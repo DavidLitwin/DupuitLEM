@@ -1,5 +1,6 @@
 import numpy as np
 from landlab.grid.mappers import map_mean_of_link_nodes_to_link, map_max_of_node_links_to_node
+from landlab import LinkStatus
 
 def bind_avg_hydraulic_conductivity(ks,k0,dk):
     def bound_avg_hydraulic_conductivity(grid):
@@ -32,7 +33,6 @@ def bind_avg_hydraulic_conductivity(ks,k0,dk):
     return bound_avg_hydraulic_conductivity
 
 
-
 def calc_shear_stress_at_node(grid, n_manning=0.05, rho = 1000, g = 9.81):
     r"""
     Calculate the shear stress :math:`\tau` based upon the equations: (N/m2)
@@ -60,7 +60,8 @@ def calc_shear_stress_at_node(grid, n_manning=0.05, rho = 1000, g = 9.81):
     In future, should allow n_manning and dx to be fields that are spatially variable
 
     """
-    S = abs(grid.calc_grad_at_link(grid.at_node["topographic__elevation"]))
+    S = abs(grid.calc_grad_at_link('topographic__elevation'))
+    S[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
     S_node = map_max_of_node_links_to_node(grid, S)[grid.core_nodes]
     Q = grid.at_node["surface_water__discharge"][grid.core_nodes]
 
