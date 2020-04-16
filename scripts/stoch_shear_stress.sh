@@ -10,7 +10,7 @@
 #SBATCH -o ../../DupuitLEMResults/slurm/slurm-%A_%a.out
 #### load and unload modules you may need
 script=stoch_vary_k.py
-output_folder=stoch_vary_k
+output_folder=stoch_vary_k_1
 module load git
 module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
@@ -25,4 +25,5 @@ cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/gdp_id.txt
 cp ~/data/dlitwin3/DupuitLEMScripts/scripts/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 cd ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
-python $script
+echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > slurm.txt
+python -u $script > pythonlog.out

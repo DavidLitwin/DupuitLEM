@@ -26,3 +26,5 @@ python -c "from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_co
 output_folder=test_1
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder/
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder/$SLURM_JOBID
+cd ~/data/dlitwin3/DupuitLEMResults/$output_folder/$SLURM_JOBID
+echo $SLURM_JOBID > jobid.txt
