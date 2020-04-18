@@ -50,7 +50,7 @@ params["output_fields"] = [
         "groundwater__specific_discharge_node",
         ]
 params["base_output_path"] = './data/stoch_one_k_'
-params["run_id"] = ID #make this task_id if multiple runs
+params["run_id"] = 0 #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(2)
