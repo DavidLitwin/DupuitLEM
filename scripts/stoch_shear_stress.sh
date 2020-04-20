@@ -10,7 +10,7 @@
 #SBATCH -o ../../DupuitLEMResults/slurm/slurm-%A_%a.out
 #### load and unload modules you may need
 script=stoch_vary_k.py
-output_folder=stoch_vary_k_6
+output_folder=stoch_vary_k_7
 module load git
 module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
