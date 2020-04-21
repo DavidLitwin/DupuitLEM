@@ -132,6 +132,7 @@ class StochasticRechargeShearStress:
         self.pd = PrecipitationDistribution(self._grid, mean_storm_duration=self.storm_dt,
             mean_interstorm_duration=self.interstorm_dt, mean_storm_depth=self.p,
             total_t=self.T_h)
+        self.pd.seed_generator(seedval=self.p_seed)
         self.verboseprint('Initialized landlab components')
 
     def generate_exp_precip(self):
@@ -139,7 +140,7 @@ class StochasticRechargeShearStress:
         storm_dts = []
         interstorm_dts = []
         intensities = []
-        self.pd.seed_generator(seedval=self.p_seed)
+
         for (storm_dt, interstorm_dt) in self.pd.yield_storms():
             storm_dts.append(storm_dt)
             interstorm_dts.append(interstorm_dt)
@@ -157,6 +158,10 @@ class StochasticRechargeShearStress:
 
         Note: This method may overestimate shear stress and erosion rate during the recession period.
         """
+
+        #generate new precip time series
+        self.generate_exp_precip()
+
         #find and route flow if there are pits
         self.dfr._find_pits()
         if self.dfr._number_of_pits > 0:
