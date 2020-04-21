@@ -203,6 +203,10 @@ class StochasticRechargeShearStress:
         interevent periods.
 
         """
+
+        #generate new precip time series
+        self.generate_exp_precip()
+
         #find and route flow if there are pits
         self.dfr._find_pits()
         if self.dfr._number_of_pits > 0:
@@ -247,13 +251,11 @@ class StochasticRechargeShearStress:
         self.ld.run_one_step(dt_m)
         self._elev += self.dzdt_eff*dt_m
         #check for places where erosion to bedrock occurs
+        verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
         self._elev[self._elev<self._base] = self._base[self._elev<self._base]
 
 
     def run_model(self):
-
-        #generate storm series to use each time
-        self.generate_exp_precip()
 
         N = self.N
         max_rel_change = np.zeros(N)
