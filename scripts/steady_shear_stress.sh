@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=steady_ss
-#SBATCH --time=24:0:0
+#SBATCH --time=48:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
@@ -9,8 +9,8 @@
 #SBATCH --mail-user=dlitwin3@jhu.edu
 #SBATCH -o ../../DupuitLEMResults/slurm/slurm-%A_%a.out
 #### load and unload modules you may need
-script=steady_shear_stress_marcc_test.py
-output_folder=steady_ss
+script=steady_vary_k.py
+output_folder=steady_vary_k_1
 module load git
 module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
