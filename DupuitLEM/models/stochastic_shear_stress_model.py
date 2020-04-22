@@ -251,7 +251,7 @@ class StochasticRechargeShearStress:
         self.ld.run_one_step(dt_m)
         self._elev += self.dzdt_eff*dt_m
         #check for places where erosion to bedrock occurs
-        verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
+        self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
         self._elev[self._elev<self._base] = self._base[self._elev<self._base]
 
 

@@ -29,7 +29,8 @@ class SteadyRechargeShearStress:
 
     """
 
-    def __init__(self,params,save_output=True):
+    def __init__(self,params,save_output=True, verbose=False):
+        self.verboseprint = print if verbose else lambda *a, **k: None
 
         self._grid = params.pop("grid")
         self._cores = self._grid.core_nodes
@@ -71,6 +72,7 @@ class SteadyRechargeShearStress:
             self.id =  params.pop("run_id")
         else:
             self.save_output = False
+        self.verboseprint('Parameters loaded')
 
         # initialize model components
         self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat, \
@@ -87,6 +89,8 @@ class SteadyRechargeShearStress:
                                       ignore_overfill=True)
         self.ld = LinearDiffuser(self._grid, linear_diffusivity = self.D)
         self.dfr = DepressionFinderAndRouter(self._grid)
+
+        self.verboseprint('Initialized landlab components')
 
     def run_step(self,dt_m):
 
@@ -115,6 +119,7 @@ class SteadyRechargeShearStress:
         self._elev += dzdt*self.dt_m
 
         #check for places where erosion to bedrock occurs
+        self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
         self._elev[self._elev<self._base] = self._base[self._elev<self._base]
 
 
@@ -126,7 +131,6 @@ class SteadyRechargeShearStress:
         num_substeps = np.zeros(N)
         max_rel_change = np.zeros(N)
         perc90_rel_change = np.zeros(N)
-        times = np.zeros((N,5))
         num_pits = np.zeros(N)
 
         # Run model forward
@@ -134,9 +138,9 @@ class SteadyRechargeShearStress:
             elev0 = self._elev.copy()
 
             self.run_step(self.dt_m)
+            self.verboseprint('Completed model loop %d' % i)
 
             num_substeps[i] = self.number_substeps
-            num_pits[i] = self.dfr._number_of_pits
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
             perc90_rel_change[i] = np.percentile(elev_diff,90)
@@ -158,6 +162,3 @@ class SteadyRechargeShearStress:
 
                     filename = self.base_path + str(self.id) + '_90perc_rel_change' + '.txt'
                     np.savetxt(filename,perc90_rel_change, fmt='%.4e')
-
-                    filename = self.base_path + str(self.id) + '_num_pits' + '.txt'
-                    np.savetxt(filename,num_pits, fmt='%.1f')
