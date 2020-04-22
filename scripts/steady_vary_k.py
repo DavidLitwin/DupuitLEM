@@ -37,7 +37,7 @@ params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
 params["hydrological_timestep"] = 1e5 # hydrological timestep [s]
-params["total_time"] = 5e5*(365*24*3600) # total simulation time [s]
+params["total_time"] = 2.5e6*(365*24*3600) # total simulation time [s]
 params["morphologic_scaling_factor"] = 1000 # morphologic scaling factor [-]
 
 params["recharge_rate"] = 1.752/(365*24*3600) #[m/s] #equivalent to 2 hr storm dt, 48 hr interstorm dt, 0.01m depth.
