@@ -38,7 +38,7 @@ params["hillslope_diffusivity"] = 0.001/(365*24*3600) # hillslope diffusivity [m
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
 params["total_hydrological_time"] = 30*24*3600 # total hydrological time
-params["total_morphological_time"] = 5e5*(365*24*3600) # total simulation time [s]
+params["total_morphological_time"] = 2.5e6*(365*24*3600) # total simulation time [s]
 
 params["precipitation_seed"] = 2
 params["mean_storm_duration"] = 2*3600
