@@ -42,7 +42,7 @@ params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
-params["total_hydrological_time"] = 30*24*3600 # total hydrological time
+params["total_hydrological_time"] = 365*24*3600 # total hydrological time
 params["total_morphological_time"] = 1e4*(365*24*3600) # total simulation time [s]
 
 params["precipitation_seed"] = 2
@@ -74,19 +74,45 @@ mdl = StochasticRechargeShearStress(params,save_output=False,verbose=True)
 
 #%%
 
-
+#run model
 mdl.generate_exp_precip()
+mdl.visualize_run_hydrological_step()
 
+Q_all = mdl.Q_all[30:,:]
+wtrel_all = mdl.wtrel_all[30:,:]
 
-time, intensity, tau_all, Q_all, wtrel_all, qs_all = mdl.visualize_run_hydrological_step()
-
-
-Q_range = np.max(Q_all,axis=0) - np.min(Q_all,axis=0)
-wt_range = np.max(wtrel_all,axis=0) - np.min(wtrel_all,axis=0)
-
+#proportion of time saturated
+sat_all = np.greater_equal(wtrel_all, 0.99)
+sat_time = np.sum(sat_all,axis=0)/np.shape(wtrel_all)[0]
 
 plt.figure()
-imshow_grid(grid,Q_all[7,:])
+imshow_grid(grid,sat_time, cmap = 'Blues', limits=(0,1), colorbar_label = 'Proportion of time saturated', grid_units=('m','m'))
+plt.savefig('C:/Users/dgbli/Documents/MARCC_output/DupuitLEMResults/figs/stoch_vary_k_'+str(num)+'/prop_sat_K=%.2f_d=%.2f.png'%(Ks*3600,d_k))
+
+
+#amount of runoff from exfiltration and precip on sat area
+time = mdl.time[30:]
+qs_all = mdl.qs_all[30:,:]
+p = mdl.intensity[30:]
+exfilt_all = np.zeros_like(qs_all)
+exfilt_sum = np.zeros(len(elev))
+p_sat_all = np.zeros_like(qs_all)
+p_sat_sum = np.zeros(len(elev))
+for i in range(np.shape(qs_all)[0]-1):
+    exfilt_all[i,:] = np.maximum(qs_all[i,:]-p[i],0)
+    exfilt_sum += exfilt_all[i,:]*(time[i+1]-time[i])
+    
+    p_sat_all[i,:] = qs_all[i,:]-exfilt_all[i,:]
+    p_sat_sum += p_sat_all[i,:]*(time[i+1]-time[i])
+    
+plt.figure()
+imshow_grid(grid,exfilt_sum, cmap = 'Blues', colorbar_label = 'exfiltration', grid_units=('m','m'))
+plt.savefig('C:/Users/dgbli/Documents/MARCC_output/DupuitLEMResults/figs/stoch_vary_k_'+str(num)+'/exfilt_K=%.2f_d=%.2f.png'%(Ks*3600,d_k))
+
+plt.figure()
+imshow_grid(grid,p_sat_sum, cmap = 'Blues', colorbar_label = 'precip on saturated area', grid_units=('m','m'))
+plt.savefig('C:/Users/dgbli/Documents/MARCC_output/DupuitLEMResults/figs/stoch_vary_k_'+str(num)+'/p_sat_K=%.2f_d=%.2f.png'%(Ks*3600,d_k))
+
 
 
 def plot_gif(source,index):
