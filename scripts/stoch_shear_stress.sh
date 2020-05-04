@@ -16,14 +16,14 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
-export PYTHONPATH="/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMScripts"
+export PYTHONPATH="/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM"
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/data
-cd ~/data/dlitwin3/DupuitLEMScripts
+cd ~/data/dlitwin3/DupuitLEM
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/scripts/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+cp ~/data/dlitwin3/DupuitLEM/scripts/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 cd ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > slurm.txt
 python -u $script > pythonlog.out
