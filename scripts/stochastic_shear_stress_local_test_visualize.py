@@ -7,6 +7,7 @@ Date: 3 April 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
+import imageio
 
 from landlab import RasterModelGrid
 from landlab import imshow_grid
@@ -19,7 +20,7 @@ from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 #parameters
 params = {}
 ID = 0
-num = 4
+num = 8
 
 Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
 Ks = Ks_all[ID]
@@ -51,9 +52,10 @@ params["mean_storm_depth"] = 0.01
 
 #load grid values from file
 path = 'C:/Users/dgbli/Documents/MARCC_output/DupuitLEMResults/stoch_vary_k_'+str(num)+'-'+str(ID)+'/data/'
-file = 'MSF500_stoch_vary_k_'+str(ID)+'_grid_12165.nc'
+file = 'MSF500_stoch_vary_k_'+str(ID)+'_grid_60832.nc'
 path1 = path+file
 mg = read_netcdf(path1)
+
 
 grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
@@ -76,7 +78,7 @@ mdl = StochasticRechargeShearStress(params,save_output=False,verbose=True)
 mdl.generate_exp_precip()
 
 
-time, intensity, tau_all, Q_all, wtrel_all = mdl.visualize_run_hydrological_step()
+time, intensity, tau_all, Q_all, wtrel_all, qs_all = mdl.visualize_run_hydrological_step()
 
 
 Q_range = np.max(Q_all,axis=0) - np.min(Q_all,axis=0)
@@ -84,15 +86,33 @@ wt_range = np.max(wtrel_all,axis=0) - np.min(wtrel_all,axis=0)
 
 
 plt.figure()
-imshow_grid(grid,Q_range)
+imshow_grid(grid,Q_all[7,:])
+
+
+def plot_gif(source,index):
+    
+    fig = plt.figure(figsize=(8,6))
+    imshow_grid(grid,source, cmap='gist_earth', limits=(0,50), colorbar_label = 'Elevation [m]', grid_units=('m','m'))
+    plt.tight_layout()
+    
+    fig.canvas.draw()       # draw the canvas, cache the renderer
+    image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
+    image  = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    
+    plt.close()
+    
+    return image
+
+imageio.mimsave('../DupuitLEMResults/figs/stoch_vary_k_'+str(num)+'/q_'+str(ID)+'.gif', [plot_gif(Q_all[i],i) for i in range(len(Q_all))], fps=1)
+
+
+
+p_plot = intensity[intensity>0]
+t_plot = time[intensity>0]
 
 plt.figure()
-imshow_grid(grid,np.min(Q_all,axis=0))
-
-
-plt.figure()
-imshow_grid(grid,wt_range)
-
+bar = plt.bar(t_plot,p_plot,20000)
+plt.show()
 
 
 
