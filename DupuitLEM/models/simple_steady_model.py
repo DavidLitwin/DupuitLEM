@@ -121,7 +121,12 @@ class SimpleSteadyRecharge:
             t5 = time.time()
             self.ld.run_one_step(self.dt_m)
             self.sp.run_one_step(self.dt_m)
-            self._elev[self._elev<self._base] = self._base[self._elev<self._base]
+
+            #check for places where erosion to bedrock occurs
+            self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
+            self._base[self._elev<self._base] = self._elev[self._elev<self._base] - np.finfo(float).eps
+            self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
+            self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
 
             t6 = time.time()
             times[i:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5]

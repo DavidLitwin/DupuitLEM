@@ -120,7 +120,9 @@ class SteadyRechargeShearStress:
 
         #check for places where erosion to bedrock occurs
         self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
-        self._elev[self._elev<self._base] = self._base[self._elev<self._base]
+        self._base[self._elev<self._base] = self._elev[self._elev<self._base] - np.finfo(float).eps
+        self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
+        self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
 
 
 

@@ -215,6 +215,8 @@ class StochasticRechargeShearStress:
         #update flow directions
         self.fd.run_one_step()
 
+        self.max_substeps_storm = 0
+        self.max_substeps_interstorm = 0
         self.dzdt_eff = np.zeros_like(self._tau)
         dzdt2 = np.zeros_like(self._tau)
         for i in range(len(self.storm_dts)):
@@ -226,6 +228,7 @@ class StochasticRechargeShearStress:
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
             self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
             dzdt1 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
+            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
 
             #run interevent, accumulate flow, and calculate resulting shear stress
             self.gdp.recharge = 0.0
@@ -233,6 +236,7 @@ class StochasticRechargeShearStress:
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
             self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
             dzdt2 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
+            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
 
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
@@ -250,16 +254,19 @@ class StochasticRechargeShearStress:
         #run linear diffusion, erosion
         self.ld.run_one_step(dt_m)
         self._elev += self.dzdt_eff*dt_m
+
         #check for places where erosion to bedrock occurs
         self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
-        self._elev[self._elev<self._base] = self._base[self._elev<self._base]
-
+        self._base[self._elev<self._base] = self._elev[self._elev<self._base] - np.finfo(float).eps
+        self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
+        self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
 
     def run_model(self):
 
         N = self.N
         max_rel_change = np.zeros(N)
         perc90_rel_change = np.zeros(N)
+        gdp_substeps = np.zeros((N,2))
 
         # Run model forward
         for i in range(N):
@@ -270,6 +277,8 @@ class StochasticRechargeShearStress:
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
             perc90_rel_change[i] = np.percentile(elev_diff,90)
+            gdp_substeps[i,0] = self.max_substeps_storm
+            gdp_substeps[i,1] = self.max_substeps_interstorm
 
             if self.save_output:
 
@@ -284,6 +293,9 @@ class StochasticRechargeShearStress:
 
                     filename = self.base_path + str(self.id) + '_90perc_rel_change' + '.txt'
                     np.savetxt(filename,perc90_rel_change, fmt='%.4e')
+
+                    filename = self.base_path + str(self.id) + '_substeps' + '.txt'
+                    np.savetxt(filename,gdp_substeps, fmt='%.4e')
 
 
     def visualize_run_hydrological_step(self):

@@ -13,7 +13,6 @@ from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 
 #parameters
-#parameters
 params = {}
 Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
 Ks = Ks_all[4]
@@ -61,36 +60,55 @@ mdl = StochasticRechargeShearStress(params,save_output=False,verbose=True)
 
 mdl.run_model()
 
-#%%
-# from landlab.grid.mappers import map_max_of_node_links_to_node
 
-# storm_vn = np.zeros(len(mdl.storm_dts), len(elev))
-# interstorm_vn = np.zeros(len(mdl.storm_dts), len(elev))
-# storm_courant = np.zeros(len(mdl.storm_dts), len(elev))
-# interstorm_courant = np.zeros(len(mdl.storm_dts), len(elev))
+#%% run and track storms and substeps
 
-num_substeps_storm = np.zeros(len(mdl.storm_dts))
-num_substeps_interstorm = np.zeros(len(mdl.storm_dts))
+max_substeps_storm = np.zeros(1000)
+max_substeps_interstorm = np.zeros(1000)
+
+intensity = []
+storm_dts = []
+interstorm_dts = []
+
+for i in range(1000):
+
+    mdl.run_step(mdl.dt_m)
+
+    max_substeps_storm[i] = mdl.max_substeps_storm
+    max_substeps_interstorm[i] = mdl.max_substeps_interstorm
+
+    print('Completed model loop %d' % i)
+    
+    intensity.append(mdl.intensities)
+    storm_dts.append(mdl.storm_dts)
+    interstorm_dts.append(mdl.interstorm_dts)
+
+#%% Run hydrological model only
+
+max_substeps_storm = np.zeros(500)
+max_substeps_interstorm = np.zeros(500)
+
+for j in range(500):
+
+    mdl.generate_exp_precip()
+
+    num_substeps_storm = np.zeros(len(mdl.storm_dts))
+    num_substeps_interstorm = np.zeros(len(mdl.storm_dts))
+
+    for i in range(len(mdl.storm_dts)):
+
+        #run event, accumulate flow, and calculate resulting shear stress
+        mdl.gdp.recharge_rate = mdl.intensities[i]
+        mdl.gdp.run_with_adaptive_time_step_solver(mdl.storm_dts[i])
+        num_substeps_storm[i] = mdl.gdp.number_of_substeps
 
 
-for i in range(len(mdl.storm_dts)):
+        #run interevent, accumulate flow, and calculate resulting shear stress
+        mdl.gdp.recharge_rate = 0.0
+        mdl.gdp.run_with_adaptive_time_step_solver(mdl.interstorm_dts[i])
+        num_substeps_interstorm[i] = mdl.gdp.number_of_substeps
 
-    #run event, accumulate flow, and calculate resulting shear stress
-    mdl.gdp.recharge_rate = mdl.intensities[i]
-    mdl.gdp.run_with_adaptive_time_step_solver(mdl.storm_dts[i])
-    num_substeps_storm[i] = mdl.gdp.number_of_substeps
+    max_substeps_storm[j] = max(num_substeps_storm)
+    max_substeps_interstorm[j] = max(num_substeps_interstorm)
 
-
-    # storm_vn[i,:] = map_max_of_node_links_to_node(grid, mdl.gdp._vn_criteria)
-    # storm_courant[i,:] = map_max_of_node_links_to_node(grid, mdl.gdp._courant_criteria)
-
-    #run interevent, accumulate flow, and calculate resulting shear stress
-    mdl.gdp.recharge_rate = 0.0
-    mdl.gdp.run_with_adaptive_time_step_solver(mdl.interstorm_dts[i])
-    num_substeps_interstorm[i] = mdl.gdp.number_of_substeps
-
-
-
-    # interstorm_vn[i,:] = map_max_of_node_links_to_node(grid, mdl.gdp._vn_criteria)
-    # interstorm_courant[i,:] = map_max_of_node_links_to_node(grid, mdl.gdp._courant_criteria)
-
+    print('completed '+str(j))
