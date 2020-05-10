@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=st_9
+#SBATCH --job-name=st_10
 #SBATCH --time=72:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
@@ -9,8 +9,8 @@
 #SBATCH --mail-user=dlitwin3@jhu.edu
 #SBATCH -o ../../DupuitLEMResults/slurm/slurm-%A_%a.out
 #### load and unload modules you may need
-script=stoch_vary_k.py
-output_folder=stoch_vary_k_9
+script=stoch_vary_K_D.py
+output_folder=stoch_vary_K_D
 module load git
 module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
