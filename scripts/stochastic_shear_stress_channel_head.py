@@ -15,7 +15,7 @@ from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 #parameters
 params = {}
-Ks = 0.01/3600 #[m/s]
+Ks = 0.5/3600 #[m/s]
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 d_k = 1 #m
 params["hydraulic_conductivity"] = bind_avg_hydraulic_conductivity(Ks,K0,d_k) #this is the depth-dependent K form
@@ -35,25 +35,25 @@ params["hillslope_diffusivity"] = 0.001/(365*24*3600) # hillslope diffusivity [m
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
 params["total_hydrological_time"] = 30*24*3600 # total hydrological time
-params["total_morphological_time"] = 2.5e6*(365*24*3600) # total simulation time [s]
+params["total_morphological_time"] = 1e6*(365*24*3600) # total simulation time [s]
 
 params["precipitation_seed"] = 2
 params["mean_storm_duration"] = 2*3600
-params["mean_interstorm_duration"] = 48*3600 
+params["mean_interstorm_duration"] = 48*3600
 params["mean_storm_depth"] = 0.01 #[m]
 
-## additional fields for saving output as netCDFs
-# params["output_interval"] = 1000
-# params["output_fields"] = [
-#         "topographic__elevation",
-#         "aquifer_base__elevation",
-#         "water_table__elevation",
-#         "surface_water__discharge",
-#         "groundwater__specific_discharge_node",
-#         ]
-# params["base_output_path"] = './data/MSF500_stoch_vary_k_'
-# params["run_id"] = ID #make this SLURM task_id if multiple runs
-#
+# additional fields for saving output as netCDFs
+params["output_interval"] = 100
+params["output_fields"] = [
+        "topographic__elevation",
+        "aquifer_base__elevation",
+        "water_table__elevation",
+        "surface_water__discharge",
+        "groundwater__specific_discharge_node",
+        ]
+params["base_output_path"] = 'C:/Users/dgbli/Documents/Research_Data/Landscape evolution/stoch_channel_head_'
+params["run_id"] = 1 #make this SLURM task_id if multiple runs
+
 
 
 """
@@ -75,7 +75,7 @@ elev[:] = d_i + 0.1*np.random.rand(len(elev))
 
 
 # partial grid that you want
-x_indices = np.where(grid.x_of_node <= 200)
+x_indices = np.where(grid.x_of_node <= 250)
 y_indices = np.where(grid.y_of_node >= 800)
 indices = np.intersect1d(x_indices,y_indices)
 
@@ -93,25 +93,25 @@ wt_1[:] = elev_1.copy()
 params["grid"] = grid_1
 
 #initialize the model
-mdl = StochasticRechargeShearStress(params,save_output=False)
+mdl = StochasticRechargeShearStress(params,save_output=True)
 
 #run the model in one go for the total morphological time
 mdl.run_model()
 
 """
 Alternate way to run the model:
-    
+
 for i in range(N):
     mdl.run_step(dt_m)
-    
-where dt_m is the length (in seconds) of the morphological timestep. Note that 
-you will still need to specify the hydrological timestep dt_h in the parameter 
+
+where dt_m is the length (in seconds) of the morphological timestep. Note that
+you will still need to specify the hydrological timestep dt_h in the parameter
 dictionary, but that morphologic_scaling_factor and total_morphological_time
 are optional arguments. When the run_model method is used, dt_m = MSF*dt_h.
 """
 
 """
-The simplest way to visualize output is landlab's built in imshow_grid function. 
+The simplest way to visualize output is landlab's built in imshow_grid function.
 Handles reshaping, axes, etc.
 
 #elevation
@@ -122,5 +122,3 @@ imshow_grid(grid_1,elev_1, cmap='gist_earth', colorbar_label = 'Elevation [m]', 
 plt.figure(figsize=(8,6))
 imshow_grid(grid_1,elev_1-base_1, cmap='Blues', limits=(0,6), colorbar_label = 'regolith thickness', grid_units=('m','m'))
 """
-
-
