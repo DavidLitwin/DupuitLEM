@@ -2,7 +2,7 @@
 """
 Use StochasticRechargeShearStress model to test different values stream
 power coefficient and diffusivity. Save output. The goal of this test is to
-identify whether the feature that appears for k_st = 1e10 and d=0.001 
+identify whether the feature that appears for k_st = 1e10 and d=0.001
 (bedrock amphitheater shaped channel heads) appears always or only in some cases.
 
 Date: 10 May 2020
@@ -42,7 +42,7 @@ params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
 params["k_st"] = k_st_all[ID] #shear stress erosion coefficient
 params["shear_stress_threshold"] = 0.01 #threshold shear stress [N/m2]
-params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
+params["chezy_c"] = 15 #chezy coefficient for flow depth calcualtion
 params["hillslope_diffusivity"] = D_all[ID] # hillslope diffusivity [m2/s]
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]

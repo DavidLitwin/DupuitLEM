@@ -33,7 +33,7 @@ params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
 params["k_st"] = 1e-10 #shear stress erosion coefficient
 params["shear_stress_threshold"] = 0.01 #threshold shear stress [N/m2]
-params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
+params["chezy_c"] = 15 #chezy coefficient for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.001/(365*24*3600) # hillslope diffusivity [m2/s]
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]

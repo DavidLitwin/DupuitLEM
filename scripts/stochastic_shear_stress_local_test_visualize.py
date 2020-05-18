@@ -38,7 +38,7 @@ params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
 params["k_st"] = 1e-10 #shear stress erosion coefficient
 params["shear_stress_threshold"] = 0.01 #threshold shear stress [N/m2]
-params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
+params["chezy_c"] = 15 #chezy coefficient for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
@@ -63,7 +63,7 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_
 elev = grid.add_zeros('node', 'topographic__elevation')
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
-    
+
 elev[:] = mg.at_node['topographic__elevation']
 base[:] = mg.at_node['aquifer_base__elevation']
 wt[:] = mg.at_node['water_table__elevation']
@@ -101,10 +101,10 @@ p_sat_sum = np.zeros(len(elev))
 for i in range(np.shape(qs_all)[0]-1):
     exfilt_all[i,:] = np.maximum(qs_all[i,:]-p[i],0)
     exfilt_sum += exfilt_all[i,:]*(time[i+1]-time[i])
-    
+
     p_sat_all[i,:] = qs_all[i,:]-exfilt_all[i,:]
     p_sat_sum += p_sat_all[i,:]*(time[i+1]-time[i])
-    
+
 plt.figure()
 imshow_grid(grid,exfilt_sum, cmap = 'Blues', colorbar_label = 'exfiltration', grid_units=('m','m'))
 plt.savefig('C:/Users/dgbli/Documents/MARCC_output/DupuitLEMResults/figs/stoch_vary_k_'+str(num)+'/exfilt_K=%.2f_d=%.2f.png'%(Ks*3600,d_k))
@@ -116,17 +116,17 @@ plt.savefig('C:/Users/dgbli/Documents/MARCC_output/DupuitLEMResults/figs/stoch_v
 
 
 def plot_gif(source,index):
-    
+
     fig = plt.figure(figsize=(8,6))
     imshow_grid(grid,source, cmap='gist_earth', limits=(0,50), colorbar_label = 'Elevation [m]', grid_units=('m','m'))
     plt.tight_layout()
-    
+
     fig.canvas.draw()       # draw the canvas, cache the renderer
     image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
     image  = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    
+
     plt.close()
-    
+
     return image
 
 imageio.mimsave('../DupuitLEMResults/figs/stoch_vary_k_'+str(num)+'/q_'+str(ID)+'.gif', [plot_gif(Q_all[i],i) for i in range(len(Q_all))], fps=1)
@@ -139,6 +139,3 @@ t_plot = time[intensity>0]
 plt.figure()
 bar = plt.bar(t_plot,p_plot,20000)
 plt.show()
-
-
-

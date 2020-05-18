@@ -29,8 +29,8 @@ params["characteristic_w_depth"] = 1  #m
 params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
 params["k_st"] = 1e-10 #shear stress erosion coefficient
-params["shear_stress_threshold"] = 0.01 #threshold shear stress [N/m2]
-params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
+params["shear_stress_threshold"] = 0.0 #threshold shear stress [N/m2]
+params["chezy_c"] = 15 #chezy coefficient for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.001/(365*24*3600) # hillslope diffusivity [m2/s]
 
 params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
@@ -52,7 +52,7 @@ params["output_fields"] = [
         "groundwater__specific_discharge_node",
         ]
 params["base_output_path"] = 'C:/Users/dgbli/Documents/Research_Data/Landscape evolution/stoch_channel_head_'
-params["run_id"] = 1 #make this SLURM task_id if multiple runs
+params["run_id"] = 2 #make this SLURM task_id if multiple runs
 
 
 
@@ -79,7 +79,7 @@ x_indices = np.where(grid.x_of_node <= 250)
 y_indices = np.where(grid.y_of_node >= 800)
 indices = np.intersect1d(x_indices,y_indices)
 
-grid_1 = RasterModelGrid((21, 20), xy_spacing=10.0)
+grid_1 = RasterModelGrid((20, 26), xy_spacing=10.0)
 grid_1.set_status_at_node_on_edges(right=grid_1.BC_NODE_IS_CLOSED, top=grid_1.BC_NODE_IS_CLOSED, \
                               left=grid_1.BC_NODE_IS_FIXED_VALUE, bottom=grid_1.BC_NODE_IS_CLOSED)
 elev_1 = grid_1.add_zeros('node', 'topographic__elevation')
@@ -93,7 +93,7 @@ wt_1[:] = elev_1.copy()
 params["grid"] = grid_1
 
 #initialize the model
-mdl = StochasticRechargeShearStress(params,save_output=True)
+mdl = StochasticRechargeShearStress(params,save_output=True,verbose=True)
 
 #run the model in one go for the total morphological time
 mdl.run_model()

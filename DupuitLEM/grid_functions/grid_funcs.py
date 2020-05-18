@@ -32,25 +32,26 @@ def bind_avg_hydraulic_conductivity(ks,k0,dk):
         return kavg
     return bound_avg_hydraulic_conductivity
 
-
-def calc_shear_stress_at_node(grid, n_manning=0.05, rho = 1000, g = 9.81):
+def calc_shear_stress_manning(grid, n_manning=0.05, rho = 1000, g = 9.81):
     r"""
-    Calculate the shear stress :math:`\tau` based upon the equations: (N/m2)
+    Calculate the shear stress :math:`\tau` (N/m2) based upon the Manning
+    equation and shear stress for steady uniform flow:
 
     .. math::
         \tau = \rho g S d
 
     .. math::
-        d = \bigg( \frac{n Q}{S^{1/2} dx} \bigg)^{3/2}
+        d = \bigg( \frac{n Q}{S^{1/2} w} \bigg)^{3/2}
 
     where :math:`\rho` is the density of water, :math:`g` is the gravitational constant,
     :math:`S` is the topographic slope, :math:`d` is the water depth calculated with Manning's equation,
-    :math:`n` is Manning's n, :math:`Q` is surface water discharge, and :math:`dx` is the grid cell
+    :math:`n` is Manning's n, :math:`Q` is surface water discharge, and :math:`w` is the
+    channel width, here approximated as the grid cell width :math:`dx`
     width.
 
     Parameters
     ----------
-    n_manning: float or array of float (-)
+    n_manning: float or array of float ( s/m(1/3) )
         Manning's n at nodes, giving surface roughness.
     rho: density of water (kg/m3)
     g: gravitational acceleration constant (m/s2)
@@ -67,6 +68,43 @@ def calc_shear_stress_at_node(grid, n_manning=0.05, rho = 1000, g = 9.81):
 
     tau = np.zeros(grid.number_of_nodes)
     tau[grid.core_nodes] = rho * g * S_node * ( (n_manning * Q)/(grid.dx * np.sqrt(S_node)) )**(3/5)
+    return tau
+
+def calc_shear_stress_chezy(grid, c_chezy=15, rho = 1000, g = 9.81):
+    r"""
+    Calculate the shear stress :math:`\tau` (N/m2) based upon the Chezy
+    equation and shear stress for steady uniform flow:
+
+    .. math::
+        \tau = \rho g S d
+
+    .. math::
+        d = \bigg( \frac{Q}{C w S^{1/2}} \bigg)^{2/3}
+
+    where :math:`\rho` is the density of water, :math:`g` is the gravitational constant,
+    :math:`S` is the topographic slope, :math:`d` is the water depth calculated with Manning's equation,
+    :math:`C` is the Chezy coefficient, :math:`Q` is surface water discharge, and :math:`w` is the
+    channel width, here approximated as the grid cell width :math:`dx`
+
+    Parameters
+    ----------
+    c_chezy: float or array of float (m(1/2))/s)
+        Chezy coefficient at nodes, giving surface roughness.
+    rho: density of water (kg/m3)
+    g: gravitational acceleration constant (m/s2)
+    Q: surface water discharge (m3/s)
+
+    notes:
+    In future, should allow c_chezy and dx to be fields that are spatially variable
+
+    """
+    S = abs(grid.calc_grad_at_link('topographic__elevation'))
+    S[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
+    S_node = map_max_of_node_links_to_node(grid, S)[grid.core_nodes]
+    Q = grid.at_node["surface_water__discharge"][grid.core_nodes]
+
+    tau = np.zeros(grid.number_of_nodes)
+    tau[grid.core_nodes] = rho * g * S_node * ( Q/(grid.dx * c_chezy * np.sqrt(S_node)) )**(2/3)
     return tau
 
 

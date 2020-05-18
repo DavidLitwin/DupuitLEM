@@ -19,7 +19,7 @@ from landlab.components import (
     PrecipitationDistribution,
     )
 from landlab.io.netcdf import write_raster_netcdf
-from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_at_node, calc_erosion_from_shear_stress
+from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_chezy, calc_erosion_from_shear_stress
 
 def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
     """
@@ -82,7 +82,7 @@ class StochasticRechargeShearStress:
         self.b_st = params.pop("b_st") #shear stress erosion exponent
         self.k_st = params.pop("k_st") #shear stress erosion coefficient
         self.Tauc = params.pop("shear_stress_threshold") #threshold shear stress [N/m2]
-        self.n_manning = params.pop("manning_n") #manning's n for flow depth calcualtion
+        self.c_chezy = params.pop("chezy_c") #Chezy coefficient for flow depth calcualtion
         self.D = params.pop("hillslope_diffusivity") # hillslope diffusivity [m2/s]
 
         self.T_h = params.pop("total_hydrological_time") #time to run hydrological model before updating topography [s]
@@ -179,13 +179,13 @@ class StochasticRechargeShearStress:
             self.gdp.recharge = self.intensities[i]
             self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            tau1 = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            tau1 = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
 
             #run interevent, accumulate flow, and calculate resulting shear stress
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            tau2 = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            tau2 = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
 
             #calculate effective shear stress across event-interevent pair
             self._tau[:] = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
@@ -226,7 +226,7 @@ class StochasticRechargeShearStress:
             self.gdp.recharge = self.intensities[i]
             self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
             dzdt1 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
             self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
 
@@ -234,7 +234,7 @@ class StochasticRechargeShearStress:
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
             dzdt2 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
             self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
 
@@ -335,7 +335,7 @@ class StochasticRechargeShearStress:
             self.gdp.recharge = self.intensities[i]
             self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
             dzdt1 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
 
             #record event
@@ -351,7 +351,7 @@ class StochasticRechargeShearStress:
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
             dzdt2 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
 
             #record interevent
