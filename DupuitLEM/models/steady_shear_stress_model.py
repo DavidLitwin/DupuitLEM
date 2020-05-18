@@ -17,7 +17,7 @@ from landlab.components import (
     DepressionFinderAndRouter,
     )
 from landlab.io.netcdf import write_raster_netcdf
-from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_at_node, calc_erosion_from_shear_stress
+from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_manning, calc_erosion_from_shear_stress
 
 class SteadyRechargeShearStress:
 
@@ -114,7 +114,7 @@ class SteadyRechargeShearStress:
         self.ld.run_one_step(self.dt_m)
 
         #calc shear stress and erosion
-        self._tau[:] = calc_shear_stress_at_node(self._grid,n_manning = self.n_manning)
+        self._tau[:] = calc_shear_stress_manning(self._grid,n_manning = self.n_manning)
         dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
         self._elev += dzdt*self.dt_m
 

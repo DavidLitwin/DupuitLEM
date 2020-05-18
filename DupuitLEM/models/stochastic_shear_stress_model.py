@@ -243,7 +243,15 @@ class StochasticRechargeShearStress:
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
             self.dzdt_eff += deltaz / self.T_h
 
-    def run_step(self, dt_m):
+    def run_step_reg_prod(self, dt_m):
+        """
+        Run geomorphic step:
+        - update shear stress based on stochastic precipitation
+        - uplift and regolith production
+        - linear diffusion and erosion based on shear stress
+        - check for boundary issues
+        """
+
         #run gw model, calculate erosion rate
         self.run_hydrological_step()
 
@@ -255,11 +263,45 @@ class StochasticRechargeShearStress:
         self.ld.run_one_step(dt_m)
         self._elev += self.dzdt_eff*dt_m
 
-        #check for places where erosion to bedrock occurs
-        self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
+        #check for places where erosion below baselevel occurs, or water table falls below base or above elev
+        self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else pass)
         self._base[self._elev<self._base] = self._elev[self._elev<self._base] - np.finfo(float).eps
+        self.verboseprint('Eroded below baselevel' if (self._elev<0.0).any() else pass)
+        self._elev[self._elev<0.0] = 0.0
+        self.verboseprint('Water table below base' if (self._wt<self._base).any() else pass)
         self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
         self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
+        self.verboseprint('Water table above surface' if (self._wt>self._elev).any() else pass)
+        self._wt[self._wt>self._elev] = self._elev[self._wt>self._elev]
+
+
+    def run_step_const_reg(self, dt_m):
+        """
+        Run geomorphic step:
+        - update shear stress based on stochastic precipitation
+        - uplift and regolith production
+        - linear diffusion and erosion based on shear stress
+        - check for boundary issues
+        """
+        #run gw model, calculate erosion rate
+        self.run_hydrological_step()
+
+        #run linear diffusion, erosion
+        self.ld.run_one_step(dt_m)
+        self._elev += self.dzdt_eff*dt_m
+
+        #uplift and regolith production
+        self._elev[self._cores] += self.U*dt_m
+        self._base[self._cores] = self._elev[self._cores] - (- self.d_s*np.log(self.U/self.w0))
+
+        #check for places where erosion below baselevel occurs, or water table falls below base or above elev
+        self.verboseprint('Eroded below baselevel' if (self._elev<0.0).any() else pass)
+        self._elev[self._elev<0.0] = 0.0
+        self.verboseprint('Water table below base' if (self._wt<self._base).any() else pass)
+        self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
+        self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
+        self.verboseprint('Water table above surface' if (self._wt>self._elev).any() else pass)
+        self._wt[self._wt>self._elev] = self._elev[self._wt>self._elev]
 
     def run_model(self):
 
@@ -271,7 +313,7 @@ class StochasticRechargeShearStress:
         # Run model forward
         for i in range(N):
             elev0 = self._elev.copy()
-            self.run_step(self.dt_m)
+            self.run_step_const_reg(self.dt_m)
             self.verboseprint('Completed model loop %d' % i)
 
             elev_diff = abs(self._elev-elev0)/elev0
