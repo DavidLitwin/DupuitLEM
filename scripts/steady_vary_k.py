@@ -27,7 +27,7 @@ ID = int(task_id)
 #parameters
 R = 1.752/(365*24*3600) #[m/s] #equivalent to 2 hr storm dt, 48 hr interstorm dt, 0.01m depth.
 Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
-Ks = Ks_all[0]
+Ks = Ks_all[ID]
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 d_k = 1 #m
 n = 0.2 # porosity []
@@ -99,6 +99,7 @@ mdl = SteadyRechargeShearStress(grid,
         morphologic_scaling_factor = MSF,
         total_morphological_time = T_m,
         verbose=True,
+        output_dict = output,
 )
 
 mdl.run_model()
