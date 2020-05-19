@@ -24,7 +24,7 @@ from DupuitLEM.grid_functions.grid_funcs import (
 
 #parameters
 Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
-Ks = Ks_all[4]
+Ks = Ks_all[0]
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 d_k = 1 #m
 n = 0.2 # porosity []
@@ -56,7 +56,7 @@ ss_chezy_fun = bind_shear_stress_chezy(c_chezy=chezy_c)
 
 #initialize grid
 np.random.seed(2)
-grid = RasterModelGrid((100, 100), xy_spacing=10.0)
+grid = RasterModelGrid((20, 25), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -82,7 +82,6 @@ hm = HydrologyEventShearStress(
         groundwater_model=gdp,
         shear_stress_function=ss_chezy_fun,
         erosion_rate_function=ss_erosion_fun,
-        tauc = tauc,
 )
 
 rm = RegolithConstantThickness(grid, equilibrium_depth=d_eq, uplift_rate=U)
