@@ -335,5 +335,5 @@ class HydrologySteadyShearStress(HydrologicalRunner):
         self.fa.run_one_step()
 
         #calc shear stress and erosion
-        self._tau[:] = calc_shear_stress_manning(self._grid)
-        self.dzdt = calc_erosion_from_shear_stress(self._grid)
+        self._tau[:] = self.calc_shear_stress(self._grid)
+        self.dzdt = self.calc_erosion_from_shear_stress(self._grid)
