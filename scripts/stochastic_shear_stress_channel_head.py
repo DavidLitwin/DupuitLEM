@@ -24,8 +24,9 @@ params["regularization_factor"] = 0.01
 params["courant_coefficient"] = 0.9
 params["vn_coefficient"] = 0.9
 
-params["permeability_production_rate"] = 2E-4/(365*24*3600) #[m/s]
-params["characteristic_w_depth"] = 1  #m
+# params["permeability_production_rate"] = 2E-4/(365*24*3600) #[m/s]
+# params["characteristic_w_depth"] = 1  #m
+params["equilibrium_depth"] = 1  #m
 params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
 params["k_st"] = 5e-11 #shear stress erosion coefficient
@@ -67,8 +68,7 @@ grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
-d_i = -params["characteristic_w_depth"]*np.log(params["uplift_rate"]/params["permeability_production_rate"])
-elev[:] = d_i + 0.1*np.random.rand(len(elev))
+elev[:] = params["equilibrium_depth"] + 0.1*np.random.rand(len(elev))
 # base = grid.add_zeros('node', 'aquifer_base__elevation')
 # wt = grid.add_zeros('node', 'water_table__elevation')
 # wt[:] = elev.copy()
@@ -83,7 +83,6 @@ grid_1 = RasterModelGrid((20, 26), xy_spacing=10.0)
 grid_1.set_status_at_node_on_edges(right=grid_1.BC_NODE_IS_CLOSED, top=grid_1.BC_NODE_IS_CLOSED, \
                               left=grid_1.BC_NODE_IS_FIXED_VALUE, bottom=grid_1.BC_NODE_IS_CLOSED)
 elev_1 = grid_1.add_zeros('node', 'topographic__elevation')
-d_i = -params["characteristic_w_depth"]*np.log(params["uplift_rate"]/params["permeability_production_rate"])
 elev_1[:] = elev[indices]
 base_1 = grid_1.add_zeros('node', 'aquifer_base__elevation')
 wt_1 = grid_1.add_zeros('node', 'water_table__elevation')
