@@ -21,14 +21,14 @@ d_k = 1 #m
 params["hydraulic_conductivity"] = bind_avg_hydraulic_conductivity(Ks,K0,d_k) #this is the depth-dependent K form
 params["porosity"] = 0.2 #[]
 params["regularization_factor"] = 0.01
-params["courant_coefficient"] = 0.5
-params["vn_coefficient"] = 0.8
+params["courant_coefficient"] = 0.9
+params["vn_coefficient"] = 0.9
 
 params["permeability_production_rate"] = 2E-4/(365*24*3600) #[m/s]
 params["characteristic_w_depth"] = 1  #m
 params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
 params["b_st"] = 1.5 #shear stress erosion exponent
-params["k_st"] = 1e-10 #shear stress erosion coefficient
+params["k_st"] = 5e-11 #shear stress erosion coefficient
 params["shear_stress_threshold"] = 0.0 #threshold shear stress [N/m2]
 params["chezy_c"] = 15 #chezy coefficient for flow depth calcualtion
 params["hillslope_diffusivity"] = 0.001/(365*24*3600) # hillslope diffusivity [m2/s]
@@ -93,7 +93,7 @@ wt_1[:] = elev_1.copy()
 params["grid"] = grid_1
 
 #initialize the model
-mdl = StochasticRechargeShearStress(params,save_output=True,verbose=True)
+mdl = StochasticRechargeShearStress(params,save_output=False,verbose=True)
 
 #run the model in one go for the total morphological time
 mdl.run_model()

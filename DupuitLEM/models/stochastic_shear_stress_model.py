@@ -19,7 +19,11 @@ from landlab.components import (
     PrecipitationDistribution,
     )
 from landlab.io.netcdf import write_raster_netcdf
-from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_chezy, calc_erosion_from_shear_stress
+from DupuitLEM.grid_functions.grid_funcs import (
+    calc_shear_stress_chezy,
+    calc_shear_stress_manning,
+    calc_erosion_from_shear_stress,
+    )
 
 def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
     """
@@ -76,8 +80,9 @@ class StochasticRechargeShearStress:
         self.c = params.pop("courant_coefficient")
         self.vn = params.pop("vn_coefficient")
 
-        self.w0 = params.pop("permeability_production_rate") #[m/s]
-        self.d_s = params.pop("characteristic_w_depth")
+        self.w0 = params.pop("permeability_production_rate", None) #use for dynamic thickness model [m/s]
+        self.d_s = params.pop("characteristic_w_depth", None) #use for dynamic thickness model [m]
+        self.d_eq = params.pop("equilibrium_depth", None) #use for constant thickness model [m]
         self.U = params.pop("uplift_rate") # uniform uplift [m/s]
         self.b_st = params.pop("b_st") #shear stress erosion exponent
         self.k_st = params.pop("k_st") #shear stress erosion coefficient
@@ -293,7 +298,7 @@ class StochasticRechargeShearStress:
 
         #uplift and regolith production
         self._elev[self._cores] += self.U*dt_m
-        self._base[self._cores] = self._elev[self._cores] - (- self.d_s*np.log(self.U/self.w0))
+        self._base[self._cores] = self._elev[self._cores] - self.d_eq
 
         #check for places where erosion below baselevel occurs, or water table falls below base or above elev
         if (self._elev<0.0).any(): self.verboseprint('Eroded below baselevel')
