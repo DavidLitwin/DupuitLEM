@@ -23,9 +23,9 @@ class StochasticRechargeShearStress:
 
     def __init__(self,
         grid,
-        hydrology_model,
-        diffusion_model,
-        regolith_model,
+        hydrology_model = None,
+        diffusion_model = None,
+        regolith_model = None,
         morphologic_scaling_factor = None,
         total_morphological_time = None,
         save_output = False,

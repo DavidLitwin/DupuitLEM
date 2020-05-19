@@ -9,15 +9,7 @@ Author: David Litwin
 import time
 import numpy as np
 
-from landlab.components import (
-    GroundwaterDupuitPercolator,
-    FlowAccumulator,
-    LinearDiffuser,
-    LakeMapperBarnes,
-    DepressionFinderAndRouter,
-    )
 from landlab.io.netcdf import write_raster_netcdf
-from DupuitLEM.grid_functions.grid_funcs import calc_shear_stress_manning, calc_erosion_from_shear_stress
 
 class SteadyRechargeShearStress:
 
@@ -28,41 +20,37 @@ class SteadyRechargeShearStress:
     from steady recharge to a shallow aquifer.
 
     """
+    def __init__(self,
+        grid,
+        hydrology_model = None,
+        diffusion_model = None,
+        regolith_model = None,
+        hydrological_timestep = 1e5,
+        morphologic_scaling_factor = None,
+        total_morphological_time = None,
+        save_output = False,
+        verbose=False,
+        ):
 
-    def __init__(self,params,save_output=True, verbose=False):
         self.verboseprint = print if verbose else lambda *a, **k: None
 
-        self._grid = params.pop("grid")
+        self._grid = grid
         self._cores = self._grid.core_nodes
-
-        self.R = params.pop("recharge_rate") #[m/s]
-        self.Ksat = params.pop("hydraulic_conductivity") #[m/s]
-        self.n = params.pop("porosity")
-        self.r = params.pop("regularization_factor")
-        self.c = params.pop("courant_coefficient")
-        self.vn = params.pop("vn_coefficient")
-
-        self.w0 = params.pop("permeability_production_rate") #[m/s]
-        self.d_s = params.pop("characteristic_w_depth")
-        self.U = params.pop("uplift_rate") # uniform uplift [m/s]
-        self.b_st = params.pop("b_st") #shear stress erosion exponent
-        self.k_st = params.pop("k_st") #shear stress erosion coefficient
-        self.Tauc = params.pop("shear_stress_threshold") #threshold shear stress [N/m2]
-        self.n_manning = params.pop("manning_n") #manning's n for flow depth calcualtion
-        self.D = params.pop("hillslope_diffusivity") # hillslope diffusivity [m2/s]
-
-        self.dt_h = params.pop("hydrological_timestep") # hydrological timestep [s]
-        self.T = params.pop("total_time",None) # total simulation time [s]
-        self.MSF = params.pop("morphologic_scaling_factor",None) # morphologic scaling factor [-]
-        if self.T and self.MSF:
-            self.dt_m = self.MSF*self.dt_h
-            self.N = int(self.T//self.dt_m)
-
         self._elev = self._grid.at_node["topographic__elevation"]
         self._base = self._grid.at_node["aquifer_base__elevation"]
         self._wt = self._grid.at_node["water_table__elevation"]
         self._gw_flux = self._grid.add_zeros('node', 'groundwater__specific_discharge_node')
-        self._tau = self._grid.add_zeros('node',"surface_water__shear_stress")
+
+        self.hm = hydrology_model
+        self.dm = diffusion_model
+        self.rm = regolith_model
+
+        self.dt_h = hydrological_timestep
+        self.MSF = morphologic_scaling_factor # morphologic scaling factor [-]
+        self.T_m = total_morphological_time #total model time [s]
+        if self.T_m and self.MSF:
+            self.dt_m = self.T_h*self.MSF
+            self.N = int(self.T_m//self.dt_m)
 
         if save_output:
             self.save_output = True
@@ -72,58 +60,30 @@ class SteadyRechargeShearStress:
             self.id =  params.pop("run_id")
         else:
             self.save_output = False
-        self.verboseprint('Parameters loaded')
-
-        # initialize model components
-        self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat, \
-                                          recharge_rate=self.R, regularization_f=self.r, \
-                                          courant_coefficient=self.c, vn_coefficient = self.vn)
-        self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director='D8',  \
-                              runoff_rate='average_surface_water__specific_discharge')
-        self.lmb = LakeMapperBarnes(self._grid, method='D8', fill_flat=False,
-                                      surface='topographic__elevation',
-                                      fill_surface='topographic__elevation',
-                                      redirect_flow_steepest_descent=False,
-                                      reaccumulate_flow=False,
-                                      track_lakes=False,
-                                      ignore_overfill=True)
-        self.ld = LinearDiffuser(self._grid, linear_diffusivity = self.D)
-        self.dfr = DepressionFinderAndRouter(self._grid)
-
-        self.verboseprint('Initialized landlab components')
+        self.verboseprint('Model initialized')
 
     def run_step(self,dt_m):
 
-        #run gw model
-        self.gdp.run_with_adaptive_time_step_solver(self.dt_h)
-        self.number_substeps = self.gdp.number_of_substeps
+        #run gw model, calculate erosion rate
+        self.hm.run_step(self.dt_h)
 
         #uplift and regolith production
-        self._elev[self._cores] += self.U*self.dt_m
-        self._base[self._cores] += self.U*self.dt_m - self.w0*np.exp(-(self._elev[self._cores]-self._base[self._cores])/self.d_s)*self.dt_m
+        self.rm.run_step(dt_m)
 
-        #find pits for flow accumulation
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        #run linear diffusion, erosion
+        self.ld.run_one_step(dt_m)
+        self._elev += self.hm.dzdt*dt_m
 
-        #run flow accumulation
-        self.fa.run_one_step()
-
-        #run linear diffusion
-        self.ld.run_one_step(self.dt_m)
-
-        #calc shear stress and erosion
-        self._tau[:] = calc_shear_stress_manning(self._grid,n_manning = self.n_manning)
-        dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-        self._elev += dzdt*self.dt_m
-
-        #check for places where erosion to bedrock occurs
-        self.verboseprint('Eroded to bedrock' if (self._elev<self._base).any() else '')
+        #check for places where erosion below baselevel occurs, or water table falls below base or above elev
+        if (self._elev<self._base).any(): self.verboseprint('Eroded to bedrock')
         self._base[self._elev<self._base] = self._elev[self._elev<self._base] - np.finfo(float).eps
+        if (self._elev<0.0).any(): self.verboseprint('Eroded below baselevel')
+        self._elev[self._elev<0.0] = 0.0
+        if (self._wt<self._base).any(): self.verboseprint('Water table below base')
         self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
         self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
-
+        if (self._wt>self._elev).any(): self.verboseprint('Water table above surface')
+        self._wt[self._wt>self._elev] = self._elev[self._wt>self._elev]
 
 
     def run_model(self):

@@ -30,6 +30,7 @@ class SimpleSteadyRecharge:
     """
 
     def __init__(self,params,save_output=True):
+        self.verboseprint = print if verbose else lambda *a, **k: None
 
         self._grid = params.pop("grid")
         self._cores = self._grid.core_nodes

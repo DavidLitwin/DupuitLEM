@@ -11,58 +11,12 @@ from landlab.components import (
     DepressionFinderAndRouter,
     )
 
-def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
-    """
-    Calculate effective shear stress over the course of an event-interevent
-    period using a trapezoidal approximation, which accounts for the linear
-    interpolation of when the threshold shear stress is exceeded. Note that this
-    method may overestimate shear stress during interevent if it quickly drops
-    below the threshold value.
-    """
-
-    tauint1 = np.zeros_like(tau0)
-    tauint2 = np.zeros_like(tau0)
-
-    c1 = np.logical_and(tau0>tauc,tau1>tauc)
-    c2 = np.logical_and(tau0<tauc,tau1>tauc)
-    c3 = np.logical_and(tau0>tauc,tau1<tauc)
-    #c4 = np.logical_and(tau0<tauc,tau1<tauc) #implied
-    tauint1[c1] = 0.5*tr*(tau0[c1]+tau1[c1]-2*tauc)
-    tauint1[c2] = 0.5*tr*(tau1[c2]-tauc)*((tau1[c2]-tauc)/(tau1[c2]-tau0[c2]))
-    tauint1[c3] = 0.5*tr*(tau0[c3]-tauc)*((tau0[c3]-tauc)/(tau0[c3]-tau1[c3]))
-    #tauint1[c4] = 0.0 #implied
-
-    c1 = np.logical_and(tau1>tauc,tau2>tauc)
-    c2 = np.logical_and(tau1<tauc,tau2>tauc)
-    c3 = np.logical_and(tau1>tauc,tau2<tauc)
-    #c4 = np.logical_and(tau1<tauc,tau2<tauc) #implied
-    tauint2[c1] = 0.5*tb*(tau1[c1]+tau2[c1]-2*tauc)
-    tauint2[c2] = 0.5*tb*(tau2[c2]-tauc)*((tau2[c2]-tauc)/(tau2[c2]-tau1[c2]))
-    tauint2[c3] = 0.5*tb*(tau1[c3]-tauc)*((tau1[c3]-tauc)/(tau1[c3]-tau2[c3]))
-    #tauint2[c4] = 0.0 #implied
-
-    taueff = (tauint1+tauint2)/(tr+tb) + tauc
-    return taueff
-
-
 class HydrologicalRunner:
 
-    def __init__(self,
-        grid,
-        precip_generator,
-        groundwater_model,
-        shear_stress_function,
-        erosion_rate_function,
-        ):
+    def __init__(self, grid):
 
         self._grid = grid
-        self._tau = self._grid.at_node["surface_water__shear_stress"]
-        self._tauc = tauc
-
-        self.pd = precip_generator
-        self.gdp = groundwater_model
-        self.calc_shear_stress = shear_stress_function
-        self.calc_erosion_from_shear_stress = erosion_rate_function
+        self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
 
         self.fd = FlowDirectorD8(self._grid)
         self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director=self.fd,  \
@@ -80,6 +34,58 @@ class HydrologicalRunner:
         raise NotImplementedError
 
 
+class HydrologyIntegrateShearStress(HydrologicalRunner):
+
+    def __init__(self,
+        grid,
+        precip_generator=None,
+        groundwater_model=None,
+        shear_stress_function=None,
+        erosion_rate_function=None,
+        tauc = 0,
+        ):
+        super().__init__(grid)
+
+        self.pd = precip_generator
+        self.gdp = groundwater_model
+        self.calc_shear_stress = shear_stress_function
+        self.calc_erosion_from_shear_stress = erosion_rate_function
+        self._tauc = tauc
+
+    @staticmethod
+    def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
+        """
+        Calculate effective shear stress over the course of an event-interevent
+        period using a trapezoidal approximation, which accounts for the linear
+        interpolation of when the threshold shear stress is exceeded. Note that this
+        method may overestimate shear stress during interevent if it quickly drops
+        below the threshold value.
+        """
+
+        tauint1 = np.zeros_like(tau0)
+        tauint2 = np.zeros_like(tau0)
+
+        c1 = np.logical_and(tau0>tauc,tau1>tauc)
+        c2 = np.logical_and(tau0<tauc,tau1>tauc)
+        c3 = np.logical_and(tau0>tauc,tau1<tauc)
+        #c4 = np.logical_and(tau0<tauc,tau1<tauc) #implied
+        tauint1[c1] = 0.5*tr*(tau0[c1]+tau1[c1]-2*tauc)
+        tauint1[c2] = 0.5*tr*(tau1[c2]-tauc)*((tau1[c2]-tauc)/(tau1[c2]-tau0[c2]))
+        tauint1[c3] = 0.5*tr*(tau0[c3]-tauc)*((tau0[c3]-tauc)/(tau0[c3]-tau1[c3]))
+        #tauint1[c4] = 0.0 #implied
+
+        c1 = np.logical_and(tau1>tauc,tau2>tauc)
+        c2 = np.logical_and(tau1<tauc,tau2>tauc)
+        c3 = np.logical_and(tau1>tauc,tau2<tauc)
+        #c4 = np.logical_and(tau1<tauc,tau2<tauc) #implied
+        tauint2[c1] = 0.5*tb*(tau1[c1]+tau2[c1]-2*tauc)
+        tauint2[c2] = 0.5*tb*(tau2[c2]-tauc)*((tau2[c2]-tauc)/(tau2[c2]-tau1[c2]))
+        tauint2[c3] = 0.5*tb*(tau1[c3]-tauc)*((tau1[c3]-tauc)/(tau1[c3]-tau2[c3]))
+        #tauint2[c4] = 0.0 #implied
+
+        taueff = (tauint1+tauint2)/(tr+tb) + tauc
+        return taueff
+
     def generate_exp_precip(self):
 
         storm_dts = []
@@ -94,19 +100,6 @@ class HydrologicalRunner:
         self.storm_dts = storm_dts
         self.interstorm_dts = interstorm_dts
         self.intensities = intensities
-
-
-class HydrologyIntegrateShearStress(HydrologicalRunner):
-
-    def __init__(self, tauc):
-        super().__init__(
-            grid,
-            precip_generator,
-            groundwater_model,
-            shear_stress_function,
-            erosion_rate_function,
-            )
-        self._tauc = tauc
 
     def run_step(self):
         """"
@@ -162,14 +155,35 @@ class HydrologyEventShearStress(HydrologicalRunner):
         interevent periods.
 
         """
-    def __init__(self):
-        super().__init__(
-            grid,
-            precip_generator,
-            groundwater_model,
-            shear_stress_function,
-            erosion_rate_function,
-            )
+    def __init__(self,
+        grid,
+        precip_generator=None,
+        groundwater_model=None,
+        shear_stress_function=None,
+        erosion_rate_function=None,
+        tauc = 0,
+        ):
+        super().__init__(grid)
+
+        self.pd = precip_generator
+        self.gdp = groundwater_model
+        self.calc_shear_stress = shear_stress_function
+        self.calc_erosion_from_shear_stress = erosion_rate_function
+
+    def generate_exp_precip(self):
+
+        storm_dts = []
+        interstorm_dts = []
+        intensities = []
+
+        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+            storm_dts.append(storm_dt)
+            interstorm_dts.append(interstorm_dt)
+            intensities.append(float(self._grid.at_grid['rainfall__flux']))
+
+        self.storm_dts = storm_dts
+        self.interstorm_dts = interstorm_dts
+        self.intensities = intensities
 
     def run_step(self):
 
@@ -283,3 +297,35 @@ class HydrologyEventShearStress(HydrologicalRunner):
             #note that this only accounts for erosion during the storm period
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
             self.dzdt_eff += deltaz / self.pd._run_time
+
+class HydrologySteadyShearStress(HydrologicalRunner):
+
+    def __init__(self,
+        grid,
+        groundwater_model=None,
+        shear_stress_function=None,
+        erosion_rate_function=None,
+        ):
+        super().__init__(grid)
+
+        self.gdp = groundwater_model
+        self.calc_shear_stress = shear_stress_function
+        self.calc_erosion_from_shear_stress = erosion_rate_function
+
+    def run_step(self,dt_h):
+
+        #run gw model
+        self.gdp.run_with_adaptive_time_step_solver(dt_h)
+        self.number_substeps = self.gdp.number_of_substeps
+
+        #find pits for flow accumulation
+        self.dfr._find_pits()
+        if self.dfr._number_of_pits > 0:
+            self.lmb.run_one_step()
+
+        #run flow accumulation
+        self.fa.run_one_step()
+
+        #calc shear stress and erosion
+        self._tau[:] = calc_shear_stress_manning(self._grid)
+        self.dzdt = calc_erosion_from_shear_stress(self._grid)
