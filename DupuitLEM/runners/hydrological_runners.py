@@ -36,7 +36,8 @@ class HydrologicalRunner:
 
 class HydrologyIntegrateShearStress(HydrologicalRunner):
 
-    def __init__(self,
+    def __init__(
+        self,
         grid,
         precip_generator=None,
         groundwater_model=None,
@@ -51,6 +52,7 @@ class HydrologyIntegrateShearStress(HydrologicalRunner):
         self.calc_shear_stress = shear_stress_function
         self.calc_erosion_from_shear_stress = erosion_rate_function
         self._tauc = tauc
+        self.T_h = self.pd._run_time
 
     @staticmethod
     def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
@@ -143,32 +145,36 @@ class HydrologyIntegrateShearStress(HydrologicalRunner):
 
             #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             dzdt = calc_erosion_from_shear_stress(self._grid)
-            self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.pd._run_time * dzdt
+            self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
 
 class HydrologyEventShearStress(HydrologicalRunner):
 
-        """"
-        Run hydrological model for series of event-interevent pairs, calculate
-        instantaneous shear stress and erosion rate at beginning and end of event.
-        Calculate average erosion rate *for event only* and average this over the
-        whole duration. This method assumes erosion is negligible during the
-        interevent periods.
+    """"
+    Run hydrological model for series of event-interevent pairs, calculate
+    instantaneous shear stress and erosion rate at beginning and end of event.
+    Calculate average erosion rate *for event only* and average this over the
+    whole duration. This method assumes erosion is negligible during the
+    interevent periods.
 
-        """
-    def __init__(self,
+    """
+
+    def __init__(
+        self,
         grid,
         precip_generator=None,
         groundwater_model=None,
         shear_stress_function=None,
         erosion_rate_function=None,
-        tauc = 0,
-        ):
+        tauc = 0
+    ):
+
         super().__init__(grid)
 
         self.pd = precip_generator
         self.gdp = groundwater_model
         self.calc_shear_stress = shear_stress_function
         self.calc_erosion_from_shear_stress = erosion_rate_function
+        self.T_h = self.pd._run_time
 
     def generate_exp_precip(self):
 
@@ -201,6 +207,7 @@ class HydrologyEventShearStress(HydrologicalRunner):
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
         self.dzdt_eff = np.zeros_like(self._tau)
+        dzdt2 = np.zeros_like(self._tau)
         for i in range(len(self.storm_dts)):
             dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
 
@@ -216,14 +223,14 @@ class HydrologyEventShearStress(HydrologicalRunner):
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = self.calc_shear_stress_chezy(self._grid)
+            self._tau[:] = self.calc_shear_stress(self._grid)
             dzdt2 = self.calc_erosion_from_shear_stress(self._grid)
             self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
 
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
-            self.dzdt_eff += deltaz / self.pd._run_time
+            self.dzdt_eff += deltaz / self.T_h
 
 
     def run_step_record_state(self):
@@ -257,6 +264,7 @@ class HydrologyEventShearStress(HydrologicalRunner):
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
         self.dzdt_eff = np.zeros_like(self._tau)
+        dzdt2 = np.zeros_like(self._tau)
         for i in range(len(self.storm_dts)):
             dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
 
@@ -281,7 +289,7 @@ class HydrologyEventShearStress(HydrologicalRunner):
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = self.calc_shear_stress_chezy(self._grid)
+            self._tau[:] = self.calc_shear_stress(self._grid)
             dzdt2 = self.calc_erosion_from_shear_stress(self._grid)
             self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
 
@@ -296,11 +304,12 @@ class HydrologyEventShearStress(HydrologicalRunner):
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
-            self.dzdt_eff += deltaz / self.pd._run_time
+            self.dzdt_eff += deltaz / self.T_h
 
 class HydrologySteadyShearStress(HydrologicalRunner):
 
-    def __init__(self,
+    def __init__(
+        self,
         grid,
         groundwater_model=None,
         shear_stress_function=None,

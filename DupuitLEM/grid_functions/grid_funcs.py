@@ -32,7 +32,7 @@ def bind_avg_hydraulic_conductivity(ks,k0,dk):
         return kavg
     return bound_avg_hydraulic_conductivity
 
-def bind_shear_stress_manning(grid, n_manning=0.05, rho = 1000, g = 9.81):
+def bind_shear_stress_manning(n_manning=0.05, rho = 1000, g = 9.81):
     def calc_shear_stress_manning(grid):
         r"""
         Calculate the shear stress :math:`\tau` (N/m2) based upon the Manning
@@ -72,7 +72,7 @@ def bind_shear_stress_manning(grid, n_manning=0.05, rho = 1000, g = 9.81):
         return tau
     return calc_shear_stress_manning
 
-def bind_shear_stress_chezy(grid, c_chezy=15, rho = 1000, g = 9.81):
+def bind_shear_stress_chezy(c_chezy=15, rho = 1000, g = 9.81):
     def calc_shear_stress_chezy(grid):
         r"""
         Calculate the shear stress :math:`\tau` (N/m2) based upon the Chezy
@@ -111,7 +111,7 @@ def bind_shear_stress_chezy(grid, c_chezy=15, rho = 1000, g = 9.81):
         return tau
     return calc_shear_stress_chezy
 
-def bind_erosion_from_shear_stress(grid,tauc,K,b):
+def bind_erosion_from_shear_stress(tauc,K,b):
     def calc_erosion_from_shear_stress(grid):
         r"""
         Calculate erosion rate dzdt (m) using the shear stress method:

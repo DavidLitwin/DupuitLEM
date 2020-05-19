@@ -4,7 +4,7 @@ description
 
 from .hydrological_runners import (
     HydrologyIntegrateShearStress,
-    HydrologyrEventShearStress,
+    HydrologyEventShearStress,
     )
 from .regolith_runners import (
     RegolithConstantThickness,

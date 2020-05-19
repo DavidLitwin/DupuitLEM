@@ -17,10 +17,10 @@ class RegolithRunner:
 
 class RegolithConstantThickness(RegolithRunner):
 
-    def __init__(self,grid,d_eq=1.0,U=1e-12):
-        super()__init__(grid)
-        self.d_eq = d_eq
-        self.U = U
+    def __init__(self,grid,equilibrium_depth=1.0,uplift_rate=1e-12):
+        super().__init__(grid)
+        self.d_eq = equilibrium_depth
+        self.U = uplift_rate
 
     def run_step(self,dt_m):
 
@@ -30,11 +30,11 @@ class RegolithConstantThickness(RegolithRunner):
 
 class RegolithExponentialProduction(RegolithRunner):
 
-    def __init__(self,grid,d_s=1,w0=2e-12,U=1e-12):
-        super()__init__(grid)
-        self.U = U
-        self.d_s = d_s
-        self.w0 = w0
+    def __init__(self,grid,characteristic_depth=1,regolith_production_rate=2e-12,uplift_rate=1e-12):
+        super().__init__(grid)
+        self.U = uplift_rate
+        self.d_s = characteristic_depth
+        self.w0 = regolith_production_rate
 
     def run_step(self,dt_m):
 

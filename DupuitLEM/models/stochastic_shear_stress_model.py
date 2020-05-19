@@ -48,7 +48,7 @@ class StochasticRechargeShearStress:
         self.MSF = morphologic_scaling_factor # morphologic scaling factor [-]
         self.T_m = total_morphological_time #total model time [s]
         if self.T_m and self.MSF:
-            self.dt_m = self.T_h*self.MSF
+            self.dt_m = self.hm.T_h*self.MSF
             self.N = int(self.T_m//self.dt_m)
 
         if save_output:
@@ -77,7 +77,7 @@ class StochasticRechargeShearStress:
         self.rm.run_step(dt_m)
 
         #run linear diffusion, erosion
-        self.ld.run_one_step(dt_m)
+        self.dm.run_one_step(dt_m)
         self._elev += self.hm.dzdt_eff*dt_m
 
         #check for places where erosion below baselevel occurs, or water table falls below base or above elev
@@ -108,8 +108,8 @@ class StochasticRechargeShearStress:
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
             perc90_rel_change[i] = np.percentile(elev_diff,90)
-            gdp_substeps[i,0] = self.max_substeps_storm
-            gdp_substeps[i,1] = self.max_substeps_interstorm
+            gdp_substeps[i,0] = self.hm.max_substeps_storm
+            gdp_substeps[i,1] = self.hm.max_substeps_interstorm
 
             if self.save_output:
 
