@@ -165,7 +165,6 @@ class HydrologyEventShearStress(HydrologicalRunner):
         groundwater_model=None,
         shear_stress_function=None,
         erosion_rate_function=None,
-        tauc = 0
     ):
 
         super().__init__(grid)
