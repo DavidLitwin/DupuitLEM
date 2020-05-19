@@ -28,7 +28,7 @@ class StochasticRechargeShearStress:
         regolith_model = None,
         morphologic_scaling_factor = None,
         total_morphological_time = None,
-        save_output = False,
+        output_dict = None,
         verbose=False,
         ):
 
@@ -51,12 +51,12 @@ class StochasticRechargeShearStress:
             self.dt_m = self.hm.T_h*self.MSF
             self.N = int(self.T_m//self.dt_m)
 
-        if save_output:
+        if output_dict:
             self.save_output = True
-            self.output_interval = params.pop("output_interval")
-            self.output_fields = params.pop("output_fields")
-            self.base_path = params.pop("base_output_path")
-            self.id =  params.pop("run_id")
+            self.output_interval = output_dict["output_interval"]
+            self.output_fields = output_dict["output_fields"]
+            self.base_path = output_dict["base_output_path"]
+            self.id =  output_dict["run_id"]
         else:
             self.save_output = False
         self.verboseprint('Model initialized')

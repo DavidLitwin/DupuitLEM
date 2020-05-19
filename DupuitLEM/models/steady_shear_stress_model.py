@@ -28,7 +28,7 @@ class SteadyRechargeShearStress:
         hydrological_timestep = 1e5,
         morphologic_scaling_factor = None,
         total_morphological_time = None,
-        save_output = False,
+        output_dict = None,
         verbose=False,
         ):
 
@@ -49,15 +49,15 @@ class SteadyRechargeShearStress:
         self.MSF = morphologic_scaling_factor # morphologic scaling factor [-]
         self.T_m = total_morphological_time #total model time [s]
         if self.T_m and self.MSF:
-            self.dt_m = self.T_h*self.MSF
+            self.dt_m = self.dt_h*self.MSF
             self.N = int(self.T_m//self.dt_m)
 
-        if save_output:
+        if output_dict:
             self.save_output = True
-            self.output_interval = params.pop("output_interval")
-            self.output_fields = params.pop("output_fields")
-            self.base_path = params.pop("base_output_path")
-            self.id =  params.pop("run_id")
+            self.output_interval = output_dict["output_interval"]
+            self.output_fields = output_dict["output_fields"]
+            self.base_path = output_dict["base_output_path"]
+            self.id =  output_dict["run_id"]
         else:
             self.save_output = False
         self.verboseprint('Model initialized')
@@ -71,7 +71,7 @@ class SteadyRechargeShearStress:
         self.rm.run_step(dt_m)
 
         #run linear diffusion, erosion
-        self.ld.run_one_step(dt_m)
+        self.dm.run_one_step(dt_m)
         self._elev += self.hm.dzdt*dt_m
 
         #check for places where erosion below baselevel occurs, or water table falls below base or above elev
@@ -102,7 +102,7 @@ class SteadyRechargeShearStress:
             self.run_step(self.dt_m)
             self.verboseprint('Completed model loop %d' % i)
 
-            num_substeps[i] = self.number_substeps
+            num_substeps[i] = self.hm.number_substeps
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
             perc90_rel_change[i] = np.percentile(elev_diff,90)
