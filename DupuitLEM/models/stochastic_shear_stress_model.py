@@ -9,54 +9,7 @@ Author: David Litwin
 import time
 import numpy as np
 
-from landlab.components import (
-    GroundwaterDupuitPercolator,
-    FlowDirectorD8,
-    FlowAccumulator,
-    LinearDiffuser,
-    LakeMapperBarnes,
-    DepressionFinderAndRouter,
-    PrecipitationDistribution,
-    )
 from landlab.io.netcdf import write_raster_netcdf
-from DupuitLEM.grid_functions.grid_funcs import (
-    calc_shear_stress_chezy,
-    calc_shear_stress_manning,
-    calc_erosion_from_shear_stress,
-    )
-
-def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
-    """
-    Calculate effective shear stress over the course of an event-interevent
-    period using a trapezoidal approximation, which accounts for the linear
-    interpolation of when the threshold shear stress is exceeded. Note that this
-    method may overestimate shear stress during interevent if it quickly drops
-    below the threshold value.
-    """
-
-    tauint1 = np.zeros_like(tau0)
-    tauint2 = np.zeros_like(tau0)
-
-    c1 = np.logical_and(tau0>tauc,tau1>tauc)
-    c2 = np.logical_and(tau0<tauc,tau1>tauc)
-    c3 = np.logical_and(tau0>tauc,tau1<tauc)
-    #c4 = np.logical_and(tau0<tauc,tau1<tauc) #implied
-    tauint1[c1] = 0.5*tr*(tau0[c1]+tau1[c1]-2*tauc)
-    tauint1[c2] = 0.5*tr*(tau1[c2]-tauc)*((tau1[c2]-tauc)/(tau1[c2]-tau0[c2]))
-    tauint1[c3] = 0.5*tr*(tau0[c3]-tauc)*((tau0[c3]-tauc)/(tau0[c3]-tau1[c3]))
-    #tauint1[c4] = 0.0 #implied
-
-    c1 = np.logical_and(tau1>tauc,tau2>tauc)
-    c2 = np.logical_and(tau1<tauc,tau2>tauc)
-    c3 = np.logical_and(tau1>tauc,tau2<tauc)
-    #c4 = np.logical_and(tau1<tauc,tau2<tauc) #implied
-    tauint2[c1] = 0.5*tb*(tau1[c1]+tau2[c1]-2*tauc)
-    tauint2[c2] = 0.5*tb*(tau2[c2]-tauc)*((tau2[c2]-tauc)/(tau2[c2]-tau1[c2]))
-    tauint2[c3] = 0.5*tb*(tau1[c3]-tauc)*((tau1[c3]-tauc)/(tau1[c3]-tau2[c3]))
-    #tauint2[c4] = 0.0 #implied
-
-    taueff = (tauint1+tauint2)/(tr+tb) + tauc
-    return taueff
 
 class StochasticRechargeShearStress:
 
@@ -68,46 +21,35 @@ class StochasticRechargeShearStress:
     The shear stress that results from overland flow is tracked and averaged to update topography.
     """
 
-    def __init__(self,params,save_output=True,verbose=False):
+    def __init__(self,
+        grid,
+        hydrology_model,
+        diffusion_model,
+        regolith_model,
+        morphologic_scaling_factor = None,
+        total_morphological_time = None,
+        save_output = False,
+        verbose=False,
+        ):
+
         self.verboseprint = print if verbose else lambda *a, **k: None
 
-        self._grid = params.pop("grid")
+        self._grid = grid
         self._cores = self._grid.core_nodes
-
-        self.Ksat = params.pop("hydraulic_conductivity") #[m/s]
-        self.n = params.pop("porosity")
-        self.r = params.pop("regularization_factor")
-        self.c = params.pop("courant_coefficient")
-        self.vn = params.pop("vn_coefficient")
-
-        self.w0 = params.pop("permeability_production_rate", None) #use for dynamic thickness model [m/s]
-        self.d_s = params.pop("characteristic_w_depth", None) #use for dynamic thickness model [m]
-        self.d_eq = params.pop("equilibrium_depth", None) #use for constant thickness model [m]
-        self.U = params.pop("uplift_rate") # uniform uplift [m/s]
-        self.b_st = params.pop("b_st") #shear stress erosion exponent
-        self.k_st = params.pop("k_st") #shear stress erosion coefficient
-        self.Tauc = params.pop("shear_stress_threshold") #threshold shear stress [N/m2]
-        self.c_chezy = params.pop("chezy_c", None) #Chezy coefficient for flow depth calcualtion
-        self.n_manning = params.pop("manning_n", None) #Manning's n for flow depth calcualtion
-        self.D = params.pop("hillslope_diffusivity") # hillslope diffusivity [m2/s]
-
-        self.T_h = params.pop("total_hydrological_time") #time to run hydrological model before updating topography [s]
-        self.MSF = params.pop("morphologic_scaling_factor", None) # morphologic scaling factor [-]
-        self.T_m = params.pop("total_morphological_time", None) #total model time [s]
-        if self.T_m and self.MSF:
-            self.dt_m = self.T_h*self.MSF
-            self.N = int(self.T_m//self.dt_m)
-
-        self.p_seed = params.pop("precipitation_seed")
-        self.storm_dt = params.pop("mean_storm_duration")
-        self.interstorm_dt = params.pop("mean_interstorm_duration")
-        self.p = params.pop("mean_storm_depth")
-
         self._elev = self._grid.at_node["topographic__elevation"]
         self._base = self._grid.at_node["aquifer_base__elevation"]
         self._wt = self._grid.at_node["water_table__elevation"]
         self._gw_flux = self._grid.add_zeros('node', 'groundwater__specific_discharge_node')
-        self._tau = self._grid.add_zeros('node',"surface_water__shear_stress")
+
+        self.hm = hydrology_model
+        self.dm = diffusion_model
+        self.rm = regolith_model
+
+        self.MSF = morphologic_scaling_factor # morphologic scaling factor [-]
+        self.T_m = total_morphological_time #total model time [s]
+        if self.T_m and self.MSF:
+            self.dt_m = self.T_h*self.MSF
+            self.N = int(self.T_m//self.dt_m)
 
         if save_output:
             self.save_output = True
@@ -117,139 +59,9 @@ class StochasticRechargeShearStress:
             self.id =  params.pop("run_id")
         else:
             self.save_output = False
-        self.verboseprint('Parameters loaded')
+        self.verboseprint('Model initialized')
 
-        # initialize model components
-        self.gdp = GroundwaterDupuitPercolator(self._grid, porosity=self.n, hydraulic_conductivity=self.Ksat, \
-                                          regularization_f=self.r, \
-                                          courant_coefficient=self.c, vn_coefficient = self.vn)
-        self.fd = FlowDirectorD8(self._grid)
-        self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director=self.fd,  \
-                              runoff_rate='average_surface_water__specific_discharge')
-        self.lmb = LakeMapperBarnes(self._grid, method='D8', fill_flat=False,
-                                      surface='topographic__elevation',
-                                      fill_surface='topographic__elevation',
-                                      redirect_flow_steepest_descent=False,
-                                      reaccumulate_flow=False,
-                                      track_lakes=False,
-                                      ignore_overfill=True)
-        self.ld = LinearDiffuser(self._grid, linear_diffusivity = self.D)
-        self.dfr = DepressionFinderAndRouter(self._grid)
-        self.pd = PrecipitationDistribution(self._grid, mean_storm_duration=self.storm_dt,
-            mean_interstorm_duration=self.interstorm_dt, mean_storm_depth=self.p,
-            total_t=self.T_h)
-        self.pd.seed_generator(seedval=self.p_seed)
-        self.verboseprint('Initialized landlab components')
-
-    def generate_exp_precip(self):
-
-        storm_dts = []
-        interstorm_dts = []
-        intensities = []
-
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
-            storm_dts.append(storm_dt)
-            interstorm_dts.append(interstorm_dt)
-            intensities.append(float(self._grid.at_grid['rainfall__flux']))
-
-        self.storm_dts = storm_dts
-        self.interstorm_dts = interstorm_dts
-        self.intensities = intensities
-
-    def run_hydrological_step_integrate_shear_stress(self):
-        """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        at end of event and interevent. Use a trapezoidal integration to find effective
-        shear stress and erosion rate over the total_hydrological_time
-
-        Note: This method may overestimate shear stress and erosion rate during the recession period.
-        """
-
-        #generate new precip time series
-        self.generate_exp_precip()
-
-        #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
-
-        #update flow directions
-        self.fd.run_one_step()
-
-        self.dzdt_eff = np.zeros_like(self._tau)
-        tau2 = self._tau.copy()
-        for i in range(len(self.storm_dts)):
-            tau0 = tau2.copy() #save prev end of interstorm shear stress
-
-            #run event, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            tau1 = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
-
-            #run interevent, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            tau2 = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
-
-            #calculate effective shear stress across event-interevent pair
-            self._tau[:] = calc_storm_eff_shear_stress(tau0,tau1,tau2,self.Tauc,self.storm_dts[i],self.interstorm_dts[i])
-
-            #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
-            dzdt = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-            self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
-
-    def run_hydrological_step(self):
-        """"
-        Run hydrological model for series of event-interevent pairs, calculate
-        instantaneous shear stress and erosion rate at beginning and end of event.
-        Calculate average erosion rate *for event only* and average this over the
-        whole duration. This method assumes erosion is negligible during the
-        interevent periods.
-
-        """
-
-        #generate new precip time series
-        self.generate_exp_precip()
-
-        #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
-
-        #update flow directions
-        self.fd.run_one_step()
-
-        self.max_substeps_storm = 0
-        self.max_substeps_interstorm = 0
-        self.dzdt_eff = np.zeros_like(self._tau)
-        dzdt2 = np.zeros_like(self._tau)
-        for i in range(len(self.storm_dts)):
-            dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
-
-            #run event, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
-            dzdt1 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
-
-            #run interevent, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
-            dzdt2 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
-
-            #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
-            #note that this only accounts for erosion during the storm period
-            deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
-            self.dzdt_eff += deltaz / self.T_h
-
-    def run_step_reg_prod(self, dt_m):
+    def run_step(self, dt_m):
         """
         Run geomorphic step:
         - update shear stress based on stochastic precipitation
@@ -259,15 +71,14 @@ class StochasticRechargeShearStress:
         """
 
         #run gw model, calculate erosion rate
-        self.run_hydrological_step()
+        self.hm.run_step()
 
         #uplift and regolith production
-        self._elev[self._cores] += self.U*dt_m
-        self._base[self._cores] += self.U*dt_m - self.w0*np.exp(-(self._elev[self._cores]-self._base[self._cores])/self.d_s)*dt_m
+        self.rm.run_step(dt_m)
 
         #run linear diffusion, erosion
         self.ld.run_one_step(dt_m)
-        self._elev += self.dzdt_eff*dt_m
+        self._elev += self.hm.dzdt_eff*dt_m
 
         #check for places where erosion below baselevel occurs, or water table falls below base or above elev
         if (self._elev<self._base).any(): self.verboseprint('Eroded to bedrock')
@@ -281,34 +92,6 @@ class StochasticRechargeShearStress:
         self._wt[self._wt>self._elev] = self._elev[self._wt>self._elev]
 
 
-    def run_step_const_reg(self, dt_m):
-        """
-        Run geomorphic step:
-        - update shear stress based on stochastic precipitation
-        - linear diffusion and erosion based on shear stress
-        - uplift and regolith production
-        - check for boundary issues
-        """
-        #run gw model, calculate erosion rate
-        self.run_hydrological_step()
-
-        #run linear diffusion, erosion
-        self.ld.run_one_step(dt_m)
-        self._elev += self.dzdt_eff*dt_m
-
-        #uplift and regolith production
-        self._elev[self._cores] += self.U*dt_m
-        self._base[self._cores] = self._elev[self._cores] - self.d_eq
-
-        #check for places where erosion below baselevel occurs, or water table falls below base or above elev
-        if (self._elev<0.0).any(): self.verboseprint('Eroded below baselevel')
-        self._elev[self._elev<0.0] = 0.0
-        if (self._wt<self._base).any(): self.verboseprint('Water table below base')
-        self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
-        self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
-        if (self._wt>self._elev).any(): self.verboseprint('Water table above surface')
-        self._wt[self._wt>self._elev] = self._elev[self._wt>self._elev]
-
     def run_model(self):
 
         N = self.N
@@ -319,7 +102,7 @@ class StochasticRechargeShearStress:
         # Run model forward
         for i in range(N):
             elev0 = self._elev.copy()
-            self.run_step_const_reg(self.dt_m)
+            self.run_step(self.dt_m)
             self.verboseprint('Completed model loop %d' % i)
 
             elev_diff = abs(self._elev-elev0)/elev0
@@ -344,73 +127,3 @@ class StochasticRechargeShearStress:
 
                     filename = self.base_path + str(self.id) + '_substeps' + '.txt'
                     np.savetxt(filename,gdp_substeps, fmt='%.4e')
-
-
-    def visualize_run_hydrological_step(self):
-        """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time
-
-        Visualize output
-
-        """
-
-        #fields to record:
-        self.time = np.zeros(2*len(self.storm_dts)+1)
-        self.intensity = np.zeros(2*len(self.storm_dts)+1)
-        self.tau_all = np.zeros((2*len(self.storm_dts)+1,len(self._tau))) #all shear stress
-        self.Q_all = np.zeros((2*len(self.storm_dts)+1,len(self._tau))) #all discharge
-        self.wtrel_all = np.zeros((2*len(self.storm_dts)+1,len(self._tau))) #all relative water table elevation
-        self.qs_all = np.zeros((2*len(self.storm_dts)+1,len(self._tau))) #all surface water specific discharge
-
-        self.max_substeps_storm = 0
-        self.max_substeps_interstorm = 0
-
-        #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
-
-        #update flow directions
-        self.fd.run_one_step()
-
-        self.dzdt_eff = np.zeros_like(self._tau)
-        dzdt2 = np.zeros_like(self._tau)
-        for i in range(len(self.storm_dts)):
-            dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
-
-            #run event, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
-            dzdt1 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-
-            #record event
-            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
-            self.time[i*2+1] = self.time[i*2]+self.storm_dts[i]
-            self.intensity[i*2] = self.intensities[i]
-            self.tau_all[i*2+1,:] = self._tau
-            self.Q_all[i*2+1,:] = self._grid.at_node['surface_water__discharge']
-            self.wtrel_all[i*2+1,:] = (self._wt-self._base)/(self._elev-self._base)
-            self.qs_all[i*2+1,:] = self._grid.at_node['surface_water__specific_discharge']
-
-            #run interevent, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
-            self._tau[:] = calc_shear_stress_chezy(self._grid,c_chezy = self.c_chezy)
-            dzdt2 = calc_erosion_from_shear_stress(self._grid,self.Tauc,self.k_st,self.b_st)
-
-            #record interevent
-            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
-            self.time[i*2+2] = self.time[i*2+1]+self.interstorm_dts[i]
-            self.tau_all[i*2+2,:] = self._tau
-            self.Q_all[i*2+2,:] = self._grid.at_node['surface_water__discharge']
-            self.wtrel_all[i*2+2,:] = (self._wt-self._base)/(self._elev-self._base)
-            self.qs_all[i*2+2,:] = self._grid.at_node['surface_water__specific_discharge']
-
-            #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
-            #note that this only accounts for erosion during the storm period
-            deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
-            self.dzdt_eff += deltaz / self.T_h
