@@ -8,49 +8,99 @@ Date: 1 April 2020
 import numpy as np
 
 from landlab import RasterModelGrid
+from landlab.components import (
+    GroundwaterDupuitPercolator,
+    LinearDiffuser,
+    )
 from DupuitLEM import SteadyRechargeShearStress
-from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
-
+from DupuitLEM.runners import HydrologySteadyShearStress, RegolithConstantThickness
+from DupuitLEM.grid_functions.grid_funcs import (
+    bind_avg_hydraulic_conductivity,
+    bind_erosion_from_shear_stress,
+    bind_shear_stress_chezy,
+    )
 
 #parameters
-params = {}
-params["recharge_rate"] = 1.5/(365*24*3600) #[m/s]
-Ks = 1/3600 #[m/s]
-K0 = 0.01/3600 #[m/s]
+R = 1.5/(365*24*3600) # recharge rate [m/s]
+Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
+Ks = Ks_all[0]
+K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 d_k = 1 #m
-params["hydraulic_conductivity"] = bind_avg_hydraulic_conductivity(Ks,K0,d_k)
-params["porosity"] = 0.2 #[]
-params["regularization_factor"] = 0.01
-params["courant_coefficient"] = 0.5
-params["vn_coefficient"] = 0.8
+n = 0.2 # porosity []
+r = 0.01 # regularization factor
+c = 0.9 # courant_coefficient
+vn = 0.9 # von Neumann coefficient
 
-params["permeability_production_rate"] = 2E-4/(365*24*3600) #[m/s]
-params["characteristic_w_depth"] = 1 #m
-params["uplift_rate"] = 1E-4/(365*24*3600) # uniform uplift [m/s]
-params["b_st"] = 1.5 #shear stress erosion exponent
-params["k_st"] = 1e-10 #shear stress erosion coefficient
-params["shear_stress_threshold"] = 0.25 #threshold shear stress [N/m2]
-params["manning_n"] = 0.05 #manning's n for flow depth calcualtion
-params["hillslope_diffusivity"] = 0.01/(365*24*3600) # hillslope diffusivity [m2/s]
+d_eq = 1 #equilibrium depth [m]
+U = 1E-4/(365*24*3600) # uniform uplift [m/s]
+b_st = 1.5 #shear stress erosion exponent
+k_st = 5e-11 #shear stress erosion coefficient
+tauc = 0.0 #threshold shear stress [N/m2]
+chezy_c = 15 #chezy coefficient for flow depth calcualtion
+D = 0.001/(365*24*3600) # hillslope diffusivity [m2/s]
 
-params["hydrological_timestep"] = 1e5 # hydrological timestep [s]
-params["total_time"] = 1e4*(365*24*3600) # total simulation time [s]
-params["morphologic_scaling_factor"] = 500 # morphologic scaling factor [-]
+MSF = 500 # morphologic scaling factor [-]
+dt_h = 1e5 # total hydrological time
+T_m = 2.5e6*(365*24*3600) # total simulation time [s]
+
+#initialize grid_functions
+ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,d_k) # hydraulic conductivity [m/s]
+ss_erosion_fun = bind_erosion_from_shear_stress(tauc,k_st,b_st)
+ss_chezy_fun = bind_shear_stress_chezy(c_chezy=chezy_c)
 
 #initialize grid
 np.random.seed(2)
-grid = RasterModelGrid((100, 100), xy_spacing=10.0)
+grid = RasterModelGrid((20, 25), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
-d_i = -params["characteristic_w_depth"]*np.log(params["uplift_rate"]/params["permeability_production_rate"])
-elev[:] = d_i + 0.1*np.random.rand(len(elev))
+elev[:] = d_eq + 0.1*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 
-params["grid"] = grid
+#initialize landlab components
+gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
+                                  regularization_f=r, recharge_rate = R, \
+                                  courant_coefficient=c, vn_coefficient = vn)
+ld = LinearDiffuser(grid, linear_diffusivity = D)
 
-mdl = SteadyRechargeShearStress(params,save_output=False)
+#initialize other models
+hm = HydrologySteadyShearStress(
+        grid,
+        groundwater_model=gdp,
+        shear_stress_function=ss_chezy_fun,
+        erosion_rate_function=ss_erosion_fun,
+)
+
+rm = RegolithConstantThickness(grid, equilibrium_depth=d_eq, uplift_rate=U)
+
+mdl = SteadyRechargeShearStress(grid,
+        hydrology_model = hm,
+        diffusion_model = ld,
+        regolith_model = rm,
+        hydrological_timestep = dt_h,
+        morphologic_scaling_factor = MSF,
+        total_morphological_time = T_m,
+        verbose=True,
+)
+
+#%%
 
 mdl.run_model()
+
+#%%
+
+for i in range(100):
+
+    hm.run_step(mdl.dt_h)
+
+    print('finished step ' + str(i))
+
+#%%
+
+for i in range(100):
+
+    mdl.run_step(mdl.dt_m)
+
+    print('finished step ' + str(i))

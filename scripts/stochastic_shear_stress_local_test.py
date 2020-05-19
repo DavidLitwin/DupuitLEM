@@ -92,11 +92,28 @@ mdl = StochasticRechargeShearStress(grid,
         regolith_model = rm,
         morphologic_scaling_factor = MSF,
         total_morphological_time = T_m,
-        save_output = False,
-        verbose=False,
+        verbose=True,
 )
 
+#%%
+
 mdl.run_model()
+
+#%%
+
+for i in range(100):
+
+    hm.run_step()
+
+    print('finished step ' + str(i))
+
+#%%
+
+for i in range(100):
+
+    mdl.run_step(mdl.dt_m)
+
+    print('finished step ' + str(i))
 
 #%% run and track storms and substeps
 
