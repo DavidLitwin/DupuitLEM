@@ -71,7 +71,7 @@ ss_chezy_fun = bind_shear_stress_chezy(c_chezy=chezy_c)
 
 #initialize grid
 np.random.seed(2)
-grid = RasterModelGrid((20, 25), xy_spacing=10.0)
+grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')

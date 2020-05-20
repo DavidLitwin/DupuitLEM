@@ -74,12 +74,12 @@ class StochasticRechargeShearStress:
         #run gw model, calculate erosion rate
         self.hm.run_step()
 
-        #uplift and regolith production
-        self.rm.run_step(dt_m)
-
         #run linear diffusion, erosion
         self.dm.run_one_step(dt_m)
         self._elev += self.hm.dzdt_eff*dt_m
+
+        #uplift and regolith production
+        self.rm.run_step(dt_m)
 
         #check for places where erosion below baselevel occurs, or water table falls below base or above elev
         if (self._elev<self._base).any(): self.verboseprint('Eroded to bedrock')

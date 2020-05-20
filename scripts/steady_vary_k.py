@@ -43,7 +43,7 @@ tauc = 0.0 #threshold shear stress [N/m2]
 chezy_c = 15 #chezy coefficient for flow depth calcualtion
 D = 0.001/(365*24*3600) # hillslope diffusivity [m2/s]
 
-MSF = 500 # morphologic scaling factor [-]
+MSF = 5000 # morphologic scaling factor [-]
 dt_h = 1e5 # total hydrological time
 T_m = 2.5e6*(365*24*3600) # total simulation time [s]
 
@@ -61,12 +61,12 @@ output["output_fields"] = [
         "surface_water__discharge",
         "groundwater__specific_discharge_node",
         ]
-output["base_output_path"] = './data/stoch_vary_k_'
+output["base_output_path"] = './data/steady_vary_k_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(2)
-grid = RasterModelGrid((20, 25), xy_spacing=10.0)
+grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
