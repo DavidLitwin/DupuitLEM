@@ -1,10 +1,11 @@
 """
 Landscape evolution model using the GroundwaterDupuitPercolator in which
-recharge occurs with events selected from a probability distribution. The shear
+recharge events are selected from probability distributions. The shear
 stress that results from overland flow is tracked and averaged to update topography.
 
 Author: David Litwin
 
+19 May 2020
 """
 import time
 import numpy as np
@@ -64,9 +65,9 @@ class StochasticRechargeShearStress:
     def run_step(self, dt_m):
         """
         Run geomorphic step:
-        - update shear stress based on stochastic precipitation
+        - update shear stress and erosion rate based on stochastic precipitation
         - uplift and regolith production
-        - linear diffusion and erosion based on shear stress
+        - diffusion and erosion based on shear stress
         - check for boundary issues
         """
 

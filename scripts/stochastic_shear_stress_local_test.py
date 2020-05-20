@@ -2,7 +2,7 @@
 """
 test of StochasticRechargeShearStress model, without saving output
 
-Date: 3 April 2020
+19 May 2020
 """
 
 import numpy as np
@@ -14,7 +14,7 @@ from landlab.components import (
     PrecipitationDistribution,
     )
 from DupuitLEM import StochasticRechargeShearStress
-from DupuitLEM.runners import HydrologyEventShearStress, RegolithConstantThickness
+from DupuitLEM.auxiliary_models import HydrologyEventShearStress, RegolithConstantThickness
 from DupuitLEM.grid_functions.grid_funcs import (
     bind_avg_hydraulic_conductivity,
     bind_erosion_from_shear_stress,
@@ -95,11 +95,11 @@ mdl = StochasticRechargeShearStress(grid,
         verbose=True,
 )
 
-#%%
+#%% Run whole model
 
 mdl.run_model()
 
-#%%
+#%% run hydrological model
 
 for i in range(100):
 
@@ -107,7 +107,7 @@ for i in range(100):
 
     print('finished step ' + str(i))
 
-#%%
+#%% run whole model one step at a time
 
 for i in range(100):
 
@@ -137,7 +137,7 @@ for i in range(1000):
     storm_dts.append(mdl.storm_dts)
     interstorm_dts.append(mdl.interstorm_dts)
 
-#%% Run hydrological model only
+#%% Run groundwater model only
 
 max_substeps_storm = np.zeros(500)
 max_substeps_interstorm = np.zeros(500)

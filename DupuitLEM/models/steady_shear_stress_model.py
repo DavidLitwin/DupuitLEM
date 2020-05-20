@@ -5,6 +5,7 @@ is calculated by calculating excess shear stress.
 
 Author: David Litwin
 
+19 May 2020
 """
 import time
 import numpy as np

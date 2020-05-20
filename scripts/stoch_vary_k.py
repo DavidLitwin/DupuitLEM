@@ -3,7 +3,7 @@
 Use StochasticRechargeShearStress model to test different values of
 hydraulic conductivity. Save output.
 
-Date: 3 April 2020
+19 May 2020
 """
 import os
 import numpy as np
@@ -15,7 +15,7 @@ from landlab.components import (
     PrecipitationDistribution,
     )
 from DupuitLEM import StochasticRechargeShearStress
-from DupuitLEM.runners import HydrologyEventShearStress, RegolithConstantThickness
+from DupuitLEM.auxiliary_models import HydrologyEventShearStress, RegolithConstantThickness
 from DupuitLEM.grid_functions.grid_funcs import (
     bind_avg_hydraulic_conductivity,
     bind_erosion_from_shear_stress,

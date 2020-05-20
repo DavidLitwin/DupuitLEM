@@ -1,13 +1,9 @@
-"""
-description
-"""
-
-from .hydrological_runners import (
+from .hydrological_models import (
     HydrologyIntegrateShearStress,
     HydrologyEventShearStress,
     HydrologySteadyShearStress,
     )
-from .regolith_runners import (
+from .regolith_models import (
     RegolithConstantThickness,
     RegolithExponentialProduction,
     )

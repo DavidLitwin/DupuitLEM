@@ -1,5 +1,10 @@
 """
-Description here
+Combined hydrological and fluvial erosion models for DupuitLEM. Take instantiated
+landlab components and functions indicating how the shear stress and erosion
+should be calculated from overland flow, and return an effective erosion rate
+over the hydrological model run time.
+
+19 May 2020
 """
 
 import numpy as np
@@ -11,8 +16,15 @@ from landlab.components import (
     DepressionFinderAndRouter,
     )
 
-class HydrologicalRunner:
+class HydrologicalModel:
+    """
+    Base class for hydrological model.
 
+    Parameters
+    -----
+    grid: a landlab grid with GroundwaterDupuitPercolator already instantiated
+
+    """
     def __init__(self, grid):
 
         self._grid = grid
@@ -34,7 +46,26 @@ class HydrologicalRunner:
         raise NotImplementedError
 
 
-class HydrologyIntegrateShearStress(HydrologicalRunner):
+class HydrologyIntegrateShearStress(HydrologicalModel):
+
+    """"
+    Stochastic hydrological model running pairs of events and interevents over
+    total time specifiied by instantiated PrecipitationDistribution.
+    A trapezoidal integration method is used to find effective
+    shear stress and erosion rate.
+
+    Note: This method may overestimate shear stress and erosion rate during the recession period.
+
+    Parameters
+    -----
+    grid: landlab grid
+    precip_generator: instantiated PrecipitationDistribution
+    groundwater_model: instantiated GroundwaterDupuitPercolator
+    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
+    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
+    tauc: shear stress threshold for erosion
+
+    """
 
     def __init__(
         self,
@@ -89,7 +120,10 @@ class HydrologyIntegrateShearStress(HydrologicalRunner):
         return taueff
 
     def generate_exp_precip(self):
-
+        """
+        Generate series of storm_dts, interstorm_dts, and intensities from
+        PrecipitationDistribution.
+        """
         storm_dts = []
         interstorm_dts = []
         intensities = []
@@ -104,12 +138,10 @@ class HydrologyIntegrateShearStress(HydrologicalRunner):
         self.intensities = intensities
 
     def run_step(self):
-        """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        at end of event and interevent. Use a trapezoidal integration to find effective
-        shear stress and erosion rate over the total_hydrological_time
 
-        Note: This method may overestimate shear stress and erosion rate during the recession period.
+        """
+        Hydrological model for series of event-interevent pairs, calculate shear stresses
+        at end of event and interevent, calculate erosion rate.
         """
 
         #generate new precip time series
@@ -147,7 +179,7 @@ class HydrologyIntegrateShearStress(HydrologicalRunner):
             dzdt = calc_erosion_from_shear_stress(self._grid)
             self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
 
-class HydrologyEventShearStress(HydrologicalRunner):
+class HydrologyEventShearStress(HydrologicalModel):
 
     """"
     Run hydrological model for series of event-interevent pairs, calculate
@@ -155,6 +187,14 @@ class HydrologyEventShearStress(HydrologicalRunner):
     Calculate average erosion rate *for event only* and average this over the
     whole duration. This method assumes erosion is negligible during the
     interevent periods.
+
+    Parameters
+    -----
+    grid: landlab grid
+    precip_generator: instantiated PrecipitationDistribution
+    groundwater_model: instantiated GroundwaterDupuitPercolator
+    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
+    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
 
     """
 
@@ -191,6 +231,11 @@ class HydrologyEventShearStress(HydrologicalRunner):
         self.intensities = intensities
 
     def run_step(self):
+        """"
+        Run hydrological model for series of event-interevent pairs, calculate shear stresses
+        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
+        is from event period only.
+        """
 
         #generate new precip time series
         self.generate_exp_precip()
@@ -237,7 +282,10 @@ class HydrologyEventShearStress(HydrologicalRunner):
         Run hydrological model for series of event-interevent pairs, calculate shear stresses
         and calculate effective erosion rate over the total_hydrological_time
 
-        Visualize output
+        track the state of the model:
+            time, intensity, tau_all (shear stress), Q_all (discharge),
+            wtrel_all (relative water table position),
+            qs_all (surface water specific discharge)
 
         """
 
@@ -305,7 +353,19 @@ class HydrologyEventShearStress(HydrologicalRunner):
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
             self.dzdt_eff += deltaz / self.T_h
 
-class HydrologySteadyShearStress(HydrologicalRunner):
+class HydrologySteadyShearStress(HydrologicalModel):
+    """"
+    Run hydrological model for steady recharge.
+    Calculate shear stress and erosion rate at the end of the timestep
+
+    Parameters
+    -----
+    grid: landlab grid
+    groundwater_model: instantiated GroundwaterDupuitPercolator
+    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
+    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
+
+    """
 
     def __init__(
         self,
@@ -321,6 +381,14 @@ class HydrologySteadyShearStress(HydrologicalRunner):
         self.calc_erosion_from_shear_stress = erosion_rate_function
 
     def run_step(self,dt_h):
+        """
+        Run steay model one step. Update groundwater state, route and accumulate flow,
+        calculate shear stress and erosion rate.
+
+        Parameters
+        -----
+        dt_h: float. Groundwater model timestep
+        """
 
         #run gw model
         self.gdp.run_with_adaptive_time_step_solver(dt_h)
