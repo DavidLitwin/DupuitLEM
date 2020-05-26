@@ -85,13 +85,13 @@ class StochasticRechargeShearStress:
         if (self._elev<self._base).any(): self.verboseprint('Eroded to bedrock')
         self._base[self._elev<self._base] = self._elev[self._elev<self._base] - np.finfo(float).eps
         if (self._elev<0.0).any(): self.verboseprint('Eroded below baselevel')
-        self._elev[self._elev<0.0] = 0.0
+        # self._elev[self._elev<0.0] = 0.0
         if (self._wt<self._base).any(): self.verboseprint('Water table below base')
         self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
         self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
         if (self._wt>self._elev).any(): self.verboseprint('Water table above surface')
         self._wt[self._wt>self._elev] = self._elev[self._wt>self._elev]
-
+        self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
 
     def run_model(self):
 
