@@ -405,3 +405,94 @@ class HydrologySteadyShearStress(HydrologicalModel):
         #calc shear stress and erosion
         self._tau[:] = self.calc_shear_stress(self._grid)
         self.dzdt = self.calc_erosion_from_shear_stress(self._grid)
+
+
+
+class HydrologyEventStreamPower(HydrologicalModel):
+
+    """"
+    Run hydrological model for series of event-interevent pairs, calculate
+    instantaneous flow rate at the beginning and end of event. This method
+    assumes erosion is negligible during the interevent periods.
+    HydrologyEventStreamPower is meant to be passed to
+    StochasticRechargeStreamPower, where erosion rate is calcualted.
+
+    Parameters
+    -----
+    grid: landlab grid
+    precip_generator: instantiated PrecipitationDistribution
+    groundwater_model: instantiated GroundwaterDupuitPercolator
+
+    """
+
+    def __init__(
+        self,
+        grid,
+        precip_generator=None,
+        groundwater_model=None,
+    ):
+
+        super().__init__(grid)
+
+        self.pd = precip_generator
+        self.gdp = groundwater_model
+        self.calc_shear_stress = shear_stress_function
+        self.calc_erosion_from_shear_stress = erosion_rate_function
+        self.T_h = self.pd._run_time
+
+    def generate_exp_precip(self):
+
+        storm_dts = []
+        interstorm_dts = []
+        intensities = []
+
+        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+            storm_dts.append(storm_dt)
+            interstorm_dts.append(interstorm_dt)
+            intensities.append(float(self._grid.at_grid['rainfall__flux']))
+
+        self.storm_dts = storm_dts
+        self.interstorm_dts = interstorm_dts
+        self.intensities = intensities
+
+    def run_step(self):
+        """"
+        Run hydrological model for series of event-interevent pairs, calculate shear stresses
+        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
+        is from event period only.
+        """
+
+        #generate new precip time series
+        self.generate_exp_precip()
+
+        #find and route flow if there are pits
+        self.dfr._find_pits()
+        if self.dfr._number_of_pits > 0:
+            self.lmb.run_one_step()
+
+        #update flow directions
+        self.fd.run_one_step()
+
+        self.max_substeps_storm = 0
+        self.max_substeps_interstorm = 0
+        self.q_eff = np.zeros_like(self._elev)
+        q2 = np.zeros_like(self._elev)
+        for i in range(len(self.storm_dts)):
+            q0 = q2.copy() #save prev end of interstorm flow rate
+
+            #run event, accumulate flow
+            self.gdp.recharge = self.intensities[i]
+            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,q1 = self.fa.accumulate_flow(update_flow_director=False)
+            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
+
+            #run interevent, accumulate flow
+            self.gdp.recharge = 0.0
+            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            _,q2 = self.fa.accumulate_flow(update_flow_director=False)
+            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
+
+            #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
+            #note that this only accounts for erosion during the storm period
+            q_event_vol = 0.5*(q0+q1)*self.storm_dts[i]
+            self.q_eff += q_event_vol / self.T_h
