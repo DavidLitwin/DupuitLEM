@@ -19,7 +19,7 @@ from landlab.components import (
     )
 
 
-class SimpleSteadyRecharge:
+class SteadyRechargeStreamPower:
 
     """
     Simple groundwater landscape evolution model with constant uplift/baselevel
