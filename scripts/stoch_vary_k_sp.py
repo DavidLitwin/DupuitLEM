@@ -7,6 +7,7 @@ hydraulic conductivity. Save output.
 """
 
 import numpy as np
+import os
 
 from landlab import RasterModelGrid
 from landlab.components import (
