@@ -8,7 +8,7 @@ Date: 16 Mar 2020
 import numpy as np
 
 from landlab import RasterModelGrid
-from DupuitLEM import SimpleSteadyRecharge
+from DupuitLEM import SteadyRechargeStreamPower
 from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 
@@ -50,6 +50,6 @@ wt[:] = elev.copy()
 
 params["grid"] = grid
 
-mdl = SimpleSteadyRecharge(params,save_output=False)
+mdl = SteadyRechargeStreamPower(params,save_output=False)
 
 mdl.run_model()

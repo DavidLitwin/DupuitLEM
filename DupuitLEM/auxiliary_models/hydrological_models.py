@@ -28,7 +28,6 @@ class HydrologicalModel:
     def __init__(self, grid):
 
         self._grid = grid
-        self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
 
         self.fd = FlowDirectorD8(self._grid)
         self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director=self.fd,  \
@@ -78,6 +77,7 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
         ):
         super().__init__(grid)
 
+        self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
         self.pd = precip_generator
         self.gdp = groundwater_model
         self.calc_shear_stress = shear_stress_function
@@ -209,6 +209,7 @@ class HydrologyEventShearStress(HydrologicalModel):
 
         super().__init__(grid)
 
+        self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
         self.pd = precip_generator
         self.gdp = groundwater_model
         self.calc_shear_stress = shear_stress_function
@@ -376,6 +377,7 @@ class HydrologySteadyShearStress(HydrologicalModel):
         ):
         super().__init__(grid)
 
+        self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
         self.gdp = groundwater_model
         self.calc_shear_stress = shear_stress_function
         self.calc_erosion_from_shear_stress = erosion_rate_function
@@ -434,10 +436,9 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
         super().__init__(grid)
 
+        self.q_eff = self._grid.add_zeros("node","surface_water_effective__discharge")
         self.pd = precip_generator
         self.gdp = groundwater_model
-        self.calc_shear_stress = shear_stress_function
-        self.calc_erosion_from_shear_stress = erosion_rate_function
         self.T_h = self.pd._run_time
 
     def generate_exp_precip(self):
@@ -475,8 +476,8 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
-        self.q_eff = np.zeros_like(self._elev)
-        q2 = np.zeros_like(self._elev)
+        q_total_vol = np.zeros_like(self.q_eff)
+        q2 = np.zeros_like(self.q_eff)
         for i in range(len(self.storm_dts)):
             q0 = q2.copy() #save prev end of interstorm flow rate
 
@@ -495,4 +496,6 @@ class HydrologyEventStreamPower(HydrologicalModel):
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
             q_event_vol = 0.5*(q0+q1)*self.storm_dts[i]
-            self.q_eff += q_event_vol / self.T_h
+            q_total_vol += q_event_vol
+
+        self.q_eff[:] = q_total_vol/self.T_h
