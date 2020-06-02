@@ -29,7 +29,7 @@ class SteadyRechargeStreamPower:
 
     """
 
-    def __init__(self,params,save_output=True):
+    def __init__(self,params,output_dict=None, verbose=False):
         self.verboseprint = print if verbose else lambda *a, **k: None
 
         self._grid = params.pop("grid")
@@ -61,10 +61,14 @@ class SteadyRechargeStreamPower:
         self._wt = self._grid.at_node["water_table__elevation"]
         self._gw_flux = self._grid.add_zeros('node', 'groundwater__specific_discharge_node')
 
-        if save_output:
-            self._output_interval = params.pop("output_interval")
-            self._output_fields = params.pop("output_fields")
-            self._track_times = params.pop("track_times")
+        if output_dict:
+            self.save_output = True
+            self.output_interval = output_dict["output_interval"]
+            self.output_fields = output_dict["output_fields"]
+            self.base_path = output_dict["base_output_path"]
+            self.id =  output_dict["run_id"]
+        else:
+            self.save_output = False
 
 
         # initialize model components
@@ -129,9 +133,27 @@ class SteadyRechargeStreamPower:
             self._wt[self._wt<self._base] = self._base[self._wt<self._base] + np.finfo(float).eps
             self._grid.at_node['aquifer__thickness'][self._cores] = (self._wt - self._base)[self._cores]
 
+            self.verboseprint('Completed model loop %d' % i)
             t6 = time.time()
             times[i:] = [t2-t1, t3-t2, t4-t3, t5-t4, t6-t5]
             num_pits[i] = self.dfr._number_of_pits
             elev_diff = abs(self._elev-elev0)/elev0
             max_rel_change[i] = np.max(elev_diff)
             perc90_rel_change[i] = np.percentile(elev_diff,90)
+
+            if self.save_output:
+
+                if i % self.output_interval == 0 or i==max(range(N)):
+
+                    self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
+                    filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'
+                    write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
+
+                    filename = self.base_path + str(self.id) + '_max_rel_change' + '.txt'
+                    np.savetxt(filename,max_rel_change, fmt='%.4e')
+
+                    filename = self.base_path + str(self.id) + '_90perc_rel_change' + '.txt'
+                    np.savetxt(filename,perc90_rel_change, fmt='%.4e')
+
+                    filename = self.base_path + str(self.id) + '_substeps' + '.txt'
+                    np.savetxt(filename,gdp_substeps, fmt='%.4e')
