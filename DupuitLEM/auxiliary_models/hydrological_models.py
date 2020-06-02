@@ -168,7 +168,7 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
 
             #run interevent, accumulate flow, and calculate resulting shear stress
             self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
             tau2 = self.calc_shear_stress(self._grid)
 
@@ -266,7 +266,7 @@ class HydrologyEventShearStress(HydrologicalModel):
 
             #run interevent, accumulate flow, and calculate resulting shear stress
             self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
             _,_ = self.fa.accumulate_flow(update_flow_director=False)
             self._tau[:] = self.calc_shear_stress(self._grid)
             dzdt2 = self.calc_erosion_from_shear_stress(self._grid)
@@ -408,8 +408,6 @@ class HydrologySteadyShearStress(HydrologicalModel):
         self._tau[:] = self.calc_shear_stress(self._grid)
         self.dzdt = self.calc_erosion_from_shear_stress(self._grid)
 
-
-
 class HydrologyEventStreamPower(HydrologicalModel):
 
     """"
@@ -489,13 +487,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
             #run interevent, accumulate flow
             self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
             _,q2 = self.fa.accumulate_flow(update_flow_director=False)
             self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
 
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
-            q_event_vol = 0.5*(q0+q1)*self.storm_dts[i]
-            q_total_vol += q_event_vol
+            q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
