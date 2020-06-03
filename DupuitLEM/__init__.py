@@ -1,4 +1,4 @@
 from .models.steady_stream_power_model import SteadyRechargeStreamPower
 from .models.stochastic_shear_stress_model import StochasticRechargeShearStress
-from .models.steady_shear_stress_model import SteadyRechargeShearStress
-from .models.stochastic_stream_power_model import StochasticRechargeStreamPower
+from .models.shear_stress_model import ShearStressModel
+from .models.stream_power_model import StreamPowerModel

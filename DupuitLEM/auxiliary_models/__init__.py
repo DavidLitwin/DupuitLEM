@@ -2,7 +2,8 @@ from .hydrological_models import (
     HydrologyIntegrateShearStress,
     HydrologyEventShearStress,
     HydrologySteadyShearStress,
-    HydrologyEventStreamPower
+    HydrologyEventStreamPower,
+    HydrologySteadyStreamPower
     )
 from .regolith_models import (
     RegolithConstantThickness,

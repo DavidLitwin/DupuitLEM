@@ -155,7 +155,7 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
         #update flow directions
         self.fd.run_one_step()
 
-        self.dzdt_eff = np.zeros_like(self._tau)
+        self.dzdt = np.zeros_like(self._tau)
         tau2 = self._tau.copy()
         for i in range(len(self.storm_dts)):
             tau0 = tau2.copy() #save prev end of interstorm shear stress
@@ -177,7 +177,7 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
 
             #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             dzdt = calc_erosion_from_shear_stress(self._grid)
-            self.dzdt_eff += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
+            self.dzdt += (self.storm_dts[i]+self.interstorm_dts[i])/self.T_h * dzdt
 
 class HydrologyEventShearStress(HydrologicalModel):
 
@@ -251,7 +251,7 @@ class HydrologyEventShearStress(HydrologicalModel):
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
-        self.dzdt_eff = np.zeros_like(self._tau)
+        self.dzdt = np.zeros_like(self._tau)
         dzdt2 = np.zeros_like(self._tau)
         for i in range(len(self.storm_dts)):
             dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
@@ -275,7 +275,7 @@ class HydrologyEventShearStress(HydrologicalModel):
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
-            self.dzdt_eff += deltaz / self.T_h
+            self.dzdt += deltaz / self.T_h
 
 
     def run_step_record_state(self):
@@ -311,7 +311,7 @@ class HydrologyEventShearStress(HydrologicalModel):
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
-        self.dzdt_eff = np.zeros_like(self._tau)
+        self.dzdt = np.zeros_like(self._tau)
         dzdt2 = np.zeros_like(self._tau)
         for i in range(len(self.storm_dts)):
             dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
@@ -352,7 +352,7 @@ class HydrologyEventShearStress(HydrologicalModel):
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
             deltaz = 0.5*(dzdt0+dzdt1)*self.storm_dts[i]
-            self.dzdt_eff += deltaz / self.T_h
+            self.dzdt += deltaz / self.T_h
 
 class HydrologySteadyShearStress(HydrologicalModel):
     """"
@@ -374,6 +374,7 @@ class HydrologySteadyShearStress(HydrologicalModel):
         groundwater_model=None,
         shear_stress_function=None,
         erosion_rate_function=None,
+        hydrological_timestep = 1e5
         ):
         super().__init__(grid)
 
@@ -381,19 +382,16 @@ class HydrologySteadyShearStress(HydrologicalModel):
         self.gdp = groundwater_model
         self.calc_shear_stress = shear_stress_function
         self.calc_erosion_from_shear_stress = erosion_rate_function
+        self.T_h = hydrological_timestep
 
-    def run_step(self,dt_h):
+    def run_step(self):
         """
-        Run steay model one step. Update groundwater state, route and accumulate flow,
+        Run steady model one step. Update groundwater state, route and accumulate flow,
         calculate shear stress and erosion rate.
-
-        Parameters
-        -----
-        dt_h: float. Groundwater model timestep
         """
 
         #run gw model
-        self.gdp.run_with_adaptive_time_step_solver(dt_h)
+        self.gdp.run_with_adaptive_time_step_solver(self.T_h)
         self.number_substeps = self.gdp.number_of_substeps
 
         #find pits for flow accumulation
@@ -498,3 +496,34 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
+
+class HydrologySteadyStreamPower(HydrologicalModel):
+
+    def __init__(
+        self,
+        grid,
+        groundwater_model=None,
+        hydrological_timestep=1e5,
+        ):
+        super().__init__(grid)
+
+        self.gdp = groundwater_model
+        self.T_h = hydrological_timestep
+
+    def run_step(self):
+        """
+        Run steady model one step. Update groundwater state, route and accumulate flow,
+        updating surface_water__discharge.
+        """
+
+        #run gw model
+        self.gdp.run_with_adaptive_time_step_solver(self.T_h)
+        self.number_substeps = self.gdp.number_of_substeps
+
+        #find pits for flow accumulation
+        self.dfr._find_pits()
+        if self.dfr._number_of_pits > 0:
+            self.lmb.run_one_step()
+
+        #run flow accumulation
+        self.fa.run_one_step()
