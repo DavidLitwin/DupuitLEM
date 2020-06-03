@@ -1,25 +1,23 @@
-
 """
-test of StochasticRechargeStreamPower model, without saving output
+test of stochastic recharge + constant thickness + ShearStressModel, without saving output
 
-28 May 2020
+19 May 2020
 """
 
 import numpy as np
-from landlab import imshow_grid
-import matplotlib.pyplot as plt
 
 from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
     LinearDiffuser,
-    FastscapeEroder,
     PrecipitationDistribution,
     )
-from DupuitLEM import StochasticRechargeStreamPower
-from DupuitLEM.auxiliary_models import HydrologyEventStreamPower, RegolithConstantThickness
+from DupuitLEM import ShearStressModel
+from DupuitLEM.auxiliary_models import HydrologyEventShearStress, RegolithConstantThickness
 from DupuitLEM.grid_functions.grid_funcs import (
-    bind_avg_hydraulic_conductivity
+    bind_avg_hydraulic_conductivity,
+    bind_erosion_from_shear_stress,
+    bind_shear_stress_chezy,
     )
 
 
@@ -28,7 +26,7 @@ Ks_all = np.array([0.01, 0.05, 0.1, 0.5, 1.0])*(1/3600) #[m/s]
 Ks = Ks_all[0]
 K0 = 0.01*Ks # asymptotic hydraulic conductivity at infinite depth
 d_k = 1 #m
-n = 0.1 # porosity []
+n = 0.2 # porosity []
 r = 0.01 # regularization factor
 c = 0.9 # courant_coefficient
 vn = 0.9 # von Neumann coefficient
@@ -37,33 +35,27 @@ d_eq = 1 #equilibrium depth [m]
 U = 1E-4/(365*24*3600) # uniform uplift [m/s]
 b_st = 1.5 #shear stress erosion exponent
 k_st = 1e-10 #shear stress erosion coefficient
-sp_c = 0.0 #threshold streampower
+tauc = 0.0 #threshold shear stress [N/m2]
 chezy_c = 15 #chezy coefficient for flow depth calcualtion
-
-rho = 1000 #density [kg/m3]
-g = 9.81 #gravitational constant [m/s2]
-dx = 10 #grid cell width [m]
-Ksp = k_st*( (rho*g)/(chezy_c*dx)**(2/3) )**b_st
-m = 2/3*b_st
-n = 2/3*b_st
-
 D = 0.001/(365*24*3600) # hillslope diffusivity [m2/s]
 
 MSF = 500 # morphologic scaling factor [-]
 T_h = 30*24*3600 # total hydrological time
-T_m = 1e5*(365*24*3600) # total simulation time [s]
+T_m = 1e4*(365*24*3600) # total simulation time [s]
 
 p_seed = 2 #s eed for stochastic precipitation
 storm_dt = 2*3600 # storm duration [s]
-interstorm_dt = 22*3600 # interstorm duration [s]
-p_d = 0.002 # storm depth [m]
+interstorm_dt = 48*3600 # interstorm duration [s]
+p_d = 0.01 # storm depth [m]
 
 #initialize grid_functions
 ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,d_k) # hydraulic conductivity [m/s]
+ss_erosion_fun = bind_erosion_from_shear_stress(tauc,k_st,b_st)
+ss_chezy_fun = bind_shear_stress_chezy(c_chezy=chezy_c)
 
 #initialize grid
 np.random.seed(2)
-grid = RasterModelGrid((100, 100), xy_spacing=dx)
+grid = RasterModelGrid((20, 25), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -77,26 +69,25 @@ gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_
                                   regularization_f=r, \
                                   courant_coefficient=c, vn_coefficient = vn)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
-
 pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
     mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
     total_t=T_h)
 pd.seed_generator(seedval=p_seed)
 
 #initialize other models
-hm = HydrologyEventStreamPower(
+hm = HydrologyEventShearStress(
         grid,
         precip_generator=pd,
         groundwater_model=gdp,
+        shear_stress_function=ss_chezy_fun,
+        erosion_rate_function=ss_erosion_fun,
 )
 
-sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = m, n_sp=n, discharge_field='surface_water_effective__discharge')
 rm = RegolithConstantThickness(grid, equilibrium_depth=d_eq, uplift_rate=U)
 
-mdl = StochasticRechargeStreamPower(grid,
+mdl = ShearStressModel(grid,
         hydrology_model = hm,
         diffusion_model = ld,
-        streampower_model = sp,
         regolith_model = rm,
         morphologic_scaling_factor = MSF,
         total_morphological_time = T_m,
@@ -109,21 +100,11 @@ mdl.run_model()
 
 #%% run hydrological model
 
-q_eff = []
-# intensities = []
-
 for i in range(100):
 
     hm.run_step()
-    
-    q_eff.append(grid.at_node['surface_water_effective__discharge'])
-    # intensities.append(hm.intensities)
 
     print('finished step ' + str(i))
-    
-q_effmax = np.zeros(len(q_eff))
-for i in range(len(q_eff)):
-    q_effmax[i] = np.max(q_eff[i])
 
 #%% run whole model one step at a time
 
@@ -160,69 +141,27 @@ for i in range(1000):
 max_substeps_storm = np.zeros(500)
 max_substeps_interstorm = np.zeros(500)
 
-for j in range(10):
+for j in range(500):
 
     hm.generate_exp_precip()
 
     num_substeps_storm = np.zeros(len(hm.storm_dts))
     num_substeps_interstorm = np.zeros(len(hm.storm_dts))
 
-    q_total_vol = np.zeros_like(hm.q_eff)
-    q2 = np.zeros_like(hm.q_eff)
     for i in range(len(hm.storm_dts)):
-        q0 = q2.copy() #save prev end of interstorm flow rate
 
-        # print(hm.intensities[i])
-        # print(hm.storm_dts[i])
         #run event, accumulate flow, and calculate resulting shear stress
         gdp.recharge_rate = hm.intensities[i]
         gdp.run_with_adaptive_time_step_solver(hm.storm_dts[i])
-        _,q1 = hm.fa.accumulate_flow(update_flow_director=False)
-        print(max(q1))
-        # num_substeps_storm[i] = gdp.number_of_substeps
+        num_substeps_storm[i] = gdp.number_of_substeps
 
-        
+
         #run interevent, accumulate flow, and calculate resulting shear stress
         gdp.recharge_rate = 0.0
-        gdp.run_with_adaptive_time_step_solver(max(hm.interstorm_dts[i],1e-15))
-        _,q2 = hm.fa.accumulate_flow(update_flow_director=False)
-        print(max(q0))
-        # num_substeps_interstorm[i] = gdp.number_of_substeps
+        gdp.run_with_adaptive_time_step_solver(hm.interstorm_dts[i])
+        num_substeps_interstorm[i] = gdp.number_of_substeps
 
-
-        q_total_vol += 0.5*(q0+q1)*hm.storm_dts[i]
-        # print(q_total_vol[0])
-    
-    q_eff = q_total_vol/hm.T_h
-    print(max(q_eff))
-    
-    # print(np.isnan(q_eff).any())
+    max_substeps_storm[j] = max(num_substeps_storm)
+    max_substeps_interstorm[j] = max(num_substeps_interstorm)
 
     print('completed '+str(j))
-
-
-#%%
-
-
-hm.generate_exp_precip()
-
-num_substeps_storm = np.zeros(len(hm.storm_dts))
-num_substeps_interstorm = np.zeros(len(hm.storm_dts))
-
-for i in range(len(hm.storm_dts)):
-
-    #run event, accumulate flow, and calculate resulting shear stress
-    gdp.recharge_rate = hm.intensities[i]
-    gdp.run_with_adaptive_time_step_solver(hm.storm_dts[i])
-    _,q1 = hm.fa.accumulate_flow(update_flow_director=False)
-    # num_substeps_storm[i] = gdp.number_of_substeps
-
-
-    #run interevent, accumulate flow, and calculate resulting shear stress
-    gdp.recharge_rate = 0.0
-    gdp.run_with_adaptive_time_step_solver(hm.interstorm_dts[i])
-    _,q2 = hm.fa.accumulate_flow(update_flow_director=False)
-    # num_substeps_interstorm[i] = gdp.number_of_substeps
-    
-    plt.figure()
-    imshow_grid(grid,q2)
