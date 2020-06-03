@@ -482,13 +482,15 @@ class HydrologyEventStreamPower(HydrologicalModel):
             #run event, accumulate flow
             self.gdp.recharge = self.intensities[i]
             self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,q1 = self.fa.accumulate_flow(update_flow_director=False)
+            _,q = self.fa.accumulate_flow(update_flow_director=False)
+            q1 = q.copy()
             self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
 
             #run interevent, accumulate flow
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
-            _,q2 = self.fa.accumulate_flow(update_flow_director=False)
+            _,q = self.fa.accumulate_flow(update_flow_director=False)
+            q2 = q.copy()
             self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
 
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
