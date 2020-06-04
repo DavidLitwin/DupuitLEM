@@ -1,5 +1,5 @@
 """
-steady recharge + constant thickness + StreamPowerModel
+Stochastic recharge + constant thickness + StreamPowerModel
 
 Date: 4 Jun 2020
 """
@@ -8,18 +8,18 @@ import numpy as np
 from itertools import product
 import pandas as pd
 
-from landlab import imshow_grid
-import matplotlib.pyplot as plt
-
 from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
     LinearDiffuser,
     FastscapeEroder,
+    PrecipitationDistribution,
     )
 from DupuitLEM import StreamPowerModel
-from DupuitLEM.auxiliary_models import HydrologySteadyStreamPower, RegolithConstantThickness
-from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
+from DupuitLEM.auxiliary_models import HydrologyEventStreamPower, RegolithConstantThickness
+from DupuitLEM.grid_functions.grid_funcs import (
+    bind_avg_hydraulic_conductivity
+    )
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -53,7 +53,7 @@ def generate_parameters(p, beq, n, gam, pe, lam, pi, phi, om):
 
 #parameters
 MSF = 500 # morphologic scaling factor [-]
-dt_h = 5e5 # hydrological timestep
+T_h = 30*24*3600 # total hydrological time
 T_m = 2.5e6*(365*24*3600) # total simulation time [s]
 
 pe_all = np.geomspace(100,1000,6)
@@ -84,6 +84,11 @@ p = df_params['p'][ID]
 beq = df_params['beq'][ID]
 n = df_params['n'][ID]
 
+p_seed = 2 #seed for stochastic precipitation
+storm_dt = 2*3600 # storm duration [s]
+interstorm_dt = 48*3600 # interstorm duration [s]
+p_d = p*(storm_dt+interstorm_dt) # storm depth [m]
+
 output = {}
 output["output_interval"] = 1000
 output["output_fields"] = [
@@ -93,7 +98,7 @@ output["output_fields"] = [
         "surface_water__discharge",
         "groundwater__specific_discharge_node",
         ]
-output["base_output_path"] = './data/steady_sp_1_'
+output["base_output_path"] = './data/stoch_sp_1_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid_functions
@@ -112,15 +117,19 @@ wt[:] = elev.copy()
 
 #initialize landlab components
 gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
-                                  regularization_f=0.01, recharge_rate=p, \
+                                  regularization_f=0.01, recharge_rate=0.0, \
                                   courant_coefficient=0.9, vn_coefficient = 0.9)
+pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
+    mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
+    total_t=T_h)
+pd.seed_generator(seedval=p_seed)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
 
 #initialize other models
-hm = HydrologySteadyStreamPower(
+hm = HydrologyEventStreamPower(
         grid,
+        precip_generator=pd,
         groundwater_model=gdp,
-        hydrological_timestep=dt_h,
 )
 #use surface_water__discharge for steady case
 sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = 1, n_sp=1, discharge_field='surface_water__discharge')
@@ -136,6 +145,5 @@ mdl = StreamPowerModel(grid,
         verbose=True,
         output_dict = output,
 )
-
 
 mdl.run_model()
