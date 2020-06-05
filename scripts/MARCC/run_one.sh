@@ -16,14 +16,14 @@ module load python/3.7-anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
-export PYTHONPATH="/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEMScripts"
+export PYTHONPATH="/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM"
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder
 mkdir ~/data/dlitwin3/DupuitLEMResults/$output_folder/data
-cd ~/data/dlitwin3/DupuitLEMScripts
+cd ~/data/dlitwin3/DupuitLEM
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEMScripts/scripts/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder
+cp ~/data/dlitwin3/DupuitLEM/scripts/MARCC/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder
 cd ~/data/dlitwin3/DupuitLEMResults/$output_folder
 echo $SLURM_JOBID > slurm.txt
 python -u $script > pythonlog.out
