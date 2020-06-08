@@ -16,7 +16,7 @@ from landlab.components import (
     PrecipitationDistribution,
     )
 from DupuitLEM import StreamPowerModel
-from DupuitLEM.auxiliary_models import HydrologyEventStreamPower, RegolithConstantThickness
+from DupuitLEM.auxiliary_models import HydrologyEventStreamPower, RegolithConstantThicknessPerturbed
 from DupuitLEM.grid_functions.grid_funcs import (
     bind_avg_hydraulic_conductivity
     )
@@ -106,7 +106,7 @@ ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,beq) # hydraulic conductivity [
 
 #initialize grid
 np.random.seed(2)
-grid = RasterModelGrid((100, 100), xy_spacing=10.0)
+grid = RasterModelGrid((50, 50), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -133,7 +133,7 @@ hm = HydrologyEventStreamPower(
 )
 #use surface_water__discharge for steady case
 sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = 1, n_sp=1, discharge_field='surface_water__discharge')
-rm = RegolithConstantThickness(grid, equilibrium_depth=beq, uplift_rate=U)
+rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U)
 
 mdl = StreamPowerModel(grid,
         hydrology_model = hm,
