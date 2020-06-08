@@ -7,6 +7,7 @@ import os
 import numpy as np
 from itertools import product
 import pandas as pd
+import pickle
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -68,12 +69,21 @@ beq1 = 1 #equilibrium depth [m]
 pe1 = np.array(list(product(pe_all,phi_all)))[:,0]
 phi1 = np.array(list(product(pe_all,phi_all)))[:,1]
 
+storm_dt = 2*3600 # storm duration [s]
+interstorm_dt = 48*3600 # interstorm duration [s]
+p_d = p1*(storm_dt+interstorm_dt) # storm depth [m]
+
 params = np.zeros((len(pe1),8))
 for i in range(len(pe1)):
 
     params[i,:] = generate_parameters(p1, beq1, n1, gam1, pe1[i], lam1, pi1, phi1[i], om1)
 
 df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'beq', 'l', 'n'])
+df_params['storm_dt'] = storm_dt
+df_params['interstorm_dt'] = interstorm_dt
+df_params['depth'] = p_d
+
+pickle.dump(df_params, open('parameters.p','wb'))
 
 Ksp = df_params['K'][ID] #streampower coefficient
 D = df_params['D'][ID] #hillslope diffusivity
@@ -84,10 +94,6 @@ p = df_params['p'][ID]
 beq = df_params['beq'][ID]
 n = df_params['n'][ID]
 
-p_seed = 2 #seed for stochastic precipitation
-storm_dt = 2*3600 # storm duration [s]
-interstorm_dt = 48*3600 # interstorm duration [s]
-p_d = p*(storm_dt+interstorm_dt) # storm depth [m]
 
 output = {}
 output["output_interval"] = 1000
@@ -122,7 +128,7 @@ gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_
 pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
     mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
     total_t=T_h)
-pd.seed_generator(seedval=p_seed)
+pd.seed_generator(seedval=2)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
 
 #initialize other models
