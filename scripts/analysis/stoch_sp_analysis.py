@@ -10,7 +10,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 from landlab import imshow_grid
-from landlab.io.netcdf import read_netcdf
+from landlab.io.netcdf import read_netcdf, write_raster_netcdf
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -23,12 +23,12 @@ from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
 from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 
-base = 'stoch_sp_2'
+base_output_path = 'stoch_sp_2'
 ID = '30'
 
 
 ############ basic plots
-grid_files = glob.glob('../../../DupuitLEMResults/'+base+'-'+ID+'/data/*.nc')
+grid_files = glob.glob('../../../DupuitLEMResults/'+base_output_path+'-'+ID+'/data/*.nc')
 files = sorted(grid_files, key=lambda x:float(sub("\D", "", x[50:-3])))
 
 path = files[-1]
@@ -43,33 +43,33 @@ wt = grid.at_node['water_table__elevation']
 plt.figure(figsize=(8,6))
 imshow_grid(grid,elev, cmap='gist_earth', colorbar_label = 'Elevation [m]', grid_units=('m','m'))
 plt.title('ID %d, Iteration %d'%(ID,iteration))
-plt.savefig('../../../DupuitLEMResults/figs/'+base+'/elev_ID_%d'%ID)
+plt.savefig('../../../DupuitLEMResults/figs/'+base_output_path+'/elev_ID_%d.png'%ID)
 plt.close()
 
 # relative saturation
 plt.figure(figsize=(8,6))
 imshow_grid(grid,(wt-base)/(elev-base), cmap='Blues', limits=(0,1), colorbar_label = 'Relative saturated thickness [-]', grid_units=('m','m'))
 plt.title('ID %d, Iteration %d'%(ID,iteration))
-plt.savefig('../../../DupuitLEMResults/figs/'+base+'/elev_ID_%d'%ID)
+plt.savefig('../../../DupuitLEMResults/figs/'+base_output_path+'/sat_ID_%d.png'%ID)
 plt.close()
 
 # water table
 plt.figure(figsize=(8,6))
 imshow_grid(grid,wt, cmap='Blues', colorbar_label = 'water table elevation', grid_units=('m','m'))
 plt.title('ID %d, Iteration %d'%(ID,iteration))
-plt.savefig('../../../DupuitLEMResults/figs/'+base+'/elev_ID_%d'%ID)
+plt.savefig('../../../DupuitLEMResults/figs/'+base_output_path+'/wt_ID_%d.png'%ID)
 plt.close()
 
 # regolith thickness
 # plt.figure(figsize=(8,6))
 # imshow_grid(grid,elev-base, cmap='Blues', colorbar_label = 'regolith thickness', grid_units=('m','m'))
 # plt.title('ID %d, Iteration %d'%(ID,iteration))
-# plt.savefig('../../../DupuitLEMResults/figs/'+base+'/elev_ID_%d'%ID)
+# plt.savefig('../../../DupuitLEMResults/figs/'+base_output_path+'/elev_ID_%d'%ID)
 # plt.close()
 
 ################ find channel network
 
-df_params = pickle.load(open('../../../DupuitLEMResults/'+base+'-'+ID,'rb'))
+df_params = pickle.load(open('../../../DupuitLEMResults/'+base_output_path+'-'+ID,'rb'))
 
 Ks = df_params['ksat'][ID] #surface hydraulic conductivity [m/s]
 K0 = Ks*0.01 #minimum hydraulic conductivity [m/s]
@@ -152,3 +152,28 @@ dd_med = dd.calculate_drainage_density()
 ch_min = mg.add_zeros('node', 'channel_mask_min')
 ch_max = mg.add_zeros('node', 'channel_mask_max')
 ch_med = mg.add_zeros('node', 'channel_mask_med')
+ch_min[:] = min_network
+ch_max[:] = max_network
+ch_med[:] = med_network
+
+hd_min = mg.add_zeros('node', 'hand_min')
+hd_max = mg.add_zeros('node', 'hand_max')
+hd_med = mg.add_zeros('node', 'hand_med')
+hd_min[:] = hand_min
+hd_max[:] = hand_max
+hd_med[:] = hand_med
+
+output_fields = [
+        "topographic__elevation",
+        "aquifer_base__elevation",
+        "water_table__elevation",
+        'channel_mask_min',
+        'channel_mask_max',
+        'channel_mask_med',
+        'hand_min',
+        'hand_max',
+        'hand_med',
+        ]
+
+filename = '../../../DupuitLEMResults/figs/'+base_output_path+'/grid_ID_%d.nc'%ID
+write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
