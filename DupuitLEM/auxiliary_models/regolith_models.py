@@ -42,6 +42,34 @@ class RegolithConstantThickness(RegolithModel):
         self._elev[self._cores] += self.U*dt_m
         self._base[self._cores] = self._elev[self._cores] - self.d_eq
 
+class RegolithConstantThicknessPerturbed(RegolithModel):
+    """
+    Constant thickness of regoltih is maintained throughout, and uplift
+    rate is spatially uniform and constant in time. A small perturbation is
+    added to topography each step so channels don't simply form parallel rills.
+    """
+    def __init__(self,grid,equilibrium_depth=1.0,uplift_rate=1e-12, std=0.01):
+        """
+        Parameters:
+        -----
+        grid: landlab grid
+        equilibrium_depth: float. Constant thickness value
+        uplift_rate: float. Constant uplift rate
+        std: float. standard deviation of the perturbation
+        """
+
+        super().__init__(grid)
+        self.d_eq = equilibrium_depth
+        self.U = uplift_rate
+        self.std = std
+
+    def run_step(self,dt_m):
+
+        #uplift and regolith production
+        self._elev[self._cores] += self.U*dt_m + self.std*np.random.randn(len(self._cores))
+        self._base[self._cores] = self._elev[self._cores] - self.d_eq
+
+
 class RegolithExponentialProduction(RegolithModel):
     """
     Exponential regolith production model, where production rate is a function

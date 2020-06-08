@@ -8,4 +8,5 @@ from .hydrological_models import (
 from .regolith_models import (
     RegolithConstantThickness,
     RegolithExponentialProduction,
+    RegolithConstantThicknessPerturbed,
     )
