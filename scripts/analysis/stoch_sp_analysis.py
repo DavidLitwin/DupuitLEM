@@ -80,7 +80,9 @@ interstorm_dt = df_params['interstorm_dt'] #mean interstorm duration [s]
 p_d = df_params['depth'] #mean storm depth [m]
 T_h = 365*24*3600 #total hydrological time [s]
 
-mg = RasterModelGrid((50, 50), xy_spacing=10.0)
+#initialize grid
+dx = 10.0
+mg = RasterModelGrid((50, 50), xy_spacing=dx)
 mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
                               left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
 z = mg.add_zeros('node', 'topographic__elevation')
@@ -105,8 +107,11 @@ hm = HydrologyEventStreamPower(
         precip_generator=pd,
         groundwater_model=gdp,
 )
+
+#run model
 hm.run_step_record_state()
 
+#find channel network
 sat_cells = hm.qs_all > 0.0
 count_sat_cells = np.sum(sat_cells,axis=1)
 min_network_id = np.where(count_sat_cells == min(count_sat_cells))[0][0]
@@ -116,6 +121,49 @@ med_network_id = np.where(count_sat_cells == np.median(count_sat_cells))[0][0]
 min_network = sat_cells[min_network_id,:]
 max_network = sat_cells[max_network_id,:]
 med_network = sat_cells[med_network_id,:]
+
+######## Runoff generation Analysis
+
+time = hm.time[30:]
+qs_all = hm.qs_all[30:,:]
+p = hm.intensity[30:]
+Q_all = hm.Q_all[30:,:]
+qs_sum = 0 #total proportion of water leaving via surface [m]
+p_sum = 0 #total precipitation [m]
+qe_all = np.zeros_like(qs_all) #the amount of qs that is derived from exfiltration from the subsurface [m/s]
+qe_sum = np.zeros(len(elev)) #cumulative exfiltration [m]
+qp_all = np.zeros_like(qs_all) #the amount of qs that is derived from precip on saturated area [m/s]
+qp_sum = np.zeros(len(elev)) #cumulative precip on saturated area [m]
+runon_all = np.zeros_like(qs_all) #the amount of Q that is derived from upstream [m3/s]
+runon_sum = np.zeros(len(elev)) #cumulative runon [m3]
+Q_sum = np.zeros(len(elev))
+for i in range(np.shape(qs_all)[0]-1):
+    qe_all[i,:] = np.maximum(qs_all[i,:]-p[i],0)
+    qe_sum += qe_all[i,:]*(time[i+1]-time[i])
+
+    qp_all[i,:] = qs_all[i,:]-qe_all[i,:]
+    qp_sum += p_sat_all[i,:]*(time[i+1]-time[i])
+
+    runon_all[i,:] = Q_all[i,:] - qs_all[i,:]*dx**2
+    runon_sum += runon_all[i,:]*(time[i+1]-time[i])
+    Q_sum += Q_all[i,:]*(time[i+1]-time[i])
+
+    qs_sum += np.sum(qs_all[i,:])*(time[i+1]-time[i])
+    p_sum += p[i]*(time[i+1]-time[i])
+
+
+# exfiltration proportion
+plt.figure(figsize=(8,6))
+imshow_grid(grid,wt, cmap='Blues', colorbar_label = 'exfiltration [m]', grid_units=('m','m'))
+plt.title('ID %d, Iteration %d'%(ID,iteration))
+plt.savefig('../../../DupuitLEMResults/figs/'+base_output_path+'/exfilt_ID_%d.png'%ID)
+plt.close()
+
+
+plt.figure()
+imshow_grid(grid,p_sat_sum, cmap = 'Blues', colorbar_label = 'precip on saturated area', grid_units=('m','m'))
+plt.savefig('C:/Users/dgbli/Documents/MARCC_output/DupuitLEMResults/figs/stoch_vary_k_'+str(num)+'/p_sat_K=%.2f_d=%.2f.png'%(Ks*3600,d_k))
+
 
 ######## Calculate HAND
 
@@ -162,6 +210,20 @@ hd_med = mg.add_zeros('node', 'hand_med')
 hd_min[:] = hand_min
 hd_max[:] = hand_max
 hd_med[:] = hand_med
+
+p = mg.add_zeros('node', 'cum_precipitation')
+qs = mg.add_zeros('node', 'cum_surface_water__specific_discharge')
+qe = mg.add_zeros('node', 'cum_exfiltration')
+qp = mg.add_zeros('node', 'cum_precip_sat')
+Q = mg.add_zeros('node', 'cum_discharge')
+runon = mg.add_zeros('node', 'cum_runon')
+pcp[:] = p_sum
+qs[:] = qs_sum
+qe[:] = qe_sum
+qp[:] = qp_sum
+Q[:] = Q_sum
+runon[:] = runon_sum
+
 
 output_fields = [
         "topographic__elevation",
