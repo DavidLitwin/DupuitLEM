@@ -58,16 +58,16 @@ T_h = 30*24*3600 # total hydrological time
 T_m = 2.5e6*(365*24*3600) # total simulation time [s]
 
 pe_all = np.geomspace(100,1000,6)
+phi_all = np.geomspace(10,100,6)
+pe1 = np.array(list(product(pe_all,phi_all)))[:,0]
+phi1 = np.array(list(product(pe_all,phi_all)))[:,1]
 lam1 = 0.1
 pi1 = 5e-6
-phi_all = np.geomspace(10,100,6)
 om1 = 20
 p1 = 1/(365*24*3600) # recharge rate [m/s]
 n1 = 0.1 # drainable porosity []
 gam1 = 0.2
 beq1 = 1 #equilibrium depth [m]
-pe1 = np.array(list(product(pe_all,phi_all)))[:,0]
-phi1 = np.array(list(product(pe_all,phi_all)))[:,1]
 
 storm_dt = 2*3600 # storm duration [s]
 interstorm_dt = 48*3600 # interstorm duration [s]
@@ -111,8 +111,8 @@ output["run_id"] = ID #make this task_id if multiple runs
 ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,beq) # hydraulic conductivity [m/s]
 
 #initialize grid
-np.random.seed(2)
-grid = RasterModelGrid((50, 50), xy_spacing=10.0)
+np.random.seed(1234)
+grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -128,7 +128,7 @@ gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_
 pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
     mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
     total_t=T_h)
-pd.seed_generator(seedval=2)
+pd.seed_generator(seedval=1235)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
 
 #initialize other models
@@ -139,7 +139,7 @@ hm = HydrologyEventStreamPower(
 )
 #use surface_water__discharge for steady case
 sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = 1, n_sp=1, discharge_field='surface_water__discharge')
-rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U)
+rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, seed=1236)
 
 mdl = StreamPowerModel(grid,
         hydrology_model = hm,
