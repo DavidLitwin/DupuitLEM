@@ -493,8 +493,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q2 = q.copy()
             self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
 
-            #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
-            #note that this only accounts for erosion during the storm period
+            #volume of runoff contributed during timestep
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
@@ -515,16 +514,6 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
         """
 
-        #fields to record:
-        self.time = np.zeros(2*len(self.storm_dts)+1)
-        self.intensity = np.zeros(2*len(self.storm_dts)+1)
-        self.Q_all = np.zeros((2*len(self.storm_dts)+1,len(self._elev))) #all discharge
-        self.wtrel_all = np.zeros((2*len(self.storm_dts)+1,len(self._elev))) #all relative water table elevation
-        self.qs_all = np.zeros((2*len(self.storm_dts)+1,len(self._elev))) #all surface water specific discharge
-
-        self.max_substeps_storm = 0
-        self.max_substeps_interstorm = 0
-
         #generate new precip time series
         self.generate_exp_precip()
 
@@ -536,8 +525,16 @@ class HydrologyEventStreamPower(HydrologicalModel):
         #update flow directions
         self.fd.run_one_step()
 
+        #fields to record:
+        self.time = np.zeros(2*len(self.storm_dts)+1)
+        self.intensity = np.zeros(2*len(self.storm_dts)+1)
+        self.Q_all = np.zeros((2*len(self.storm_dts)+1,len(self.q_eff))) #all discharge
+        self.wt_all = np.zeros((2*len(self.storm_dts)+1,len(self.q_eff))) #water table elevation
+        self.qs_all = np.zeros((2*len(self.storm_dts)+1,len(self.q_eff))) #all surface water specific discharge
+
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
+
         q_total_vol = np.zeros_like(self.q_eff)
         q2 = np.zeros_like(self.q_eff)
         for i in range(len(self.storm_dts)):
@@ -554,7 +551,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             self.time[i*2+1] = self.time[i*2]+self.storm_dts[i]
             self.intensity[i*2] = self.intensities[i]
             self.Q_all[i*2+1,:] = self._grid.at_node['surface_water__discharge']
-            self.wtrel_all[i*2+1,:] = (self._wt-self._base)/(self._elev-self._base)
+            self.wt_all[i*2+1,:] = self._grid.at_node['water_table__elevation']
             self.qs_all[i*2+1,:] = self._grid.at_node['surface_water__specific_discharge']
 
             #run interevent, accumulate flow
@@ -567,11 +564,10 @@ class HydrologyEventStreamPower(HydrologicalModel):
             #record interevent
             self.time[i*2+2] = self.time[i*2+1]+self.interstorm_dts[i]
             self.Q_all[i*2+2,:] = self._grid.at_node['surface_water__discharge']
-            self.wtrel_all[i*2+2,:] = (self._wt-self._base)/(self._elev-self._base)
+            self.wt_all[i*2+2,:] = self._grid.at_node['water_table__elevation']
             self.qs_all[i*2+2,:] = self._grid.at_node['surface_water__specific_discharge']
 
-            #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
-            #note that this only accounts for erosion during the storm period
+            #volume of runoff contributed during timestep
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
