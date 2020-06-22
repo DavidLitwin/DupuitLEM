@@ -123,14 +123,14 @@ df_output = pd.DataFrame()
 df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','qs','S'])
 
 ##### recession
-def power_law(x, a, b):
-    return a*np.power(x, b)
+def power_law(x, a, b, c):
+    return a*np.power(x, b) + c
 
 rec_inds = np.where(np.diff(df['qs'], prepend=0.0) < 0.0)[0]
 Q = df['qs'][rec_inds]
-S = df['S'][rec_inds]
+S = df['S'][rec_inds] - min(df['S'][rec_inds])
 
-pars, cov = curve_fit(f=power_law, xdata=S, ydata=Q, p0=[0, 0], bounds=(-np.inf, np.inf))
+pars, cov = curve_fit(f=power_law, xdata=S, ydata=Q, p0=[0, 1, 0], bounds=(-100, 100))
 stdevs = np.sqrt(np.diag(cov))
 
 df_output['rec_a'] = pars[0]
@@ -187,7 +187,7 @@ for i in range(np.shape(qs_all)[0]-1):
     qe = np.maximum(qs_all[i,:]-p[i],0)
     qe_sum += qe*(time[i+1]-time[i])
 
-    qp = qs_all[i,:]-qe_all[i,:]
+    qp = qs_all[i,:]-qe
     qp_sum += qp*(time[i+1]-time[i])
 
     qs_sum += np.sum(qs_all[i,:]*(time[i+1]-time[i]))
@@ -223,14 +223,14 @@ df_output['mean_hand_med'] = np.mean(hand_med)
 
 ######## Calculate drainage density
 
-dd = DrainageDensity(mg, channel__mask=min_network)
+dd = DrainageDensity(mg, channel__mask=np.uint8(min_network))
 channel_mask = mg.at_node['channel__mask']
 df_output['dd_min'] = dd.calculate_drainage_density()
 
-channel_mask[:] = max_network
-df_output['dd_max'] = dd.calculate_drainage_density()
+# channel_mask[:] = np.uint8(max_network)
+# df_output['dd_max'] = dd.calculate_drainage_density()
 
-channel_mask[:] = med_network
+channel_mask[:] = np.uint8(med_network)
 df_output['dd_med'] = dd.calculate_drainage_density()
 
 ####### save things
@@ -251,4 +251,4 @@ output_fields = [
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
 
-pickle.dump(df_outout, open('../post_proc/%s/output_ID_%d.nc'%(base_output_path, ID), 'wb'))
+pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.nc'%(base_output_path, ID), 'wb'))
