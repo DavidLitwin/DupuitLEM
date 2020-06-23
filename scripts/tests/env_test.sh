@@ -6,9 +6,5 @@
 # number of tasks (processes) per node
 #SBATCH --ntasks-per-node=1
 #### load and unload modules you may need
-ml anaconda
-. /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
-conda activate
-conda activate landlab_dev
-cd ~/data/dlitwin3/landlab
-pytest landlab  > test_new.out
+conda info --envs > env.out
+which python > python_version.out

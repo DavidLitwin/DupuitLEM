@@ -12,7 +12,7 @@
 script=$1
 output_folder=$2
 module load git
-module load python
+module load anaconda
 . /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
 conda activate
 conda activate landlab_dev
