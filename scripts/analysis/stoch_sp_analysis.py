@@ -209,17 +209,17 @@ hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
 
 hd.run_one_step()
 hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_min'] = np.mean(hand_min)
+df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
 
 hd.channel_mask = max_network
 hd.run_one_step()
 hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_max'] = np.mean(hand_max)
+df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
 
 hd.channel_mask = med_network
 hd.run_one_step()
 hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_med'] = np.mean(hand_med)
+df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
 
 ######## Calculate drainage density
 
