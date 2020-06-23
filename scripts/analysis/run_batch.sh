@@ -11,11 +11,6 @@
 #### load and unload modules you may need
 script=$1
 output_folder=$2
-module load anaconda
-. /software/apps/anaconda/5.2/python/3.7/etc/profile.d/conda.sh
-conda activate
-conda activate landlab_dev
-export PYTHONPATH="/home-1/dlitwin3@jhu.edu/data/dlitwin3/DupuitLEM"
 cd ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > analysis_slurm.txt
 python -u ~/data/dlitwin3/DupuitLEM/scripts/analysis/$script > analysis_pythonlog.out
