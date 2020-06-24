@@ -112,7 +112,7 @@ hm = HydrologyEventStreamPower(
 
 #run model
 hm.run_step_record_state()
-
+f.close()
 
 ##########  Analysis
 
@@ -133,10 +133,20 @@ S = df['S'][rec_inds] - min(df['S'][rec_inds])
 pars, cov = curve_fit(f=power_law, xdata=S, ydata=Q, p0=[0, 1, 0], bounds=(-100, 100))
 stdevs = np.sqrt(np.diag(cov))
 
+def linear_law(x,a,c):
+    return a*x + c
+
+pars_lin, cov_lin = curve_fit(f=linear_law, xdata=S, ydata=Q, p0=[0, 0], bounds=(-100, 100))
+stdevs_lin = np.sqrt(np.diag(cov_lin))
+
 df_output['rec_a'] = pars[0]
 df_output['rec_b'] = pars[1]
+df_output['rec_c'] = pars[2]
 df_output['rec_a_std'] = stdevs[0]
 df_output['rec_b_std'] = stdevs[1]
+df_output['rec_a_linear'] = pars_lin[0]
+df_output['rec_c_linear'] = pars_lin[1]
+df_output['rec_a_std_linear'] = stdevs_lin[0]
 
 # S_test = np.linspace(min(S),max(S),100)
 # plt.figure()
@@ -173,32 +183,35 @@ max_network[:] = sat_cells[max_network_id,:]
 med_network[:] = sat_cells[med_network_id,:]
 
 ######## Runoff generation
+areas = mg.cell_area_at_node #areas on the grid
+# timeseries recorded, assuming more or less equilibrated after 30 timesteps
 time = hm.time[30:]
 p = hm.intensity[30:]
 qs_all = hm.qs_all[30:,:]
 
+#offset because p is recorded at beginning of dt and q at the end
+dt_q = np.diff(time,prepend=time[0])
+dt_p = np.diff(time,append=time[-1])
+qs = np.sum(qs_all*areas,axis=1)
+
+#total fluxes
+p_sum = np.sum(p*dt_p)*np.sum(areas) # total water entering as precipitation [m3]
+qs_sum = np.sum(qs*dt_q) # total water leaving via surface [m3]
+qs_sum_event = np.sum(qs[p>0]*dt_q[p>0])
+
+df_output['BFI'] = (qs_sum - qs_sum_event)/qs_sum # this is *a* baseflow index, but not really *the* baseflow index.
+df_output['RR'] = qs_sum/p_sum # runoff ratio
+
+
 qe_sum = mg.add_zeros('node', 'cum_exfiltration') #cumulative exfiltration [m]
 qp_sum = mg.add_zeros('node', 'cum_precip_sat') #cumulative precip on saturated area [m]
-qs_sum = 0 #total proportion of water leaving via surface [m]
-p_sum = 0 #total precipitation [m]
-qs_sum_event = 0 #qs during storm events only [m]
-for i in range(np.shape(qs_all)[0]-1):
+for i in range(np.shape(qs_all)[0]):
 
     qe = np.maximum(qs_all[i,:]-p[i],0)
-    qe_sum += qe*(time[i+1]-time[i])
+    qe_sum += qe*dt_q[i]
 
     qp = qs_all[i,:]-qe
-    qp_sum += qp*(time[i+1]-time[i])
-
-    qs_sum += np.sum(qs_all[i,:]*(time[i+1]-time[i]))
-    p_sum += p[i]*(time[i+1]-time[i])
-
-    if p[i]>0.0:
-        qs_sum_event += np.sum(qs_all[i,:]*(time[i+1]-time[i]))
-
-
-df_output['BFI'] = (qs_sum - qs_sum_event)/qs_sum #this is *a* baseflow index, but not really *the* baseflow index.
-df_output['RR'] = qs_sum/p_sum
+    qp_sum += qp*dt_q[i]
 
 ######## Calculate HAND
 hand_min = mg.add_zeros('node', 'hand_min')

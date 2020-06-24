@@ -552,7 +552,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             self.intensity[i*2] = self.intensities[i]
             self.Q_all[i*2+1,:] = self._grid.at_node['surface_water__discharge']
             self.wt_all[i*2+1,:] = self._grid.at_node['water_table__elevation']
-            self.qs_all[i*2+1,:] = self._grid.at_node['surface_water__specific_discharge']
+            self.qs_all[i*2+1,:] = self._grid.at_node['average_surface_water__specific_discharge']
 
             #run interevent, accumulate flow
             self.gdp.recharge = 0.0
@@ -565,7 +565,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             self.time[i*2+2] = self.time[i*2+1]+self.interstorm_dts[i]
             self.Q_all[i*2+2,:] = self._grid.at_node['surface_water__discharge']
             self.wt_all[i*2+2,:] = self._grid.at_node['water_table__elevation']
-            self.qs_all[i*2+2,:] = self._grid.at_node['surface_water__specific_discharge']
+            self.qs_all[i*2+2,:] = self._grid.at_node['average_surface_water__specific_discharge']
 
             #volume of runoff contributed during timestep
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
