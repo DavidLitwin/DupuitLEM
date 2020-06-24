@@ -1,9 +1,9 @@
 """
 Stochastic recharge + constant thickness + StreamPowerModel
 
-Vary Phi and Pe, keep everything else constant. 
+Vary l (length scale), keep everything else constant.
 
-Date: 4 Jun 2020
+Date: 24 Jun 2020
 """
 import os
 import numpy as np
@@ -28,11 +28,11 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def K_sp_fun(beq, n, Pe, gam, lam, pi, om):
-    return (Pe*gam*lam*pi)/(beq**2*n*om**2)
+def K_sp_fun(l, n, Pe, gam, lam, pi):
+    return (Pe*lam*pi)/(gam*l**2*n)
 
-def D_fun(beq, p, n, gam, lam, pi, om):
-    return (beq*p*lam*pi*om)/(n*gam**2)
+def D_fun(l, p, n, gam, lam, pi):
+    return (lam*pi*p*l)/(gam*n)
 
 def ksat_fun(p, gam, phi):
     return (p*phi)/gam
@@ -40,17 +40,17 @@ def ksat_fun(p, gam, phi):
 def U_fun(p, n, pi):
     return (p*pi)/n
 
-def l_fun(beq, gam, om):
-    return (om*beq)/gam
+def beq_fun(l, gam, om):
+    return (l*gam)/om
 
 #generate dimensioned parameters
-def generate_parameters(p, beq, n, gam, pe, lam, pi, phi, om):
+def generate_parameters(p, l, n, gam, pe, lam, pi, phi, om):
 
-    l = l_fun(beq, gam, om)
+    beq = beq_fun(l, gam, om)
     ksat = ksat_fun(p, gam, phi)
     U = U_fun(p, n, pi)
-    D = D_fun(beq, p, n, gam, lam, pi, om)
-    K = K_sp_fun(beq, n, pe, gam, lam, pi, om)
+    D = D_fun(l, p, n, gam, lam, pi)
+    K = K_sp_fun(l, n, pe, gam, lam, pi)
 
     return K, D, U, ksat, p, beq, l, n
 
@@ -59,26 +59,24 @@ MSF = 500 # morphologic scaling factor [-]
 T_h = 30*24*3600 # total hydrological time
 T_m = 2.5e6*(365*24*3600) # total simulation time [s]
 
-pe_all = np.geomspace(10,10000,6)
-phi_all = np.geomspace(1,1000,6)
-pe1 = np.array(list(product(pe_all,phi_all)))[:,0]
-phi1 = np.array(list(product(pe_all,phi_all)))[:,1]
+pe1 = 500
+phi1 = 100
 lam1 = 0.1
 pi1 = 5e-6
 om1 = 20
 p1 = 1/(365*24*3600) # recharge rate [m/s]
 n1 = 0.1 # drainable porosity []
 gam1 = 0.2
-beq1 = 1 #equilibrium depth [m]
+l1 = np.geomspace(20,500,11) #equilibrium depth [m]
 
 storm_dt = 2*3600 # storm duration [s]
 interstorm_dt = 48*3600 # interstorm duration [s]
 p_d = p1*(storm_dt+interstorm_dt) # storm depth [m]
 
-params = np.zeros((len(pe1),8))
-for i in range(len(pe1)):
+params = np.zeros((len(l1),8))
+for i in range(len(l1)):
 
-    params[i,:] = generate_parameters(p1, beq1, n1, gam1, pe1[i], lam1, pi1, phi1[i], om1)
+    params[i,:] = generate_parameters(p1, l1[i], n1, gam1, pe1, lam1, pi1, phi1, om1)
 
 df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'beq', 'l', 'n'])
 df_params['storm_dt'] = storm_dt
@@ -106,7 +104,7 @@ output["output_fields"] = [
         "surface_water__discharge",
         "groundwater__specific_discharge_node",
         ]
-output["base_output_path"] = './data/stoch_sp_1_'
+output["base_output_path"] = './data/stoch_sp_2_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid_functions
