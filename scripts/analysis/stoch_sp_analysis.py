@@ -26,9 +26,7 @@ from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
-
-base_output_path = 'stoch_sp_3'
-
+base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
