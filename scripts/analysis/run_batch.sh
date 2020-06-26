@@ -13,5 +13,6 @@ script=$1
 output_folder=$2
 export BASE_OUTPUT_FOLDER=$2
 cd ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+cp parameters.p ~/data/dlitwin3/DupuitLEMResults/post_proc/$output_folder/parameters.p
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > analysis_slurm.txt
 python -u ~/data/dlitwin3/DupuitLEM/scripts/analysis/$script > analysis_pythonlog.out
