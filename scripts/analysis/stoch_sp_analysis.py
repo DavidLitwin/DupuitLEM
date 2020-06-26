@@ -115,7 +115,7 @@ f.close()
 ##########  Analysis
 
 #dataframe for output
-df_output = pd.DataFrame()
+df_output = {}
 
 #load the full storage discharge dataset that was just generated
 df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','qs','S'])
