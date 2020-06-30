@@ -50,6 +50,7 @@ plt.close()
 
 ########## Run hydrological model
 df_params = pickle.load(open('./parameters.p','rb'))
+pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
 
 Ks = df_params['ksat'][ID] #surface hydraulic conductivity [m/s]
 K0 = Ks*0.01 #minimum hydraulic conductivity [m/s]
