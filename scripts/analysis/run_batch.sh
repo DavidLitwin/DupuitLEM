@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=post
-#SBATCH --time=6:0:0
+#SBATCH --time=1:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
