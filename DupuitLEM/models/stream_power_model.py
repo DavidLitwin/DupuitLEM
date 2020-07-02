@@ -5,6 +5,7 @@ Author: David Litwin
 """
 import time
 import numpy as np
+import pandas as pd
 
 from landlab.io.netcdf import write_raster_netcdf
 
@@ -95,8 +96,7 @@ class StreamPowerModel:
     def run_model(self):
 
         N = self.N
-        max_rel_change = np.zeros(N)
-        perc90_rel_change = np.zeros(N)
+        z_change = np.zeros((N, 5))
 
         # Run model forward
         for i in range(N):
@@ -104,20 +104,23 @@ class StreamPowerModel:
             self.run_step(self.dt_m)
             self.verboseprint('Completed model loop %d' % i)
 
-            elev_diff = abs(self._elev-elev0)/elev0
-            max_rel_change[i] = np.max(elev_diff)
-            perc90_rel_change[i] = np.percentile(elev_diff,90)
+            elev_diff = abs(self._elev-elev0)
+            z_change[i,0] = np.max(elev_diff)
+            z_change[i,1] = np.percentile(elev_diff,90)
+            z_change[i,2] = np.percentile(elev_diff,50)
+            z_change[i,3] = np.mean(elev_diff)
+            z_change[i,4] = np.mean(self._elev-elev0)
 
             if self.save_output:
 
                 if i % self.output_interval == 0 or i==max(range(N)):
 
+                    # save the specified grid fields
                     self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
                     filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'
                     write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
 
-                    filename = self.base_path + str(self.id) + '_max_rel_change' + '.txt'
-                    np.savetxt(filename,max_rel_change, fmt='%.4e')
-
-                    filename = self.base_path + str(self.id) + '_90perc_rel_change' + '.txt'
-                    np.savetxt(filename,perc90_rel_change, fmt='%.4e')
+                    # save elevation change information
+                    df_ouput = pd.DataFrame(data=z_change, columns=['max_abs','90_abs', '50_abs', 'mean_abs', 'mean'])
+                    filename = self.base_path + str(self.id) + '_elev_change.csv'
+                    df_ouput.to_csv(filename, index=False, float_format='%.3e')
