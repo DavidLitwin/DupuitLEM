@@ -1,7 +1,7 @@
 """
 Stochastic recharge + constant thickness + StreamPowerModel
 
-Vary Phi and Pe, keep everything else constant. 
+Vary Phi and Pe, keep everything else constant.
 
 Date: 4 Jun 2020
 """
@@ -52,7 +52,7 @@ def generate_parameters(p, beq, n, gam, pe, lam, pi, phi, om):
     D = D_fun(beq, p, n, gam, lam, pi, om)
     K = K_sp_fun(beq, n, pe, gam, lam, pi, om)
 
-    return K, D, U, ksat, p, beq, l, n
+    return K, D, U, ksat, p, beq, l, n, gam, pe, lam, pi, phi, om
 
 #parameters
 MSF = 500 # morphologic scaling factor [-]
@@ -75,12 +75,12 @@ storm_dt = 2*3600 # storm duration [s]
 interstorm_dt = 48*3600 # interstorm duration [s]
 p_d = p1*(storm_dt+interstorm_dt) # storm depth [m]
 
-params = np.zeros((len(pe1),8))
+params = np.zeros((len(pe1),14))
 for i in range(len(pe1)):
 
     params[i,:] = generate_parameters(p1, beq1, n1, gam1, pe1[i], lam1, pi1, phi1[i], om1)
 
-df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'beq', 'l', 'n'])
+df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'beq', 'l', 'n', 'gam', 'pe', 'lam', 'pi', 'phi', 'om'])
 df_params['storm_dt'] = storm_dt
 df_params['interstorm_dt'] = interstorm_dt
 df_params['depth'] = p_d

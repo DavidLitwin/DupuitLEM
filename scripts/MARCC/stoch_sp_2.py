@@ -52,7 +52,7 @@ def generate_parameters(p, l, n, gam, pe, lam, pi, phi, om):
     D = D_fun(l, p, n, gam, lam, pi)
     K = K_sp_fun(l, n, pe, gam, lam, pi)
 
-    return K, D, U, ksat, p, beq, l, n
+    return K, D, U, ksat, p, beq, l, n, gam, pe, lam, pi, phi, om
 
 #parameters
 MSF = 500 # morphologic scaling factor [-]
@@ -73,12 +73,12 @@ storm_dt = 2*3600 # storm duration [s]
 interstorm_dt = 48*3600 # interstorm duration [s]
 p_d = p1*(storm_dt+interstorm_dt) # storm depth [m]
 
-params = np.zeros((len(l1),8))
+params = np.zeros((len(l1),14))
 for i in range(len(l1)):
 
     params[i,:] = generate_parameters(p1, l1[i], n1, gam1, pe1, lam1, pi1, phi1, om1)
 
-df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'beq', 'l', 'n'])
+df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'beq', 'l', 'n', 'gam', 'pe', 'lam', 'pi', 'phi', 'om'])
 df_params['storm_dt'] = storm_dt
 df_params['interstorm_dt'] = interstorm_dt
 df_params['depth'] = p_d
