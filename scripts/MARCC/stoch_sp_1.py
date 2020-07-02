@@ -141,7 +141,7 @@ hm = HydrologyEventStreamPower(
 )
 #use surface_water__discharge for steady case
 sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = 1, n_sp=1, discharge_field='surface_water__discharge')
-rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, std=1e-2, seed=1236)
+rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, std=1e-4, seed=1236)
 
 mdl = StreamPowerModel(grid,
         hydrology_model = hm,
