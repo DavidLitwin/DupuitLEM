@@ -57,7 +57,7 @@ def generate_parameters(p, beq, n, gam, pe, lam, pi, phi, om):
 #parameters
 MSF = 500 # morphologic scaling factor [-]
 T_h = 30*24*3600 # total hydrological time
-T_m = 2.5e6*(365*24*3600) # total simulation time [s]
+T_m = 1e7*(365*24*3600) # total simulation time [s]
 
 pe_all = np.geomspace(10,10000,6)
 phi_all = np.geomspace(1,1000,6)
@@ -114,7 +114,7 @@ ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,beq) # hydraulic conductivity [
 
 #initialize grid
 np.random.seed(1234)
-grid = RasterModelGrid((100, 100), xy_spacing=10.0)
+grid = RasterModelGrid((50, 50), xy_spacing=20.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -141,7 +141,7 @@ hm = HydrologyEventStreamPower(
 )
 #use surface_water__discharge for steady case
 sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = 1, n_sp=1, discharge_field='surface_water__discharge')
-rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, seed=1236)
+rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, std=1e-2, seed=1236)
 
 mdl = StreamPowerModel(grid,
         hydrology_model = hm,
