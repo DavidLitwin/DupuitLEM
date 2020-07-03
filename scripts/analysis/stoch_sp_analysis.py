@@ -62,8 +62,8 @@ p_d = df_params['depth'][ID] #mean storm depth [m]
 T_h = 365*24*3600 #total hydrological time [s]
 
 #initialize grid
-dx = 10.0
-mg = RasterModelGrid((100, 100), xy_spacing=dx)
+dx = grid.dx
+mg = RasterModelGrid(grid.shape, xy_spacing=dx)
 mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
                               left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
 z = mg.add_zeros('node', 'topographic__elevation')
@@ -245,6 +245,17 @@ df_output['dd_min'] = dd.calculate_drainage_density()
 channel_mask[:] = np.uint8(med_network)
 df_output['dd_med'] = dd.calculate_drainage_density()
 
+####### calculate topographic index
+
+TI = mg.add_zeros('node', 'topographic__index')
+S = mg.calc_slope_at_node(elev)
+TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
+# TI_nd = TI/(df_params['l']/df_params['gam']) #nondimensionalized TI
+
+crit_twi = mg.add_zeros('node', 'TI_exceedence_contour')
+twi_contour = df_params['ksat'][ID]/(df_output['rec_a_linear']*df_params['n'][ID])
+crit_twi[:] = TI >= twi_contour
+
 ####### save things
 
 output_fields = [
@@ -257,7 +268,9 @@ output_fields = [
         'hand_max',
         'hand_med',
         'cum_exfiltration',
-        'cum_precip_sat'
+        'cum_precip_sat',
+        'topographic__index',
+        'TI_exceedence_contour'
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
