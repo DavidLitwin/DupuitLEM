@@ -57,7 +57,7 @@ def generate_parameters(p, l, n, gam, pe, lam, pi, phi, om):
 #parameters
 MSF = 500 # morphologic scaling factor [-]
 T_h = 30*24*3600 # total hydrological time
-T_m = 2.5e6*(365*24*3600) # total simulation time [s]
+T_m = 5e6*(365*24*3600) # total simulation time [s]
 
 pe1 = 500
 phi1 = 100
@@ -101,8 +101,6 @@ output["output_fields"] = [
         "topographic__elevation",
         "aquifer_base__elevation",
         "water_table__elevation",
-        "surface_water__discharge",
-        "groundwater__specific_discharge_node",
         ]
 output["base_output_path"] = './data/stoch_sp_2_'
 output["run_id"] = ID #make this task_id if multiple runs
@@ -129,7 +127,7 @@ pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
     mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
     total_t=T_h)
 pd.seed_generator(seedval=1235)
-ld = LinearDiffuser(grid, linear_diffusivity = D)
+ld = LinearDiffuser(grid, linear_diffusivity=D)
 
 #initialize other models
 hm = HydrologyEventStreamPower(
@@ -137,19 +135,19 @@ hm = HydrologyEventStreamPower(
         precip_generator=pd,
         groundwater_model=gdp,
 )
-#use surface_water__discharge for steady case
-sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = 1, n_sp=1, discharge_field='surface_water__discharge')
-rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, seed=1236)
+#use surface_water_effective__discharge for stochastic case
+sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_effective__discharge")
+rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, std=1e-2, seed=1236)
 
 mdl = StreamPowerModel(grid,
-        hydrology_model = hm,
-        diffusion_model = ld,
-        streampower_model = sp,
-        regolith_model = rm,
-        morphologic_scaling_factor = MSF,
-        total_morphological_time = T_m,
+        hydrology_model=hm,
+        diffusion_model=ld,
+        streampower_model=sp,
+        regolith_model=rm,
+        morphologic_scaling_factor=MSF,
+        total_morphological_time=T_m,
         verbose=True,
-        output_dict = output,
+        output_dict=output,
 )
 
 mdl.run_model()
