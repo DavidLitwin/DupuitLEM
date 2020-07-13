@@ -417,6 +417,10 @@ class HydrologyEventStreamPower(HydrologicalModel):
     HydrologyEventStreamPower is meant to be passed to
     StochasticRechargeStreamPower, where erosion rate is calcualted.
 
+    An additional field, surface_water_area_norm__discharge is calculated
+    by dividing the effective discharge by the square root of the drainage area.
+    This accounts for how channel width varies with the square root of area.
+
     Parameters
     -----
     grid: landlab grid
@@ -435,6 +439,8 @@ class HydrologyEventStreamPower(HydrologicalModel):
         super().__init__(grid)
 
         self.q_eff = self._grid.add_zeros("node","surface_water_effective__discharge")
+        self.q_star = self._grid.add_zeros("node","surface_water_area_norm__discharge")
+        self.area = self._grid.at_node["drainage_area"]
         self.pd = precip_generator
         self.gdp = groundwater_model
         self.T_h = self.pd._run_time
@@ -497,6 +503,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
+        self.q_star[:] = self.q_eff/np.sqrt(self.area)
 
 
     def run_step_record_state(self):
@@ -571,6 +578,8 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
+        self.q_star[:] = self.q_eff/np.sqrt(self.area)
+
 
 class HydrologySteadyStreamPower(HydrologicalModel):
 

@@ -62,13 +62,13 @@ class StreamPowerModel:
     def run_step(self, dt_m):
         """
         Run geomorphic step:
-        - update shear stress and erosion rate based on stochastic precipitation
-        - uplift and regolith production
-        - diffusion and erosion based on shear stress
+        - update discharge field based on stochastic precipitation
+        - diffusion and erosion based on discharge field
+        - uplift and regolith change
         - check for boundary issues
         """
 
-        #run gw model, calculate erosion rate
+        #run gw model, calculate discharge fields
         self.hm.run_step()
 
         #run linear diffusion, erosion
