@@ -34,14 +34,14 @@ vn = 0.9 # von Neumann coefficient
 d_eq = 1 #equilibrium depth [m]
 U = 1E-4/(365*24*3600) # uniform uplift [m/s]
 b_st = 1.5 #shear stress erosion exponent
-k_st = 1e-10 #shear stress erosion coefficient
+k_st = 5e-8 #shear stress erosion coefficient
 sp_c = 0.0 #threshold streampower
 chezy_c = 15 #chezy coefficient for flow depth calcualtion
 
 rho = 1000 #density [kg/m3]
 g = 9.81 #gravitational constant [m/s2]
 dx = 10 #grid cell width [m]
-Ksp = k_st*( (rho*g)/(chezy_c*dx)**(2/3) )**b_st
+Ksp = k_st*( (rho*g)/(chezy_c)**(2/3) )**b_st
 m = 2/3*b_st
 n = 2/3*b_st
 
@@ -88,7 +88,7 @@ hm = HydrologyEventStreamPower(
         groundwater_model=gdp,
 )
 
-sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = m, n_sp=n, discharge_field='surface_water_effective__discharge')
+sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = m, n_sp=n, discharge_field='surface_water_area_norm__discharge')
 rm = RegolithConstantThickness(grid, equilibrium_depth=d_eq, uplift_rate=U)
 
 mdl = StreamPowerModel(grid,
