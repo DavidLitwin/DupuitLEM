@@ -9,12 +9,12 @@ nondimensionalizing the governing landscape evolution equation.
 \[Alpha] == ds/(b n),
 \[Tau]r == (tr ksat U)/(Dm n)
 
-Date: 4 Jun 2020
+Date: 15 Jul 2020
 """
 import os
 import numpy as np
 from itertools import product
-import pandas as pd
+import pandas
 import pickle
 
 from landlab import RasterModelGrid
@@ -72,26 +72,26 @@ T_m = 5e6*(365*24*3600) # total simulation time [s]
 ### fix below here
 D1 = 0.002/(365*24*3600) # hillslope linear diffusivity [m2/s]
 p1 = 1/(365*24*3600) # recharge rate [m/s]
-U1 = 1e-3/(365*24*3600) # Uplift rate [m/s]
+U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
 b1 = 1.0 # permeable thickness [m]
 n1 = 0.1 # drainable porosity []
-eta_all = np.geomspace(10,10000,6)
-gam_all = np.geomspace(1,1000,6)
-eta1 = np.array(list(product(pe_all,phi_all)))[:,0]
-gam1 = np.array(list(product(pe_all,phi_all)))[:,1]
-alpha1 = 0.01
-taur1 = 1
+eta_all = np.geomspace(0.1,100,6)
+gam_all = np.geomspace(1,100,6)
+eta1 = np.array(list(product(eta_all,gam_all)))[:,0]
+gam1 = np.array(list(product(eta_all,gam_all)))[:,1]
+alpha1 = 0.05
+taur1 = 0.04
 
 params = np.zeros((len(eta1),14))
 for i in range(len(eta1)):
 
-    params[i,:] = generate_parameters(D1, p1, U1, b1, n1, alpha1, gam1, eta1, taur1)
+    params[i,:] = generate_parameters(D1, p1, U1, b1, n1, alpha1, gam1[i], eta1[i], taur1)
 
-df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'taur'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'taur'])
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
-Ksp = df_params['K'][ID] #streampower coefficient
+K = df_params['K'][ID] #streampower coefficient
 D = df_params['D'][ID] #hillslope diffusivity
 U = df_params['U'][ID] #uplift Rate
 Ks = df_params['ksat'][ID]
@@ -102,6 +102,8 @@ n = df_params['n'][ID]
 tr = df_params['tr'][ID]
 tb = df_params['tb'][ID]
 ds = df_params['ds'][ID]
+
+Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
 
 output = {}
 output["output_interval"] = 1000
@@ -146,8 +148,8 @@ hm = HydrologyEventStreamPower(
 
 #use surface_water_effective__discharge for stochastic case
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_area_norm__discharge")
-#rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=b, uplift_rate=U, std=1e-2, seed=1236)
-rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
+rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=b, uplift_rate=U, std=1e-2, seed=1236)
+# rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 
 mdl = StreamPowerModel(grid,
         hydrology_model=hm,
