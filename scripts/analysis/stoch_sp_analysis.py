@@ -94,7 +94,7 @@ gdp = GroundwaterDupuitPercolator(mg,
                                   regularization_f=0.01,
                                   recharge_rate=0.0,
                                   courant_coefficient=0.1,
-                                  vn_coefficient = 0.1,
+                                  vn_coefficient = 0.1*Ks/1e-5,
                                   callback_fun = write_SQ,
                                   )
 
