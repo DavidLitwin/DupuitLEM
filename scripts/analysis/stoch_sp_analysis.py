@@ -55,10 +55,10 @@ pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'
 Ks = df_params['ksat'][ID] #surface hydraulic conductivity [m/s]
 K0 = Ks*0.01 #minimum hydraulic conductivity [m/s]
 n = df_params['n'][ID] #drainable porosity [-]
-beq = df_params['beq'][ID] #characteristic depth  [m]
-storm_dt = df_params['storm_dt'][ID] #mean storm duration [s]
-interstorm_dt = df_params['interstorm_dt'][ID] #mean interstorm duration [s]
-p_d = df_params['depth'][ID] #mean storm depth [m]
+b = df_params['b'][ID] #characteristic depth  [m]
+tr = df_params['tr'][ID] #mean storm duration [s]
+tb = df_params['tb'][ID] #mean interstorm duration [s]
+ds = df_params['ds'][ID] #mean storm depth [m]
 T_h = 365*24*3600 #total hydrological time [s]
 
 #initialize grid
@@ -74,7 +74,7 @@ zwt = mg.add_zeros('node', 'water_table__elevation')
 zwt[:] = wt
 
 #initialize landlab components
-ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,beq) # hydraulic conductivity [m/s]
+ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,b) # hydraulic conductivity [m/s]
 
 f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
 def write_SQ(grid,dt,file=f):
@@ -98,8 +98,8 @@ gdp = GroundwaterDupuitPercolator(mg,
                                   callback_fun = write_SQ,
                                   )
 
-pdr = PrecipitationDistribution(mg, mean_storm_duration=storm_dt,
-    mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
+pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
+    mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
 pdr.seed_generator(seedval=2)
 

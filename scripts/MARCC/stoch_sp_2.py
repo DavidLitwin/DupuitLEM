@@ -40,19 +40,19 @@ def ksat_fun(p, gam, phi):
 def U_fun(p, n, pi):
     return (p*pi)/n
 
-def beq_fun(l, gam, om):
+def b_fun(l, gam, om):
     return (l*gam)/om
 
 #generate dimensioned parameters
 def generate_parameters(p, l, n, gam, pe, lam, pi, phi, om):
 
-    beq = beq_fun(l, gam, om)
+    b = b_fun(l, gam, om)
     ksat = ksat_fun(p, gam, phi)
     U = U_fun(p, n, pi)
     D = D_fun(l, p, n, gam, lam, pi)
     K = K_sp_fun(l, n, pe, gam, lam, pi)
 
-    return K, D, U, ksat, p, beq, l, n, gam, pe, lam, pi, phi, om
+    return K, D, U, ksat, p, b, l, n, gam, pe, lam, pi, phi, om
 
 #parameters
 MSF = 500 # morphologic scaling factor [-]
@@ -69,19 +69,19 @@ n1 = 0.1 # drainable porosity []
 gam1 = 0.2
 l1 = np.geomspace(20,500,11) #equilibrium depth [m]
 
-storm_dt = 2*3600 # storm duration [s]
-interstorm_dt = 48*3600 # interstorm duration [s]
-p_d = p1*(storm_dt+interstorm_dt) # storm depth [m]
+tr = 2*3600 # storm duration [s]
+tb = 48*3600 # interstorm duration [s]
+ds = p1*(tr+tb) # storm depth [m]
 
 params = np.zeros((len(l1),14))
 for i in range(len(l1)):
 
     params[i,:] = generate_parameters(p1, l1[i], n1, gam1, pe1, lam1, pi1, phi1, om1)
 
-df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'beq', 'l', 'n', 'gam', 'pe', 'lam', 'pi', 'phi', 'om'])
-df_params['storm_dt'] = storm_dt
-df_params['interstorm_dt'] = interstorm_dt
-df_params['depth'] = p_d
+df_params = pd.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'l', 'n', 'gam', 'pe', 'lam', 'pi', 'phi', 'om'])
+df_params['tr'] = tr
+df_params['tb'] = tb
+df_params['ds'] = ds
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -91,7 +91,7 @@ U = df_params['U'][ID] #uplift Rate
 Ks = df_params['ksat'][ID]
 K0 = Ks*0.01
 p = df_params['p'][ID]
-beq = df_params['beq'][ID]
+b = df_params['b'][ID]
 n = df_params['n'][ID]
 
 
@@ -106,7 +106,7 @@ output["base_output_path"] = './data/stoch_sp_2_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid_functions
-ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,beq) # hydraulic conductivity [m/s]
+ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,b) # hydraulic conductivity [m/s]
 
 #initialize grid
 np.random.seed(1234)
@@ -114,7 +114,7 @@ grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
-elev[:] = beq + 0.1*np.random.rand(len(elev))
+elev[:] = b + 0.1*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
@@ -123,8 +123,8 @@ wt[:] = elev.copy()
 gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
                                   regularization_f=0.01, recharge_rate=0.0, \
                                   courant_coefficient=0.9, vn_coefficient = 0.9)
-pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
-    mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
+pd = PrecipitationDistribution(grid, mean_storm_duration=tr,
+    mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
 pd.seed_generator(seedval=1235)
 ld = LinearDiffuser(grid, linear_diffusivity=D)
@@ -137,7 +137,7 @@ hm = HydrologyEventStreamPower(
 )
 #use surface_water_effective__discharge for stochastic case
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_effective__discharge")
-rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=beq, uplift_rate=U, std=1e-2, seed=1236)
+rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=b, uplift_rate=U, std=1e-2, seed=1236)
 
 mdl = StreamPowerModel(grid,
         hydrology_model=hm,
