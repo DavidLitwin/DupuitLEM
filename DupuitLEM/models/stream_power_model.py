@@ -7,7 +7,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from landlab.io.netcdf import write_raster_netcdf
+from landlab.io.netcdf import read_netcdf, write_raster_netcdf
 
 
 class StreamPowerModel:
@@ -23,11 +23,58 @@ class StreamPowerModel:
         diffusion_model = None,
         erosion_model = None,
         regolith_model = None,
-        morphologic_scaling_factor = None,
-        total_morphological_time = None,
+        morphologic_scaling_factor = 500,
+        total_morphological_time = 1e6*365*24*3600,
         output_dict = None,
+        steady_state_condition = None,
         verbose=False,
         ):
+
+
+        """
+        Initialize StreamPowerModel.
+
+        Parameters:
+        --------
+        hydrology_model: an instance of a DupuitLEM hydrology model, either
+            HydrologyEventStreamPower or HydrologySteadyStreamPower.
+            default: None
+        diffusion_model: an instance of a landlab diffusion component.
+            default: None
+        erosion_model: an instance of the landlab FastscapeEroder component.
+            default: None
+        regolith_model: an instance of a DupuitLEM regolith model.
+            default: None
+        morphologic_scaling_factor: float. Multiplying factor on the hydrological
+            timestep to calculate the morphologic timestep.
+            default: 500
+        total_morphological_time: float. Total model duration.
+            default: 1e6*365*24*3600 (1Myr)
+        output_dict: dict containing fields to specify output behavior.
+            default: None
+            dict contains the following fields:
+                output_interval: int. The number of model iterations between saving output
+                output_fields: list of string(s). Fields at node that will be saved
+                    to netcdf file.
+                base_path: string. The path and folder base name where the output will
+                    be saved.
+                id: int. The identifying number of the particular run. Output files
+                    are saved to (base_path)-(id)/grid_(id).nc
+        steady_state_condition: dict containting information for stopping
+            model if a condition on elevation change is met. Stopping conditions
+            are currently implemented only for the rate of change between the
+            present elevation state, and the state recorded in the most recently
+            saved output. So, using steady_state_condition is conditional on
+            saving output with output_dict. 
+
+            default: None
+            dict contains the following fields:
+                stop_at_rate: float. the critical rate of elevation change [m/yr]
+                how: string. Either 'mean' (find the mean elevation change rate)
+                    or 'percentile' (find the corresponding percentile of change)
+                value: float. if 'how' is 'percentile', this is the chosen percentile.
+
+        """
 
         self.verboseprint = print if verbose else lambda *a, **k: None
 
@@ -57,6 +104,23 @@ class StreamPowerModel:
             self.id =  output_dict["run_id"]
         else:
             self.save_output = False
+
+        if steady_state_condition:
+            self.stop_cond = True
+            self.stop_rate = steady_state_condition['stop_at_rate']
+
+            if steady_state_condition['how'] == 'mean':
+                self.calc_rate_of_change = lambda elev, elev0, dtm, N: np.mean(abs(elev-elev0))/(N*dtm)
+
+            elif steady_state_condition['how'] == 'percentile':
+                c = steady_state_condition['value']
+                self.calc_rate_of_change = lambda elev, elev0, dtm, N: np.percentile(abs(elev-elev0),c)/(N*dtm)
+
+            else:
+                print('stopping condition method %s is not supported'%stopping_cond['how'])
+        else:
+            self.stop_cond = False
+
         self.verboseprint('Model initialized')
 
     def run_step(self, dt_m):
@@ -124,3 +188,15 @@ class StreamPowerModel:
                     df_ouput = pd.DataFrame(data=z_change, columns=['max_abs','90_abs', '50_abs', 'mean_abs', 'mean'])
                     filename = self.base_path + str(self.id) + '_elev_change.csv'
                     df_ouput.to_csv(filename, index=False, float_format='%.3e')
+
+                    # check stopping condition
+                    if self.stop_cond and i > 0:
+
+                        filename0 = self.base_path + str(self.id) + '_grid_' + str(i-self.output_interval) + '.nc'
+                        grid0 = read_netcdf(filename0)
+                        elev0 = grid0.at_node['topographic__elevation']
+                        dzdt = self.calc_rate_of_change(self._elev, elev0, self.dt_m, self.output_interval)
+
+                        if dzdt < self.stop_rate:
+                            verboseprint('Stopping rate condition met, dzdt = %.4e'%dzdt)
+                            break

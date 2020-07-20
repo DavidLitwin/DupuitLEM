@@ -256,6 +256,27 @@ crit_twi = mg.add_zeros('node', 'TI_exceedence_contour')
 twi_contour = df_params['ksat'][ID]/(df_output['rec_a_linear']*df_params['n'][ID])
 crit_twi[:] = TI >= twi_contour
 
+
+####### calculate elevation change
+z_change = np.zeros((len(files),4))
+grid = read_netcdf(files[0])
+elev0 = grid.at_node['topographic__elevation']
+for i in range(1,len(files)):
+
+    grid = read_netcdf(files[i])
+    elev = grid.at_node['topographic__elevation']
+
+    elev_diff = abs(elev-elev0)
+    z_change[i,0] = np.max(elev_diff)
+    z_change[i,1] = np.percentile(elev_diff,90)
+    z_change[i,2] = np.percentile(elev_diff,50)
+    z_change[i,3] = np.mean(elev_diff)
+
+    elev0 = elev.copy()
+
+df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', 'mean'])
+df_z_change.to_csv(path_or_buf='../post_proc/%s/z_change_%d.csv'%(base_output_path, ID))
+
 ####### save things
 
 output_fields = [
