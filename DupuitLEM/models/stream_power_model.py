@@ -21,7 +21,7 @@ class StreamPowerModel:
         grid,
         hydrology_model = None,
         diffusion_model = None,
-        streampower_model = None,
+        erosion_model = None,
         regolith_model = None,
         morphologic_scaling_factor = None,
         total_morphological_time = None,

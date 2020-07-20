@@ -110,7 +110,7 @@ rm = RegolithConstantThickness(grid, equilibrium_depth=d_eq, uplift_rate=U)
 mdl = StochasticRechargeStreamPower(grid,
         hydrology_model = hm,
         diffusion_model = ld,
-        streampower_model = sp,
+        erosion_model = sp,
         regolith_model = rm,
         morphologic_scaling_factor = MSF,
         total_morphological_time = T_m,
