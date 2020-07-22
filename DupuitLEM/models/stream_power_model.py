@@ -65,7 +65,7 @@ class StreamPowerModel:
             are currently implemented only for the rate of change between the
             present elevation state, and the state recorded in the most recently
             saved output. So, using steady_state_condition is conditional on
-            saving output with output_dict. 
+            saving output with output_dict.
 
             default: None
             dict contains the following fields:
@@ -88,7 +88,7 @@ class StreamPowerModel:
         self.hm = hydrology_model
         self.dm = diffusion_model
         self.rm = regolith_model
-        self.sp = streampower_model
+        self.sp = erosion_model
 
         self.MSF = morphologic_scaling_factor # morphologic scaling factor [-]
         self.T_m = total_morphological_time #total model time [s]
