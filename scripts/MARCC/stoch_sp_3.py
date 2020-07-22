@@ -66,18 +66,18 @@ MSF = 500 # morphologic scaling factor [-]
 T_h = 30*24*3600 # total hydrological time [s]
 T_m = 5e6*(365*24*3600) # total simulation time [s]
 
-### fix below here
-D1 = 0.002/(365*24*3600) # hillslope linear diffusivity [m2/s]
+D1 = 0.005/(365*24*3600) # hillslope linear diffusivity [m2/s]
 p1 = 1/(365*24*3600) # recharge rate [m/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
 b1 = 1.0 # permeable thickness [m]
 n1 = 0.1 # drainable porosity []
-eta_all = np.geomspace(0.1,100,6)
-gam_all = np.geomspace(1,100,6)
-eta1 = np.array(list(product(eta_all,gam_all)))[:,0]
-gam1 = np.array(list(product(eta_all,gam_all)))[:,1]
-alpha1 = 0.05
-taur1 = 0.04
+eta_all = np.geomspace(0.1,10,6)
+gam_all = np.geomspace(0.1,10,6)
+alpha1 = 0.1
+taur1 = 0.01
+
+eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
+gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
 
 params = np.zeros((len(eta1),14))
 for i in range(len(eta1)):
@@ -85,6 +85,9 @@ for i in range(len(eta1)):
     params[i,:] = generate_parameters(D1, p1, U1, b1, n1, alpha1, gam1[i], eta1[i], taur1)
 
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'taur'])
+df_params['hg'] = df_params['U']/df_params['K']
+df_params['lg'] = np.sqrt(df_params['D']/df_params['K'])
+df_params['tg'] = 1/df_params['K']
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -98,6 +101,7 @@ n = df_params['n'][ID]
 tr = df_params['tr'][ID]
 tb = df_params['tb'][ID]
 ds = df_params['ds'][ID]
+hg = df_params['hg'][ID]
 
 Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
 
@@ -141,8 +145,8 @@ hm = HydrologyEventStreamPower(
 
 #use surface_water_effective__discharge for stochastic case
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_area_norm__discharge")
-rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=b, uplift_rate=U, std=1e-2, seed=1236)
-# rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
+# rm = RegolithConstantThicknessPerturbed(grid, equilibrium_depth=b, uplift_rate=U, std=1e-2, seed=1236)
+rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 
 mdl = StreamPowerModel(grid,
         hydrology_model=hm,
