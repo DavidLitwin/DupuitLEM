@@ -30,9 +30,6 @@ from DupuitLEM.auxiliary_models import (
     RegolithConstantThicknessPerturbed,
     RegolithConstantThickness,
     )
-from DupuitLEM.grid_functions.grid_funcs import (
-    bind_avg_hydraulic_conductivity
-    )
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -94,8 +91,7 @@ pickle.dump(df_params, open('parameters.p','wb'))
 K = df_params['K'][ID] #streampower coefficient
 D = df_params['D'][ID] #hillslope diffusivity
 U = df_params['U'][ID] #uplift Rate
-Ks = df_params['ksat'][ID]
-K0 = Ks*0.01
+ksat = df_params['ksat'][ID]
 p = df_params['p'][ID]
 b = df_params['b'][ID]
 n = df_params['n'][ID]
@@ -115,22 +111,19 @@ output["output_fields"] = [
 output["base_output_path"] = './data/stoch_sp_3_'
 output["run_id"] = ID #make this task_id if multiple runs
 
-#initialize grid_functions
-ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,b) # hydraulic conductivity [m/s]
-
 #initialize grid
 np.random.seed(1234)
 grid = RasterModelGrid((100, 100), xy_spacing=10.0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
-elev[:] = b + 0.1*np.random.rand(len(elev))
+elev[:] = b + 0.1*hg*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 
 #initialize landlab components
-gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
+gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat, \
                                   regularization_f=0.01, recharge_rate=0.0, \
                                   courant_coefficient=0.9, vn_coefficient = 0.9)
 pd = PrecipitationDistribution(grid, mean_storm_duration=tr,
