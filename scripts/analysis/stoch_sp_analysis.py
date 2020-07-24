@@ -129,27 +129,31 @@ df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',
 def power_law(x, a, b, c):
     return a*np.power(x, b) + c
 
+def linear_law(x,a,c):
+    return a*x + c
+
 rec_inds = np.where(np.diff(df['qs'], prepend=0.0) < 0.0)[0]
 Q = df['qs'][rec_inds]
 S = df['S'][rec_inds] - min(df['S'][rec_inds])
 
-pars, cov = curve_fit(f=power_law, xdata=S, ydata=Q, p0=[0, 1, 0], bounds=(-100, 100))
-stdevs = np.sqrt(np.diag(cov))
+try:
+    pars, cov = curve_fit(f=power_law, xdata=S, ydata=Q, p0=[0, 1, 0], bounds=(-100, 100))
+    stdevs = np.sqrt(np.diag(cov))
 
-def linear_law(x,a,c):
-    return a*x + c
+    pars_lin, cov_lin = curve_fit(f=linear_law, xdata=S, ydata=Q, p0=[0, 0], bounds=(-100, 100))
+    stdevs_lin = np.sqrt(np.diag(cov_lin))
 
-pars_lin, cov_lin = curve_fit(f=linear_law, xdata=S, ydata=Q, p0=[0, 0], bounds=(-100, 100))
-stdevs_lin = np.sqrt(np.diag(cov_lin))
+    df_output['rec_a'] = pars[0]
+    df_output['rec_b'] = pars[1]
+    df_output['rec_c'] = pars[2]
+    df_output['rec_a_std'] = stdevs[0]
+    df_output['rec_b_std'] = stdevs[1]
+    df_output['rec_a_linear'] = pars_lin[0]
+    df_output['rec_c_linear'] = pars_lin[1]
+    df_output['rec_a_std_linear'] = stdevs_lin[0]
 
-df_output['rec_a'] = pars[0]
-df_output['rec_b'] = pars[1]
-df_output['rec_c'] = pars[2]
-df_output['rec_a_std'] = stdevs[0]
-df_output['rec_b_std'] = stdevs[1]
-df_output['rec_a_linear'] = pars_lin[0]
-df_output['rec_c_linear'] = pars_lin[1]
-df_output['rec_a_std_linear'] = stdevs_lin[0]
+except:
+    print("error fitting recession")
 
 ##### channel network
 qs_all = hm.Q_all[30:,:]
@@ -270,7 +274,7 @@ crit_twi[:] = TI >= twi_contour
 
 
 ####### calculate elevation change
-z_change = np.zeros((len(files),4))
+z_change = np.zeros((len(files),5))
 grid = read_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 for i in range(1,len(files)):
@@ -282,11 +286,12 @@ for i in range(1,len(files)):
     z_change[i,0] = np.max(elev_diff)
     z_change[i,1] = np.percentile(elev_diff,90)
     z_change[i,2] = np.percentile(elev_diff,50)
-    z_change[i,3] = np.mean(elev_diff)
+    z_change[i,3] = np.percentile(elev_diff,10)
+    z_change[i,4] = np.mean(elev_diff)
 
     elev0 = elev.copy()
 
-df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', 'mean'])
+df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'mean'])
 df_z_change.to_csv(path_or_buf='../post_proc/%s/z_change_%d.csv'%(base_output_path, ID))
 
 ####### save things
