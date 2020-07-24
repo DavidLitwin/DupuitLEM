@@ -14,13 +14,14 @@ from scipy.optimize import curve_fit
 from landlab import imshow_grid
 from landlab.io.netcdf import read_netcdf, write_raster_netcdf
 
-from landlab import RasterModelGrid
+from landlab import RasterModelGrid, LinkStatus
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
     HeightAboveDrainageCalculator,
     DrainageDensity,
     )
+from landlab.grid.mappers import map_max_of_node_links_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
 from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
@@ -50,6 +51,9 @@ plt.close()
 
 ########## Run hydrological model
 df_params = pickle.load(open('./parameters.p','rb'))
+df_params['hg'] = df_params['U']/df_params['K']
+df_params['lg'] = np.sqrt(df_params['D']/df_params['K'])
+df_params['tg'] = 1/df_params['K']
 pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
 
 Ks = df_params['ksat'][ID] #surface hydraulic conductivity [m/s]
@@ -147,24 +151,6 @@ df_output['rec_a_linear'] = pars_lin[0]
 df_output['rec_c_linear'] = pars_lin[1]
 df_output['rec_a_std_linear'] = stdevs_lin[0]
 
-# S_test = np.linspace(min(S),max(S),100)
-# plt.figure()
-# plt.plot(S,Q, '.')
-# plt.plot(S_test,power_law(S_test, *pars), '--')
-# plt.xlabel('storage $[m^3]$')
-# plt.ylabel('discharge $[m^3/s]$')
-
-# plt.figure()
-# plt.plot(np.cumsum(df['dt']/(24*3600)),df['S'])
-# plt.xlabel('time [d]')
-# plt.ylabel('storage $[m^3]$')
-
-# plt.figure()
-# plt.plot(np.cumsum(df['dt']/(24*3600)),df['qs'])
-# plt.xlabel('time [d]')
-# plt.ylabel('discharge $[m^3/s]$')
-
-
 ##### channel network
 qs_all = hm.Q_all[30:,:]
 sat_cells = qs_all > 1e-10
@@ -180,6 +166,18 @@ med_network = mg.add_zeros('node', 'channel_mask_med')
 min_network[:] = sat_cells[min_network_id,:]
 max_network[:] = sat_cells[max_network_id,:]
 med_network[:] = sat_cells[med_network_id,:]
+
+##### steepness and curvature
+S = mg.add_zeros('node', 'slope')
+A = mg.at_node['drainage_area']
+curvature = mg.add_zeros('node', 'curvature')
+steepness = mg.add_zeros('node', 'steepness')
+
+dzdx = grid.calc_grad_at_link(z)
+dzdx[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
+S[:] = map_max_of_node_links_to_node(mg,abs(dzdx))
+curvature[:] = mg.calc_flux_div_at_node(dzdx)
+steepness[:] = np.sqrt(A)*S
 
 ######## Runoff generation
 areas = mg.cell_area_at_node #areas on the grid
@@ -201,7 +199,7 @@ qs_sum_event = np.sum(qs[p>0]*dt_q[p>0])
 df_output['BFI'] = (qs_sum - qs_sum_event)/qs_sum # this is *a* baseflow index, but not really *the* baseflow index.
 df_output['RR'] = qs_sum/p_sum # runoff ratio
 
-
+#separate exfiltration and precip on sat area
 qe_sum = mg.add_zeros('node', 'cum_exfiltration') #cumulative exfiltration [m]
 qp_sum = mg.add_zeros('node', 'cum_precip_sat') #cumulative precip on saturated area [m]
 for i in range(np.shape(qs_all)[0]):
@@ -211,6 +209,20 @@ for i in range(np.shape(qs_all)[0]):
 
     qp = qs_all[i,:]-qe
     qp_sum += qp*dt_q[i]
+
+#quantiles of Q*
+r = np.arange(hm.Q_all.shape[0])
+Q_all = hm.Q_all[r%2==1,:]
+Q_all_max = np.max(Q_all,axis=1)
+percs = [100,90,50,10,0]
+Q_star_percs = np.zeros((Q_all.shape[1],len(percs)))
+for i in range(len(percs)):
+    index = np.where(Q_all_max==np.percentile(Q_all_max,percs[i], interpolation='nearest'))[0][0]
+    Q_star_percs[:,i] = Q_all[index,:]/(mg.at_node['drainage_area']*df_params['p'][ID])
+df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
+df_qstar['mean'] = np.mean(Q_all,axis=0)/(mg.at_node['drainage_area']*df_params['p'][ID])
+df_qstar.fillna(value=0,inplace=True)
+
 
 ######## Calculate HAND
 hand_min = mg.add_zeros('node', 'hand_min')
@@ -291,10 +303,16 @@ output_fields = [
         'cum_exfiltration',
         'cum_precip_sat',
         'topographic__index',
-        'TI_exceedence_contour'
+        'TI_exceedence_contour',
+        'slope',
+        'drainage_area',
+        'curvature',
+        'steepness',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
+
+pickle.dump(df_qstar, open('../post_proc/%s/q_star_ID_%d.p'%(base_output_path, ID), 'wb'))
