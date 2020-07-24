@@ -154,6 +154,7 @@ try:
 
 except:
     print("error fitting recession")
+    df_output['rec_a_linear'] = 0.0
 
 ##### channel network
 qs_all = hm.Q_all[30:,:]
@@ -266,7 +267,6 @@ df_output['dd_med'] = dd.calculate_drainage_density()
 TI = mg.add_zeros('node', 'topographic__index')
 S = mg.calc_slope_at_node(elev)
 TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
-# TI_nd = TI/(df_params['l']/df_params['gam']) #nondimensionalized TI
 
 crit_twi = mg.add_zeros('node', 'TI_exceedence_contour')
 twi_contour = df_params['ksat'][ID]/(df_output['rec_a_linear']*df_params['n'][ID])
