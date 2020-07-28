@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --mail-type=begin,end
 #SBATCH --mail-user=dlitwin3@jhu.edu
-#SBATCH -o /data/slurm/slurm-%A_%a.out
+#SBATCH -o /projects/dali4360/data/slurm/slurm-%A_%a.out
 #### load and unload modules you may need
 script=$1
 output_folder=$2
