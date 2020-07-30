@@ -22,15 +22,7 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_1_'
 
-
-grid = RasterModelGrid((100,100), xy_spacing=50)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
-                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
-z = grid.add_zeros('node', 'topographic__elevation')
-z[:] = 0.1*np.random.rand(len(z))
-
-
-lg_all = [12, 25, 50, 75, 100, 150, 200]
+lg_all = [40, 80, 160, 320, 640]
 lg = lg_all[ID]
 
 D = 6e-11
@@ -41,8 +33,14 @@ n = 1
 
 T = 5e6*(365*24*3600)
 dt = 50*(365*24*3600)
-
 N = int(T//dt)
+
+grid = RasterModelGrid((100,100), xy_spacing=lg/4)
+grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
+                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
+z = grid.add_zeros('node', 'topographic__elevation')
+z[:] = 0.1*np.random.rand(len(z))
+
 
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes')
 ld = LinearDiffuser(grid, D)
