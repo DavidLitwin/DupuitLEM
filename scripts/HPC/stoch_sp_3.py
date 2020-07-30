@@ -38,43 +38,43 @@ ID = int(task_id)
 def K_sp_fun(U, b, eta):
     return (U*eta)/b
 
-def ksat_fun(D, p, U, b, gam):
-    return (D*p*gam)/(b*U)
+def ksat_fun(D, p, U, b, gam, rho):
+    return (D*p*gam)/(b*U*rho)
 
 def ds_fun(b, n, alpha):
     return b*n*alpha
 
-def tr_fun(p, b, n, gam, taur):
-    return (b*n*taur)/(p*gam)
+def tr_fun(p, b, n, alpha, rho):
+    return (b*n*alpha*rho)/p
 
-def td_fun(p, b, n, alpha, gam, taur):
-    return (b*n*alpha)/p - (b*n*taur)/(p*gam)
+def td_fun(p, b, n, alpha, rho):
+    return (b*n*alpha*(1-rho))/p
 
 #generate dimensioned parameters
 def generate_parameters(D, p, U, b, n, alpha, gam, eta, taur):
 
     K = K_sp_fun(U, b, eta)
-    ksat = ksat_fun(D, p, U, b, gam)
-    tr = tr_fun(p, b, n, gam, taur)
-    td = td_fun(p, b, n, alpha, gam, taur)
+    ksat = ksat_fun(D, p, U, b, gam, rho)
+    tr = tr_fun(p, b, n, alpha, rho)
+    tb = tb_fun(p, b, n, alpha, rho)
     ds = ds_fun(b, n, alpha)
 
-    return K, D, U, ksat, p, b, ds, tr, td, n, alpha, gam, eta, taur
+    return K, D, U, ksat, p, b, ds, tr, tb, n, alpha, gam, eta, rho
 
 #parameters
 MSF = 500 # morphologic scaling factor [-]
 T_h = 30*24*3600 # total hydrological time [s]
 T_m = 5e6*(365*24*3600) # total simulation time [s]
 
-D1 = 0.005/(365*24*3600) # hillslope linear diffusivity [m2/s]
-p1 = 1/(365*24*3600) # recharge rate [m/s]
-U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
-b1 = 1.0 # permeable thickness [m]
-n1 = 0.1 # drainable porosity []
 eta_all = np.geomspace(0.1,10,6)
 gam_all = np.geomspace(0.1,10,6)
 alpha1 = 0.1
-taur1 = 0.01
+rho1 = 0.05
+D1 = 0.005/(365*24*3600) # hillslope linear diffusivity [m2/s]
+U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
+p1 = 1/(365*24*3600) # long term average rainfall rate [m/s]
+b1 = 1.0 # permeable thickness [m]
+n1 = 0.1 # drainable porosity []
 
 eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
 gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
@@ -82,12 +82,13 @@ gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
 params = np.zeros((len(eta1),14))
 for i in range(len(eta1)):
 
-    params[i,:] = generate_parameters(D1, p1, U1, b1, n1, alpha1, gam1[i], eta1[i], taur1)
+    params[i,:] = generate_parameters(D1, p1, U1, b1, n1, alpha1, gam1[i], eta1[i], rho)
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'taur'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'rho'])
 df_params['hg'] = df_params['U']/df_params['K']
 df_params['lg'] = np.sqrt(df_params['D']/df_params['K'])
 df_params['tg'] = 1/df_params['K']
+df_params['ibar'] = df_params['p']/df_params['rho']
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
