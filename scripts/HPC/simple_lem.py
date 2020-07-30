@@ -23,14 +23,14 @@ ID = int(task_id)
 base_path = './data/simple_lem_1_'
 
 
-grid = RasterModelGrid((100,100), xy_spacing=10)
+grid = RasterModelGrid((100,100), xy_spacing=50)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.1*np.random.rand(len(z))
 
 
-lg_all = [5, 10, 20, 40, 80, 160]
+lg_all = [12, 25, 50, 75, 100, 150, 200]
 lg = lg_all[ID]
 
 D = 6e-11
@@ -49,20 +49,15 @@ ld = LinearDiffuser(grid, D)
 sp = FastscapeEroder(grid, K_sp=K, m_sp=m, n_sp=n)
 
 for i in range(N):
-    
+
     z[grid.core_nodes] += U*dt
-    
+
     ld.run_one_step(dt)
     fa.run_one_step()
     sp.run_one_step(dt)
-    
-    
+
+
     if i%1000==0:
         print('finished iteration %d'%i)
         filename = base_path + '%d_grid_%d.nc'%(ID,i)
         write_raster_netcdf(filename, grid, names = "topographic__elevation", format="NETCDF4")
-    
-        
-
-    
-    
