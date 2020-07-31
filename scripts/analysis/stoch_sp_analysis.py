@@ -23,7 +23,6 @@ from landlab.components import (
     )
 from landlab.grid.mappers import map_max_of_node_links_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
-from DupuitLEM.grid_functions.grid_funcs import bind_avg_hydraulic_conductivity
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -56,8 +55,7 @@ df_params['lg'] = np.sqrt(df_params['D']/df_params['K'])
 df_params['tg'] = 1/df_params['K']
 pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
 
-Ks = df_params['ksat'][ID] #surface hydraulic conductivity [m/s]
-K0 = Ks*0.01 #minimum hydraulic conductivity [m/s]
+Ks = df_params['ksat'][ID] #hydraulic conductivity [m/s]
 n = df_params['n'][ID] #drainable porosity [-]
 b = df_params['b'][ID] #characteristic depth  [m]
 tr = df_params['tr'][ID] #mean storm duration [s]
@@ -77,24 +75,24 @@ zb[:] = base
 zwt = mg.add_zeros('node', 'water_table__elevation')
 zwt[:] = wt
 
-#initialize landlab components
-ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,b) # hydraulic conductivity [m/s]
-
 f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
-def write_SQ(grid,dt,file=f):
+def write_SQ(grid, r, dt, file=f):
     cores = grid.core_nodes
     h = grid.at_node["aquifer__thickness"]
     area = grid.cell_area_at_node
     storage = np.sum(n*h[cores]*area[cores])
 
     qs = grid.at_node["surface_water__specific_discharge"]
-    qs_tot = np.sum(qs*area)
+    qs_tot = np.sum(qs[cores]*area[cores])
+    qs_nodes = np.sum(qs[cores]>1e-10)
 
-    file.write('%f, %f, %f\n'%(dt,qs_tot,storage))
+    r_tot = np.sum(r[cores]*area[cores])
+
+    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
 
 gdp = GroundwaterDupuitPercolator(mg,
                                   porosity=n,
-                                  hydraulic_conductivity=ksat_fun,
+                                  hydraulic_conductivity=Ks,
                                   regularization_f=0.01,
                                   recharge_rate=0.0,
                                   courant_coefficient=0.1,
@@ -123,7 +121,7 @@ f.close()
 df_output = {}
 
 #load the full storage discharge dataset that was just generated
-df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','qs','S'])
+df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','i', 'qs', 'S', 'qs_cells'])
 
 ##### recession
 def power_law(x, a, b, c):
@@ -132,10 +130,12 @@ def power_law(x, a, b, c):
 def linear_law(x,a,c):
     return a*x + c
 
+# find recession periods
 rec_inds = np.where(np.diff(df['qs'], prepend=0.0) < 0.0)[0]
 Q = df['qs'][rec_inds]
 S = df['S'][rec_inds] - min(df['S'][rec_inds])
 
+# try to fit linear and power fits to Q-S relationship directly
 try:
     pars, cov = curve_fit(f=power_law, xdata=S, ydata=Q, p0=[0, 1, 0], bounds=(-100, 100))
     stdevs = np.sqrt(np.diag(cov))
@@ -157,20 +157,23 @@ except:
     df_output['rec_a_linear'] = 0.0
 
 ##### channel network
-qs_all = hm.Q_all[30:,:]
-sat_cells = qs_all > 1e-10
-count_sat_cells = np.sum(sat_cells,axis=1)
-min_network_id = np.where(count_sat_cells == min(count_sat_cells))[0][0]
-max_network_id = np.where(count_sat_cells == max(count_sat_cells))[0][0]
-med_network_id = np.where(count_sat_cells == np.median(count_sat_cells))[0][0]
+Q_all = hm.Q_all[30:,:]
 
+#find number of saturated cells
+Q_nodes = Q_all > 1e-10
+count_Q_nodes = np.sum(Q_nodes,axis=1)
+#find channel network with min, max, and median number of contributing cells
+min_network_id = np.where(count_Q_nodes == min(count_Q_nodes))[0][0]
+max_network_id = np.where(count_Q_nodes == max(count_Q_nodes))[0][0]
+med_network_id = np.where(count_Q_nodes == np.median(count_Q_nodes))[0][0]
+
+#set fields
 min_network = mg.add_zeros('node', 'channel_mask_min')
 max_network = mg.add_zeros('node', 'channel_mask_max')
 med_network = mg.add_zeros('node', 'channel_mask_med')
-
-min_network[:] = sat_cells[min_network_id,:]
-max_network[:] = sat_cells[max_network_id,:]
-med_network[:] = sat_cells[med_network_id,:]
+min_network[:] = Q_nodes[min_network_id,:]
+max_network[:] = Q_nodes[max_network_id,:]
+med_network[:] = Q_nodes[med_network_id,:]
 
 ##### steepness and curvature
 S = mg.add_zeros('node', 'slope')
@@ -178,6 +181,8 @@ A = mg.at_node['drainage_area']
 curvature = mg.add_zeros('node', 'curvature')
 steepness = mg.add_zeros('node', 'steepness')
 
+#slope is max of the absolute value of gradient.
+#curvature is divergence of gradient. Same as LinearDiffuser.
 dzdx = grid.calc_grad_at_link(z)
 dzdx[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
 S[:] = map_max_of_node_links_to_node(mg,abs(dzdx))
@@ -185,45 +190,44 @@ curvature[:] = mg.calc_flux_div_at_node(dzdx)
 steepness[:] = np.sqrt(A)*S
 
 ######## Runoff generation
-areas = mg.cell_area_at_node #areas on the grid
-# timeseries recorded, assuming more or less equilibrated after 30 timesteps
-time = hm.time[30:]
-p = hm.intensity[30:]
-qs_all = hm.qs_all[30:,:]
+# find times with rain. Note in df qs and S are at the end of the timestep.
+# is is at the beginning of the timestep.
+df['t'] = np.cumsum(df['dt'])
+is_rain = df['i'] > 0.0
+pre_rain = np.where(np.diff(is_rain*1)>0.0)[0] #last data point before rain
+end_rain = np.where(np.diff(is_rain*1)<0.0)[0][1:] #last data point where there is rain
 
-#offset because p is recorded at beginning of dt and q at the end
-dt_q = np.diff(time,prepend=time[0])
-dt_p = np.diff(time,append=time[-1])
-qs = np.sum(qs_all*areas,axis=1)
+# make a linear-type baseflow separation, where baseflow during rain increases
+# linearly from its initial qs before rain to its final qs after rain.
+qb = df['qs'].copy()
+t = df['t']
+for i in range(len(pre_rain)):
+    slope = (qb[end_rain[i]+1] - qb[pre_rain[i]])/(t[end_rain[i]+1]-t[pre_rain[i]])
+    qb[pre_rain[i]+1:end_rain[i]+1] = qb[pre_rain[i]]+slope*(t[pre_rain[i]+1:end_rain[i]+1] - t[pre_rain[i]])
 
-#total fluxes
-p_sum = np.sum(p*dt_p)*np.sum(areas) # total water entering as precipitation [m3]
-qs_sum = np.sum(qs*dt_q) # total water leaving via surface [m3]
-qs_sum_event = np.sum(qs[p>0]*dt_q[p>0])
+df['qb'] = qb
+qe = df['qs'] - df['qb']
 
-df_output['BFI'] = (qs_sum - qs_sum_event)/qs_sum # this is *a* baseflow index, but not really *the* baseflow index.
-df_output['RR'] = qs_sum/p_sum # runoff ratio
+# integrate to find total values. trapezoidal for the properties that
+# change dynamically, and simple rectangular bc we know rain varies in this way.
+qe_tot = np.trapz(qe,df['t'])
+qb_tot = np.trapz(qb,df['t'])
+qs_tot = np.trapz(df['qs'],df['t'])
+p_tot = np.sum(df['dt']*df['i'])
 
-#separate exfiltration and precip on sat area
-qe_sum = mg.add_zeros('node', 'cum_exfiltration') #cumulative exfiltration [m]
-qp_sum = mg.add_zeros('node', 'cum_precip_sat') #cumulative precip on saturated area [m]
-for i in range(np.shape(qs_all)[0]):
-
-    qe = np.maximum(qs_all[i,:]-p[i],0)
-    qe_sum += qe*dt_q[i]
-
-    qp = qs_all[i,:]-qe
-    qp_sum += qp*dt_q[i]
+df_output['BFI'] = qb_tot/qs_tot #baseflow index
+df_output['RR'] = qe_tot/p_tot #runoff ratio
 
 #quantiles of Q*
-r = np.arange(hm.Q_all.shape[0])
-Q_all = hm.Q_all[r%2==1,:]
-Q_all_max = np.max(Q_all,axis=1)
+#these are maps of Q* when the total discharge is at percs percentile. 
+Q_all = hm.Q_all[1:,:]
+Q_sum = np.sum(Q_all,axis=1)
 percs = [100,90,50,10,0]
 Q_star_percs = np.zeros((Q_all.shape[1],len(percs)))
 for i in range(len(percs)):
-    index = np.where(Q_all_max==np.percentile(Q_all_max,percs[i], interpolation='nearest'))[0][0]
+    index = np.where(Q_sum==np.percentile(Q_sum,percs[i], interpolation='nearest'))[0][0]
     Q_star_percs[:,i] = Q_all[index,:]/(mg.at_node['drainage_area']*df_params['p'][ID])
+
 df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
 df_qstar['mean'] = np.mean(Q_all,axis=0)/(mg.at_node['drainage_area']*df_params['p'][ID])
 df_qstar.fillna(value=0,inplace=True)
@@ -263,7 +267,6 @@ channel_mask[:] = np.uint8(med_network)
 df_output['dd_med'] = dd.calculate_drainage_density()
 
 ####### calculate topographic index
-
 TI = mg.add_zeros('node', 'topographic__index')
 S = mg.calc_slope_at_node(elev)
 TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
@@ -305,8 +308,6 @@ output_fields = [
         'hand_min',
         'hand_max',
         'hand_med',
-        'cum_exfiltration',
-        'cum_precip_sat',
         'topographic__index',
         'TI_exceedence_contour',
         'slope',
@@ -321,3 +322,5 @@ write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
 
 pickle.dump(df_qstar, open('../post_proc/%s/q_star_ID_%d.p'%(base_output_path, ID), 'wb'))
+
+pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
