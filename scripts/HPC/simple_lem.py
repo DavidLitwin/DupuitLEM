@@ -7,6 +7,7 @@ Created on Mon Jul 27 12:11:59 2020
 
 import os
 import numpy as np
+from itertools import product
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -22,20 +23,25 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_1_'
 
-lg_all = [40, 80, 160, 320, 640]
-lg = lg_all[ID]
+lg_all = np.array([20, 40, 80, 160, 320])
+xy_spacing_factor_all = np.array([1,2,4,10])
+lg_1 = np.array(list(product(lg_all, xy_spacing_factor_all)))[:,0]
+xy_spacing_factor_1 = np.array(list(product(lg_all, xy_spacing_factor_all)))[:,1]
 
-D = 6e-11
+lg = lg_1[ID]
+xy_spacing_factor = xy_spacing_factor_1[ID]
+
+D = 0.002 #m2/yr
 K = D/lg**2
-U = 3e-12
+U = 1e-4 #m/yr
 m = 0.5
 n = 1
 
-T = 5e6*(365*24*3600)
-dt = 50*(365*24*3600)
+T = 5e6
+dt = 50
 N = int(T//dt)
 
-grid = RasterModelGrid((100,100), xy_spacing=lg/2)
+grid = RasterModelGrid((100,100), xy_spacing=lg/xy_spacing_factor)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 z = grid.add_zeros('node', 'topographic__elevation')
@@ -55,7 +61,7 @@ for i in range(N):
     sp.run_one_step(dt)
 
 
-    if i%1000==0:
+    if i%2000==0:
         print('finished iteration %d'%i)
         filename = base_path + '%d_grid_%d.nc'%(ID,i)
         write_raster_netcdf(filename, grid, names = "topographic__elevation", format="NETCDF4")
