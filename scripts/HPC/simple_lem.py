@@ -35,7 +35,7 @@ T = 5e6*(365*24*3600)
 dt = 50*(365*24*3600)
 N = int(T//dt)
 
-grid = RasterModelGrid((100,100), xy_spacing=lg/4)
+grid = RasterModelGrid((100,100), xy_spacing=lg/2)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 z = grid.add_zeros('node', 'topographic__elevation')
