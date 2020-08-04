@@ -34,8 +34,8 @@ U = 1e-4 #m/yr
 m = 0.5
 n = 1
 
-T = 10*(1/K)
-dt = 1e-5*T
+T = 100*(1/K)
+dt = 5e-6*T
 N = int(T//dt)
 
 grid = RasterModelGrid((100,100), xy_spacing=lg/2)
@@ -58,7 +58,7 @@ for i in range(N):
     sp.run_one_step(dt)
 
 
-    if i%2000==0:
+    if i%4000==0:
         print('finished iteration %d'%i)
         filename = base_path + '%d_grid_%d.nc'%(ID,i)
         write_raster_netcdf(filename, grid, names = "topographic__elevation", format="NETCDF4")
