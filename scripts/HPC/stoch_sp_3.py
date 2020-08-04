@@ -27,7 +27,6 @@ from landlab.components import (
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
     HydrologyEventStreamPower,
-    RegolithConstantThicknessPerturbed,
     RegolithConstantThickness,
     )
 
@@ -35,29 +34,29 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def K_sp_fun(U, b, eta):
-    return (U*eta)/b
+def b_fun(U, K, eta):
+    return (U*eta)/K
 
-def ksat_fun(D, p, U, b, gam, rho):
-    return (D*p*gam)/(b*U*rho)
+def ksat_fun(D, p, U, K, eta, gam, rho):
+    return (D*p*K*gam*rho)/(U**2*eta)
 
-def ds_fun(b, n, alpha):
-    return b*n*alpha
+def ds_fun(U, K, n, alpha, eta):
+    return (U*n*alpha*eta)/K
 
-def tr_fun(p, b, n, alpha, rho):
-    return (b*n*alpha*rho)/p
+def tr_fun(p, U, K, n, alpha, eta, rho):
+    return (U*n*alpha*eta)/(p*K*rho)
 
-def td_fun(p, b, n, alpha, rho):
-    return (b*n*alpha*(1-rho))/p
+def tb_fun(p, U, K, n, alpha, eta, rho):
+    return U*n*alpha*eta*(1-rho)/(p*K*rho**2)
 
 #generate dimensioned parameters
-def generate_parameters(D, p, U, b, n, alpha, gam, eta, taur):
+def generate_parameters(D, p, U, K, n, alpha, gam, eta, rho):
 
-    K = K_sp_fun(U, b, eta)
-    ksat = ksat_fun(D, p, U, b, gam, rho)
-    tr = tr_fun(p, b, n, alpha, rho)
-    tb = tb_fun(p, b, n, alpha, rho)
-    ds = ds_fun(b, n, alpha)
+    b = b_fun(U, K, eta)
+    ksat = ksat_fun(D, p, U, K, eta, gam, rho)
+    tr = tr_fun(p, U, K, n, alpha, eta, rho)
+    tb = tb_fun(p, U, K, n, alpha, eta, rho)
+    ds = ds_fun(U, K, n, alpha, eta)
 
     return K, D, U, ksat, p, b, ds, tr, tb, n, alpha, gam, eta, rho
 
@@ -66,14 +65,14 @@ MSF = 500 # morphologic scaling factor [-]
 T_h = 30*24*3600 # total hydrological time [s]
 T_m = 5e6*(365*24*3600) # total simulation time [s]
 
-eta_all = np.geomspace(0.1,10,6)
-gam_all = np.geomspace(0.1,10,6)
-alpha1 = 0.1
-rho1 = 0.05
+eta_all = np.geomspace(0.2,2,5)
+gam_all = np.geomspace(0.001,0.1,5)
+alpha1 = 0.01
+rho1 = 0.005
 D1 = 0.005/(365*24*3600) # hillslope linear diffusivity [m2/s]
-U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
+U1 = 5e-5/(365*24*3600) # Uplift rate [m/s]
+K1 = 1e-5/(365*24*3600) # Streampower incision coefficient [1/s]
 p1 = 1/(365*24*3600) # long term average rainfall rate [m/s]
-b1 = 1.0 # permeable thickness [m]
 n1 = 0.1 # drainable porosity []
 
 eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
@@ -82,7 +81,7 @@ gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
 params = np.zeros((len(eta1),14))
 for i in range(len(eta1)):
 
-    params[i,:] = generate_parameters(D1, p1, U1, b1, n1, alpha1, gam1[i], eta1[i], rho)
+    params[i,:] = generate_parameters(D1, p1, U1, K1, n1, alpha1, gam1[i], eta1[i], rho1)
 
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'rho'])
 df_params['hg'] = df_params['U']/df_params['K']
