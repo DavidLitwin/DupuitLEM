@@ -2,6 +2,10 @@
 """
 Created on Mon Jul 27 12:11:59 2020
 
+A simple streampower diffusion model, to test the length scales in the
+nondimensionalization introduced by Nikos Theodoratos. Add a steady state
+stopping condition.
+
 @author: dgbli
 """
 

@@ -38,6 +38,7 @@ T = 100*(1/K)
 dt = 5e-6*T
 N = int(T//dt)
 
+np.random.seed(1234)
 grid = RasterModelGrid((100,100), xy_spacing=lg/2)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
