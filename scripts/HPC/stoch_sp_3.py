@@ -71,7 +71,7 @@ K1 = 2e-5/(365*24*3600) # Streampower incision coefficient [1/s]
 tr1 = 4*3600 # mean storm duration [s]
 n1 = 0.1 # drainable porosity []
 
-Tg_nd = 200 # total duration in units of tg []
+Tg_nd = 800 # total duration in units of tg []
 dtg_nd = 5e-3 # geomorphic timestep in units of tg []
 Th_nd = 50 # hydrologic time in units of (tr+tb) []
 

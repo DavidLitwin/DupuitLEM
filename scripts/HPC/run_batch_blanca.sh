@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=dlem
-#SBATCH --time=72:0:0
+#SBATCH --time=6-0:0:0
 #SBATCH --qos=blanca-csdms
 #SBATCH --nodes=1
 # number of tasks (processes) per node
