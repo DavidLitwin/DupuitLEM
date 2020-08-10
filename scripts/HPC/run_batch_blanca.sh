@@ -20,4 +20,5 @@ git rev-parse HEAD > /projects/dali4360/data/DupuitLEMResults/$output_folder-$SL
 cp ~/DupuitLEM/scripts/HPC/$script /projects/dali4360/data/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 cd /projects/dali4360/data/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > slurm.txt
-python -u $script > pythonlog.out
+# python -u $script > pythonlog.out
+python $script
