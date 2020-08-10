@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=dlem
-#SBATCH --time=72:0:0
-#SBATCH --partition=shared
+#SBATCH --time=6-0:0:0
+#SBATCH --partition=unlimited
 #SBATCH --nodes=1
 # number of tasks (processes) per node
 #SBATCH --ntasks-per-node=1
@@ -17,7 +17,8 @@ cd ~/data/dlitwin3/DupuitLEM
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEM/scripts/MARCC/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+cp ~/data/dlitwin3/DupuitLEM/scripts/HPC/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 cd ~/data/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > slurm.txt
-python -u $script > pythonlog.out
+# python -u $script > pythonlog.out
+python $script

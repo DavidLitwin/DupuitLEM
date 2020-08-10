@@ -17,7 +17,7 @@ cd ~/data/dlitwin3/DupuitLEM
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder/script_id.txt
 cd ~/data/dlitwin3/landlab
 git rev-parse HEAD > ~/data/dlitwin3/DupuitLEMResults/$output_folder/gdp_id.txt
-cp ~/data/dlitwin3/DupuitLEM/scripts/MARCC/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder
+cp ~/data/dlitwin3/DupuitLEM/scripts/HPC/$script ~/data/dlitwin3/DupuitLEMResults/$output_folder
 cd ~/data/dlitwin3/DupuitLEMResults/$output_folder
 echo $SLURM_JOBID > slurm.txt
 python -u $script > pythonlog.out
