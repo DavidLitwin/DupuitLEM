@@ -2,12 +2,13 @@
 Stochastic recharge + constant thickness + StreamPowerModel
 
 This script uses dimensionless parameters based on Theodoratos method of
-nondimensionalizing the governing landscape evolution equation.
+nondimensionalizing the governing landscape evolution equation. Vary eta
+and gamma.
 
 \[Eta] == (b Km)/U,
-\[Gamma] == (ksat b U)/(p Dm),
-\[Alpha] == ds/(b n),
-\[Tau]r == (tr ksat U)/(Dm n)
+\[Gamma] == (ks b U)/(i Dm),
+\[Alpha] == (i tr)/(b n),
+\[Rho] == p/i = tr/(tb + tr)
 
 Date: 15 Jul 2020
 """
@@ -30,6 +31,7 @@ from DupuitLEM.auxiliary_models import (
     RegolithConstantThickness,
     )
 
+#slurm info
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
@@ -69,11 +71,11 @@ D1 = 0.008/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
 K1 = 2e-5/(365*24*3600) # Streampower incision coefficient [1/s]
 tr1 = 4*3600 # mean storm duration [s]
-n1 = 0.1 # drainable porosity []
+n1 = 0.1 # drainable porosity [-]
 
-Tg_nd = 800 # total duration in units of tg []
-dtg_nd = 5e-3 # geomorphic timestep in units of tg []
-Th_nd = 50 # hydrologic time in units of (tr+tb) []
+Tg_nd = 800 # total duration in units of tg [-]
+dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
+Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
 
 eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
 gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
@@ -91,7 +93,7 @@ df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
 df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
 df_params['ibar'] = df_params['p']/df_params['rho'] # mean storm rainfall intensity [m/s]
-df_params['MSF'] = df_params['dtg']/df_params['Th']
+df_params['MSF'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
