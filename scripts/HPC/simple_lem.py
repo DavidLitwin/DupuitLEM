@@ -34,14 +34,22 @@ U = 1e-4 #m/yr
 m = 0.5
 n = 1
 
-T = 800*(1/K)
+T = 500*(1/K)
 dt = 5e-6*T
 N = int(T//dt)
 
 np.random.seed(1234)
 grid = RasterModelGrid((100,100), xy_spacing=lg/2)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
-                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
+# grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
+#                                 top=grid.BC_NODE_IS_CLOSED,
+#                                 left=grid.BC_NODE_IS_FIXED_VALUE,
+#                                 bottom=grid.BC_NODE_IS_CLOSED,
+# )
+grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_FIXED_VALUE,
+                                top=grid.BC_NODE_IS_FIXED_VALUE,
+                                left=grid.BC_NODE_IS_FIXED_VALUE,
+                                bottom=grid.BC_NODE_IS_FIXED_VALUE,
+)
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.01*(U/K)*np.random.rand(len(z))
 
