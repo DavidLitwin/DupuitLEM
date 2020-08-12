@@ -181,12 +181,14 @@ A = mg.at_node['drainage_area']
 curvature = mg.add_zeros('node', 'curvature')
 steepness = mg.add_zeros('node', 'steepness')
 
-#slope is max of the absolute value of gradient.
+#slope is the absolute value of D8 gradient associated with flow direction. Same as FastscapeEroder.
 #curvature is divergence of gradient. Same as LinearDiffuser.
-dzdx = grid.calc_grad_at_link(z)
-dzdx[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
-S[:] = map_max_of_node_links_to_node(mg,abs(dzdx))
-curvature[:] = mg.calc_flux_div_at_node(dzdx)
+dzdx_D8 = grid.calc_grad_at_d8(elev)
+dzdx_D4 = grid.calc_grad_at_link(elev)
+dzdx_D4[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
+S[:] = abs(dzdx_D8[grid.at_node['flow__link_to_receiver_node']])
+
+curvature[:] = grid.calc_flux_div_at_node(dzdx_D4)
 steepness[:] = np.sqrt(A)*S
 
 ######## Runoff generation
@@ -219,7 +221,7 @@ df_output['BFI'] = qb_tot/qs_tot #baseflow index
 df_output['RR'] = qe_tot/p_tot #runoff ratio
 
 #quantiles of Q*
-#these are maps of Q* when the total discharge is at percs percentile. 
+#these are maps of Q* when the total discharge is at percs percentile.
 Q_all = hm.Q_all[1:,:]
 Q_sum = np.sum(Q_all,axis=1)
 percs = [100,90,50,10,0]
