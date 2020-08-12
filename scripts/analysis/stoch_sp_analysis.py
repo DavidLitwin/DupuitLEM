@@ -203,7 +203,7 @@ end_rain = np.where(np.diff(is_rain*1)<0.0)[0][1:] #last data point where there 
 # linearly from its initial qs before rain to its final qs after rain.
 qb = df['qs'].copy()
 t = df['t']
-for i in range(len(pre_rain)):
+for i in range(len(pre_rain)-1): # added -1 but FIX THIS.
     slope = (qb[end_rain[i]+1] - qb[pre_rain[i]])/(t[end_rain[i]+1]-t[pre_rain[i]])
     qb[pre_rain[i]+1:end_rain[i]+1] = qb[pre_rain[i]]+slope*(t[pre_rain[i]+1:end_rain[i]+1] - t[pre_rain[i]])
 
