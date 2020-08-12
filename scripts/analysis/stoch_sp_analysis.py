@@ -183,12 +183,12 @@ steepness = mg.add_zeros('node', 'steepness')
 
 #slope is the absolute value of D8 gradient associated with flow direction. Same as FastscapeEroder.
 #curvature is divergence of gradient. Same as LinearDiffuser.
-dzdx_D8 = grid.calc_grad_at_d8(elev)
-dzdx_D4 = grid.calc_grad_at_link(elev)
-dzdx_D4[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
-S[:] = abs(dzdx_D8[grid.at_node['flow__link_to_receiver_node']])
+dzdx_D8 = mg.calc_grad_at_d8(elev)
+dzdx_D4 = mg.calc_grad_at_link(elev)
+dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
+S[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
 
-curvature[:] = grid.calc_flux_div_at_node(dzdx_D4)
+curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
 steepness[:] = np.sqrt(A)*S
 
 ######## Runoff generation
