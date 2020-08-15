@@ -10,6 +10,7 @@ import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.optimize import curve_fit
+from scipy.interpolate import interp1d
 
 from landlab import imshow_grid
 from landlab.io.netcdf import read_netcdf, write_raster_netcdf
@@ -21,8 +22,24 @@ from landlab.components import (
     HeightAboveDrainageCalculator,
     DrainageDensity,
     )
-from landlab.grid.mappers import map_max_of_node_links_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
+
+def weighted_percentile(data, percents, weights=None, interpolation="nearest"):
+    ''' percents in units of 1%
+        weights specifies the frequency (count) of data.
+
+        This is a generalization of the solution provided by
+        Kambrian and Max Ghenis here:
+        https://stackoverflow.com/a/31539746
+    '''
+    if weights is None:
+        return np.percentile(data, percents)
+    ind=np.argsort(data)
+    d=data[ind]
+    w=weights[ind]
+    p=1.*w.cumsum()/w.sum()*100
+    f=interp1d(p, d, kind=interpolation)
+    return f(percents)
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -221,17 +238,23 @@ df_output['BFI'] = qb_tot/qs_tot #baseflow index
 df_output['RR'] = qe_tot/p_tot #runoff ratio
 
 #quantiles of Q*
-#these are maps of Q* when the total discharge is at percs percentile.
+#these are maps of Q* when the max discharge is at percs percentile.
+# Quantiles and the mean are time-weighted.
 Q_all = hm.Q_all[1:,:]
-Q_sum = np.sum(Q_all,axis=1)
-percs = [100,90,50,10,0]
+dt = np.diff(hm.time)
+Q_max = np.max(Q_all,axis=1)
+percs = [90,50,10]
+
 Q_star_percs = np.zeros((Q_all.shape[1],len(percs)))
 for i in range(len(percs)):
-    index = np.where(Q_sum==np.percentile(Q_sum,percs[i], interpolation='nearest'))[0][0]
+    index = np.where(Q_max==weighted_percentile(Q_max, percs[i], weights=dt))[0][0]
     Q_star_percs[:,i] = Q_all[index,:]/(mg.at_node['drainage_area']*df_params['p'][ID])
-
 df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
-df_qstar['mean'] = np.mean(Q_all,axis=0)/(mg.at_node['drainage_area']*df_params['p'][ID])
+
+Qmass_all = (Q_all.T * dt).T
+df_qstar['mean'] = (np.sum(Qmass_all,axis=0)/np.sum(dt))/(mg.at_node['drainage_area']*df_params['p'][ID])
+df_qstar['max'] = np.where(Q_max==max(Q_max))[0][0]
+df_qstar['max'] = np.where(Q_max==min(Q_max))[0][0]
 df_qstar.fillna(value=0,inplace=True)
 
 
