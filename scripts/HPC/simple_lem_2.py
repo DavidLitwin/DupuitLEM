@@ -25,9 +25,9 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_2_'
 
-lg = 2
-Lx_nd = 400
-dx_all = lg*np.array([10, 5, 2, 3/2, 1, 2/3, 1/2])
+lg = 8
+Lx_nd = 100
+dx_all = lg*np.array([2, 1.5, 1, 2/3, 1/2, 1/4])
 Nx_all = (Lx_nd*lg+1e-10)//dx_all
 
 dx = dx_all[ID]
