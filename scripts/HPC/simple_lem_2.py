@@ -40,7 +40,7 @@ m = 0.5
 n = 1
 
 hg = U/K
-T = 200*(1/K)
+T = 400*(1/K)
 dt = 5e-3*(1/K)
 N = int(T//dt)
 output_interval = 1000
