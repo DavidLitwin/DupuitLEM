@@ -251,12 +251,14 @@ for i in range(len(percs)):
     index = np.where(Q_max==weighted_percentile(Q_max, percs[i], weights=dt))[0][0]
     Q_star_percs[:,i] = Q_all[index,:]/(mg.at_node['drainage_area']*df_params['p'][ID])
 df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
-
-Qmass_all = (Q_all.T * dt).T
-df_qstar['mean'] = (np.sum(Qmass_all,axis=0)/np.sum(dt))/(mg.at_node['drainage_area']*df_params['p'][ID])
 df_qstar['max'] = np.where(Q_max==max(Q_max))[0][0]
 df_qstar['max'] = np.where(Q_max==min(Q_max))[0][0]
 
+# this is the mean of all Q leaving during storm events and interevents
+Qmass_all = (Q_all.T * dt).T
+df_qstar['mean'] = (np.sum(Qmass_all,axis=0)/np.sum(dt))/(mg.at_node['drainage_area']*df_params['p'][ID])
+
+# mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
 Q_event_sum = np.zeros(Q_all.shape[1])
 for i in range(1,len(Q_all)):
     if intensity[i] > 0.0:
