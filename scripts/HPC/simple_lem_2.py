@@ -26,7 +26,7 @@ ID = int(task_id)
 base_path = './data/simple_lem_2_'
 
 lg = 2
-Lx_nd = 200
+Lx_nd = 400
 dx_all = lg*np.array([10, 5, 2, 3/2, 1, 2/3, 1/2])
 Nx_all = (Lx_nd*lg+1e-10)//dx_all
 
@@ -39,7 +39,8 @@ U = 1e-4 #m/yr
 m = 0.5
 n = 1
 
-T = 500*(1/K)
+hg = U/K
+T = 200*(1/K)
 dt = 5e-3*(1/K)
 N = int(T//dt)
 output_interval = 1000
@@ -50,7 +51,7 @@ grid = RasterModelGrid((Nx, Nx), xy_spacing=dx)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 z = grid.add_zeros('node', 'topographic__elevation')
-z[:] = 0.1*np.random.rand(len(z))
+z[:] = 0.1*hg*np.random.rand(len(z))
 
 
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes')
@@ -74,7 +75,7 @@ for i in range(N):
 
     # check stopping condition
     # if i > 0:
-    # 
+    #
     #     filename0 = base_path + str(ID) + '_grid_' + str(i-output_interval) + '.nc'
     #     grid0 = read_netcdf(filename0)
     #     elev0 = grid0.at_node['topographic__elevation']
