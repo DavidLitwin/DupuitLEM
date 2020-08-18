@@ -3,6 +3,8 @@ Stochastic recharge + constant thickness + StreamPowerModel
 
 Vary l (length scale), keep everything else constant.
 
+** this is an older version of nondimensionalization
+
 Date: 24 Jun 2020
 """
 import os

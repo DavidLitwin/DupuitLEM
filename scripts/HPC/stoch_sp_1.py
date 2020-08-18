@@ -3,6 +3,8 @@ Stochastic recharge + constant thickness + StreamPowerModel
 
 Vary Phi and Pe, keep everything else constant.
 
+** this is an older version of nondimensionalization
+
 Date: 4 Jun 2020
 """
 import os

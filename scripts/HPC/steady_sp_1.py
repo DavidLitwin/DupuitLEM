@@ -8,8 +8,6 @@ import numpy as np
 from itertools import product
 import pandas as pd
 
-from landlab import imshow_grid
-import matplotlib.pyplot as plt
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -97,7 +95,7 @@ output["base_output_path"] = './data/steady_sp_1_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid_functions
-ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,beq) # hydraulic conductivity [m/s]
+ksat_depth = bind_avg_hydraulic_conductivity(Ks,K0,beq) # hydraulic conductivity [m/s]
 
 #initialize grid
 np.random.seed(2)
@@ -111,7 +109,7 @@ wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 
 #initialize landlab components
-gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
+gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_depth, \
                                   regularization_f=0.01, recharge_rate=p, \
                                   courant_coefficient=0.9, vn_coefficient = 0.9)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
