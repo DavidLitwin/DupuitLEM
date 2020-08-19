@@ -48,8 +48,8 @@ def generate_parameters(D, U, K, p, n, gam, eta):
     return K, D, U, ksat, p, b, n, gam, eta
 
 #parameters
-eta_all = np.geomspace(0.04,4,5)
-gam_all = np.geomspace(0.0025,2.5,5)
+eta_all = np.geomspace(0.1,10,6)
+gam_all = np.geomspace(0.01,1.0,6)
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
 K1 = 1e-4/(365*24*3600) # Streampower incision coefficient [1/s]
@@ -58,7 +58,7 @@ p1 = 1/(365*24*3600) # steady precipitation rate
 
 Tg_nd = 800 # total duration in units of tg [-]
 dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
-Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
+Th_nd = 5 # hydrologic time in units of t_vn [-]
 
 eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
 gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
@@ -72,9 +72,11 @@ df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n
 df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
 df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
 df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
+df_params['tfill'] = (df_params['n']*df_params['b'])/df_params['p']
+df_params['tdrain'] = (df_params['D']*df_params['n'])/(df_params['ksat']*df_params['U'])
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
-df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
+df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time in units of von neumann stability time [s]
 df_params['MSF'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 
 pickle.dump(df_params, open('parameters.p','wb'))
@@ -83,9 +85,6 @@ ksat = df_params['ksat'][ID]
 p = df_params['p'][ID]
 b = df_params['b'][ID]
 n = df_params['n'][ID]
-tr = df_params['tr'][ID]
-tb = df_params['tb'][ID]
-ds = df_params['ds'][ID]
 
 K = df_params['K'][ID]
 Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
@@ -110,7 +109,7 @@ output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(1234)
-grid = RasterModelGrid((100, 100), xy_spacing=lg/2)
+grid = RasterModelGrid((125, 125), xy_spacing=0.8*lg)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -132,7 +131,7 @@ hm = HydrologySteadyStreamPower(
         hydrological_timestep=Th,
 )
 
-#use surface_water_area_norm__discharge (Q/sqrt(A)) for stochastic case and Theodoratos definitions
+#use surface_water_area_norm__discharge (Q/sqrt(A)) for Theodoratos definitions
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_area_norm__discharge")
 rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 

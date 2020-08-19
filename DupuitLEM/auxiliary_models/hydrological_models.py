@@ -439,7 +439,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
         super().__init__(grid)
 
         self.q_eff = self._grid.add_zeros("node","surface_water_effective__discharge")
-        self.q_star = self._grid.add_zeros("node","surface_water_area_norm__discharge")
+        self.q_an = self._grid.add_zeros("node","surface_water_area_norm__discharge")
         self.area = self._grid.at_node["drainage_area"]
         self.pd = precip_generator
         self.gdp = groundwater_model
@@ -503,7 +503,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
-        self.q_star[:] = self.q_eff/np.sqrt(self.area)
+        self.q_an[:] = self.q_eff/np.sqrt(self.area)
 
 
     def run_step_record_state(self):
@@ -578,7 +578,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol/self.T_h
-        self.q_star[:] = self.q_eff/np.sqrt(self.area)
+        self.q_an[:] = self.q_eff/np.sqrt(self.area)
 
 
 class HydrologySteadyStreamPower(HydrologicalModel):
@@ -593,6 +593,10 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
         self.gdp = groundwater_model
         self.T_h = hydrological_timestep
+
+        self.q_an = self._grid.add_zeros("node","surface_water_area_norm__discharge")
+        self.area = self._grid.at_node["drainage_area"]
+        self.q = self._grid.at_node["average_surface_water__specific_discharge"]
 
     def run_step(self):
         """
@@ -611,3 +615,5 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
         #run flow accumulation
         self.fa.run_one_step()
+
+        self.q_an[:] = self.q/np.sqrt(self.area)
