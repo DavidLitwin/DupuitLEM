@@ -39,8 +39,8 @@ ID = int(task_id)
 def b_fun(U, K, eta):
     return (U*eta)/K
 
-def ksat_fun(D, U, tr, n, alpha, gam):
-    return (D*n*alpha*gam)/(U*tr)
+def ksat_fun(D, U, tr, n, alpha, gam, rho):
+    return (D*n*alpha*gam*rho)/(U*tr)
 
 def ds_fun(U, K, n, alpha, eta):
     return (U*n*alpha*eta)/K
@@ -55,7 +55,7 @@ def p_fun(U, K, tr, n, alpha, eta, rho):
 def generate_parameters(D, U, K, tr, n, alpha, gam, eta, rho):
 
     b = b_fun(U, K, eta)
-    ksat = ksat_fun(D, U, tr, n, alpha, gam)
+    ksat = ksat_fun(D, U, tr, n, alpha, gam, rho)
     tb = tb_fun(tr, rho)
     ds = ds_fun(U, K, n, alpha, eta)
     p = p_fun(U, K, tr, n, alpha, eta, rho)
