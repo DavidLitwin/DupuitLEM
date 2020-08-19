@@ -10,7 +10,6 @@ the solution with lg, the geomorphic length scale defined by Theodoratos.
 
 import os
 import numpy as np
-from itertools import product
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -25,15 +24,15 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_2_'
 
-lg = 8
+lg = 10
 Lx_nd = 100
-dx_all = lg*np.array([2, 1.75, 1.5, 1.25, 1, 3/4, 1/2, 1/4])
+dx_all = lg*np.array([1.4, 1.2, 1, 0.8, 0.6])
 Nx_all = (Lx_nd*lg+1e-10)//dx_all
 
 dx = dx_all[ID]
 Nx = int(Nx_all[ID])
 
-D = 0.002 #m2/yr
+D = 0.01 #m2/yr
 K = D/lg**2
 U = 1e-4 #m/yr
 m = 0.5
