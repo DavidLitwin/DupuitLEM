@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=dlem
-#SBATCH --time=48:0:0
-#SBATCH --partition=shared
+#SBATCH --time=8-0:0:0
+#SBATCH --partition=unlimited
 #SBATCH --nodes=1
 # number of tasks (processes) per node
 #SBATCH --ntasks-per-node=1
