@@ -1,14 +1,16 @@
 """
-Steady recharge + constant thickness + StreamPowerModel
+Stochastic recharge + constant thickness + StreamPowerModel
 
 This script uses dimensionless parameters based on Theodoratos method of
-nondimensionalizing the governing landscape evolution equation. Vary eta
-and gamma.
+nondimensionalizing the governing landscape evolution equation. Vary alpha
+and rho for several different eta-gamma combinations.
 
 \[Eta] == (b Km)/U,
 \[Gamma] == (ks b U)/(i Dm),
+\[Alpha] == (i tr)/(b n),
+\[Rho] == p/i = tr/(tb + tr)
 
-Date: 18 Aug 2020
+Date: 19 Aug 2020
 """
 import os
 import numpy as np
@@ -21,10 +23,11 @@ from landlab.components import (
     GroundwaterDupuitPercolator,
     LinearDiffuser,
     FastscapeEroder,
+    PrecipitationDistribution,
     )
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
-    HydrologySteadyStreamPower,
+    HydrologyEventStreamPower,
     RegolithConstantThickness,
     )
 
@@ -36,47 +39,68 @@ ID = int(task_id)
 def b_fun(U, K, eta):
     return (U*eta)/K
 
-def ksat_fun(D, U, p, K, gam, eta):
-    return (D*p*K*gam)/(U**2*eta)
+def ksat_fun(D, U, tr, n, alpha, gam, rho):
+    return (D*n*alpha*gam*rho)/(U*tr)
+
+def ds_fun(U, K, n, alpha, eta):
+    return (U*n*alpha*eta)/K
+
+def tb_fun(tr, rho):
+    return tr*(1-rho)/rho
+
+def p_fun(U, K, tr, n, alpha, eta, rho):
+    return (U*n*alpha*eta*rho)/(K*tr)
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, p, n, gam, eta):
+def generate_parameters(D, U, K, tr, n, alpha, gam, eta, rho):
 
     b = b_fun(U, K, eta)
-    ksat = ksat_fun(D, U, p, K, gam, eta)
+    ksat = ksat_fun(D, U, tr, n, alpha, gam, rho)
+    tb = tb_fun(tr, rho)
+    ds = ds_fun(U, K, n, alpha, eta)
+    p = p_fun(U, K, tr, n, alpha, eta, rho)
 
-    return K, D, U, ksat, p, b, n, gam, eta
+    return K, D, U, ksat, p, b, ds, tr, tb, n, alpha, gam, eta, rho
 
 #parameters
 eta_all = np.geomspace(0.1,10,5)
 gam_all = np.geomspace(0.01,1.0,5)
+eta_all_prod = np.array(list(product(eta_all, gam_all)))[:,0]
+gam_all_prod = np.array(list(product(eta_all, gam_all)))[:,1]
+eta_gam_id = np.array([0, 4, 12, 20, 24])
+
+alpha_all = np.array([0.01, 0.05, 0.1])
+rho_all = np.array([0.01, 0.1, 0.5])
+
+alpha1 = np.array(list(product(alpha_all, rho_all, eta_gam_id)))[:,0]
+rho1 = np.array(list(product(alpha_all, rho_all, eta_gam_id)))[:,1]
+eta_gam_id1 = np.array(list(product(alpha_all, rho_all, eta_gam_id)), dtype=int)[:,2]
+eta1 = eta_all_prod[eta_gam_id1]
+gam1 = gam_all_prod[eta_gam_id1]
+
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
 K1 = 1e-4/(365*24*3600) # Streampower incision coefficient [1/s]
+tr1 = 4*3600 # mean storm duration [s]
 n1 = 0.1 # drainable porosity [-]
-p1 = 1/(365*24*3600) # steady precipitation rate
 
 Tg_nd = 800 # total duration in units of tg [-]
 dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
-Th_nd = 5 # hydrologic time in units of t_vn [-]
+Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
 
-eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
-gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
-
-params = np.zeros((len(eta1),9))
+params = np.zeros((len(eta1),14))
 for i in range(len(eta1)):
 
-    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, gam1[i], eta1[i])
+    params[i,:] = generate_parameters(D1, U1, K1, tr1, n1, alpha1[i], gam1[i], eta1[i], rho1[i])
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'gam', 'eta'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'rho'])
 df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
 df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
 df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
-df_params['tfill'] = (df_params['n']*df_params['b'])/df_params['p']
-df_params['tdrain'] = (df_params['D']*df_params['n'])/(df_params['ksat']*df_params['U'])
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
-df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time in units of von neumann stability time [s]
+df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
+df_params['ibar'] = df_params['p']/df_params['rho'] # mean storm rainfall intensity [m/s]
 df_params['MSF'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 
 pickle.dump(df_params, open('parameters.p','wb'))
@@ -85,6 +109,9 @@ ksat = df_params['ksat'][ID]
 p = df_params['p'][ID]
 b = df_params['b'][ID]
 n = df_params['n'][ID]
+tr = df_params['tr'][ID]
+tb = df_params['tb'][ID]
+ds = df_params['ds'][ID]
 
 K = df_params['K'][ID]
 Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
@@ -104,12 +131,12 @@ output["output_fields"] = [
         "aquifer_base__elevation",
         "water_table__elevation",
         ]
-output["base_output_path"] = './data/steady_sp_2_'
+output["base_output_path"] = './data/stoch_sp_3_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((125, 125), xy_spacing=0.8*lg)
+grid = RasterModelGrid((100, 100), xy_spacing=lg/2)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -122,16 +149,20 @@ wt[:] = elev.copy()
 gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat, \
                                   regularization_f=0.01, recharge_rate=0.0, \
                                   courant_coefficient=0.9, vn_coefficient = 0.9)
+pd = PrecipitationDistribution(grid, mean_storm_duration=tr,
+    mean_interstorm_duration=tb, mean_storm_depth=ds,
+    total_t=Th)
+pd.seed_generator(seedval=1235)
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
 #initialize other models
-hm = HydrologySteadyStreamPower(
+hm = HydrologyEventStreamPower(
         grid,
+        precip_generator=pd,
         groundwater_model=gdp,
-        hydrological_timestep=Th,
 )
 
-#use surface_water_area_norm__discharge (Q/sqrt(A)) for Theodoratos definitions
+#use surface_water_area_norm__discharge (Q/sqrt(A)) for stochastic case and Theodoratos definitions
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_area_norm__discharge")
 rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 
