@@ -85,7 +85,7 @@ tr1 = 4*3600 # mean storm duration [s]
 n1 = 0.1 # drainable porosity [-]
 
 Tg_nd = 800 # total duration in units of tg [-]
-dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
+dtg_nd = 1e-2 # geomorphic timestep in units of tg [-]
 Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
 
 params = np.zeros((len(eta1),14))
@@ -131,12 +131,12 @@ output["output_fields"] = [
         "aquifer_base__elevation",
         "water_table__elevation",
         ]
-output["base_output_path"] = './data/stoch_sp_3_'
+output["base_output_path"] = './data/stoch_sp_4_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((100, 100), xy_spacing=lg/2)
+grid = RasterModelGrid((125, 125), xy_spacing=0.8*lg)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -162,7 +162,7 @@ hm = HydrologyEventStreamPower(
         groundwater_model=gdp,
 )
 
-#use surface_water_area_norm__discharge (Q/sqrt(A)) for stochastic case and Theodoratos definitions
+#use surface_water_area_norm__discharge (Q/sqrt(A)) for Theodoratos definitions
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_area_norm__discharge")
 rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 
