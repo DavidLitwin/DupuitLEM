@@ -48,8 +48,8 @@ def generate_parameters(D, U, K, p, n, gam, eta):
     return K, D, U, ksat, p, b, n, gam, eta
 
 #parameters
-eta_all = np.geomspace(0.1,10,6)
-gam_all = np.geomspace(0.01,1.0,6)
+eta_all = np.geomspace(0.1,10,5)
+gam_all = np.geomspace(0.01,1.0,5)
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
 K1 = 1e-4/(365*24*3600) # Streampower incision coefficient [1/s]
@@ -108,7 +108,7 @@ output["base_output_path"] = './data/steady_sp_2_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
-np.random.seed(1234)
+np.random.seed(12345)
 grid = RasterModelGrid((125, 125), xy_spacing=0.8*lg)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
