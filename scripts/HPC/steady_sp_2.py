@@ -110,8 +110,12 @@ output["run_id"] = ID #make this task_id if multiple runs
 #initialize grid
 np.random.seed(12345)
 grid = RasterModelGrid((125, 125), xy_spacing=0.8*lg)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
-                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
+grid.set_status_at_node_on_edges(
+        right=grid.BC_NODE_IS_CLOSED,
+        top=grid.BC_NODE_IS_CLOSED,
+        left=grid.BC_NODE_IS_FIXED_VALUE,
+        bottom=grid.BC_NODE_IS_CLOSED,
+)
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = b + 0.1*hg*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
@@ -119,9 +123,14 @@ wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 
 #initialize landlab components
-gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat, \
-                                  regularization_f=0.01, recharge_rate=0.0, \
-                                  courant_coefficient=0.9, vn_coefficient = 0.9)
+gdp = GroundwaterDupuitPercolator(grid,
+        porosity=n,
+        hydraulic_conductivity=ksat,
+        regularization_f=0.01,
+        recharge_rate=p,
+        courant_coefficient=0.9,
+        vn_coefficient = 0.9,
+)
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
 #initialize other models
@@ -132,7 +141,12 @@ hm = HydrologySteadyStreamPower(
 )
 
 #use surface_water_area_norm__discharge (Q/sqrt(A)) for Theodoratos definitions
-sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=1, n_sp=1, discharge_field="surface_water_area_norm__discharge")
+sp = FastscapeEroder(grid,
+        K_sp=Ksp,
+        m_sp=1,
+        n_sp=1,
+        discharge_field="surface_water_area_norm__discharge",
+)
 rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 
 mdl = StreamPowerModel(grid,
