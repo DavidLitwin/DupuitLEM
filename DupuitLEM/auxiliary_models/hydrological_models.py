@@ -596,7 +596,7 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
         self.q_an = self._grid.add_zeros("node","surface_water_area_norm__discharge")
         self.area = self._grid.at_node["drainage_area"]
-        self.q = self._grid.at_node["average_surface_water__specific_discharge"]
+        self.q = self._grid.at_node["surface_water__discharge"]
 
     def run_step(self):
         """
@@ -613,7 +613,8 @@ class HydrologySteadyStreamPower(HydrologicalModel):
         if self.dfr._number_of_pits > 0:
             self.lmb.run_one_step()
 
-        #run flow accumulation
+        #run flow accumulation on average_surface_water__specific_discharge
         self.fa.run_one_step()
 
+        #discharge field with form for Q*
         self.q_an[:] = self.q/np.sqrt(self.area)
