@@ -26,7 +26,7 @@ base_path = './data/simple_lem_2_'
 
 lg = 10
 Lx_nd = 100
-dx_all = lg*np.array([1.4, 1.2, 1, 0.8, 0.6])
+dx_all = lg*np.array([1, 0.9, 0.85, 0.8, 0.75, 0.7, 0.6])
 Nx_all = (Lx_nd*lg+1e-10)//dx_all
 
 dx = dx_all[ID]
@@ -39,7 +39,7 @@ m = 0.5
 n = 1
 
 hg = U/K
-T = 400*(1/K)
+T = 600*(1/K)
 dt = 5e-3*(1/K)
 N = int(T//dt)
 output_interval = 1000
