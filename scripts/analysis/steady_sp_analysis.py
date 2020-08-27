@@ -77,19 +77,20 @@ gdp = GroundwaterDupuitPercolator(mg,
                                   recharge_rate=p,
                                   courant_coefficient=0.9,
                                   vn_coefficient = 0.9,
-                                  )
+)
+
 hm = HydrologySteadyStreamPower(
-        grid,
+        mg,
         groundwater_model=gdp,
         hydrological_timestep=Th,
 )
 
 #run model
-N = 1e3 # max number of timesteps to take
+N = int(1e3) # max number of timesteps to take
 wt_max_change = np.zeros(N)
 for i in range(N):
     zwt_0 = zwt.copy()
-    hm.run_one_step()
+    hm.run_step()
     wt_max_change = max(abs(zwt_0-zwt)/Th)
 
     if wt_max_change < 1e-14:
