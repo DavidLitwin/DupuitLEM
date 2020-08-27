@@ -71,12 +71,12 @@ zwt = mg.add_zeros('node', 'water_table__elevation')
 zwt[:] = wt
 
 gdp = GroundwaterDupuitPercolator(mg,
-                                  porosity=n,
-                                  hydraulic_conductivity=Ks,
-                                  regularization_f=0.01,
-                                  recharge_rate=p,
-                                  courant_coefficient=0.9,
-                                  vn_coefficient = 0.9,
+          porosity=n,
+          hydraulic_conductivity=Ks,
+          regularization_f=0.01,
+          recharge_rate=p,
+          courant_coefficient=0.9,
+          vn_coefficient = 0.9,
 )
 
 hm = HydrologySteadyStreamPower(
@@ -86,15 +86,15 @@ hm = HydrologySteadyStreamPower(
 )
 
 #run model
-N = int(1e3) # max number of timesteps to take
+N = int(5e3) # max number of timesteps to take
 wt_max_change = np.zeros(N)
 for i in range(N):
     zwt_0 = zwt.copy()
     hm.run_step()
     wt_max_change = max(abs(zwt_0-zwt)/Th)
 
-    if wt_max_change < 1e-14:
-        break
+    # if wt_max_change < 1e-14:
+    #     break
 
 ##########  Analysis
 
@@ -103,9 +103,13 @@ df_output = {}
 
 ##### channel network
 
-#find number of saturated cells
+# Qstar
 Q = mg.at_node['surface_water__discharge']
-Q_nodes = Q > 1e-10
+Qstar = mg.add_zeros('node', 'qstar')
+Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
+
+#find number of saturated cells
+Q_nodes = Q > 1e-6
 
 #set fields
 network = mg.add_zeros('node', 'channel_mask')
@@ -127,9 +131,7 @@ S[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
 curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
 steepness[:] = np.sqrt(A)*S
 
-# Qstar
-Qstar = mg.add_zeros('node', 'qstar')
-Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
+
 
 ######## Calculate HAND
 hand = mg.add_zeros('node', 'hand')
