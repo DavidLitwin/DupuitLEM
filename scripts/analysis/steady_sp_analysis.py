@@ -9,8 +9,6 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.optimize import curve_fit
-from scipy.interpolate import interp1d
 
 from landlab import imshow_grid
 from landlab.io.netcdf import read_netcdf, write_raster_netcdf
@@ -134,11 +132,11 @@ Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
 
 ######## Calculate HAND
 hand = mg.add_zeros('node', 'hand')
-hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
+hd = HeightAboveDrainageCalculator(mg, channel_mask=network)
 
 hd.run_one_step()
-hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand'] = np.mean(hand_min[mg.core_nodes])
+hand[:] = mg.at_node["height_above_drainage__elevation"].copy()
+df_output['mean_hand'] = np.mean(hand[mg.core_nodes])
 
 ######## Calculate drainage density
 dd = DrainageDensity(mg, channel__mask=np.uint8(network))
@@ -189,4 +187,4 @@ filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
-pickle.dump(df_z_change, open(path_or_buf='../post_proc/%s/z_change_%d.csv'%(base_output_path, ID), 'wb'))
+pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.csv'%(base_output_path, ID), 'wb'))
