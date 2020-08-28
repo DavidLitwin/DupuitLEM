@@ -47,16 +47,16 @@ output_interval = 1000
 
 np.random.seed(12345)
 grid = RasterModelGrid((125,125), xy_spacing=dx)
-# grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
-#                                 top=grid.BC_NODE_IS_CLOSED,
-#                                 left=grid.BC_NODE_IS_FIXED_VALUE,
-#                                 bottom=grid.BC_NODE_IS_CLOSED,
-# )
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_FIXED_VALUE,
-                                top=grid.BC_NODE_IS_FIXED_VALUE,
+grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
+                                top=grid.BC_NODE_IS_CLOSED,
                                 left=grid.BC_NODE_IS_FIXED_VALUE,
-                                bottom=grid.BC_NODE_IS_FIXED_VALUE,
+                                bottom=grid.BC_NODE_IS_CLOSED,
 )
+# grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_FIXED_VALUE,
+#                                 top=grid.BC_NODE_IS_FIXED_VALUE,
+#                                 left=grid.BC_NODE_IS_FIXED_VALUE,
+#                                 bottom=grid.BC_NODE_IS_FIXED_VALUE,
+# )
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.01*hg*np.random.rand(len(z))
 

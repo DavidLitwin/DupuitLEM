@@ -176,6 +176,7 @@ df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 pe
 output_fields = [
         "topographic__elevation",
         "aquifer_base__elevation",
+        "water_table__elevation",
         'topographic__index',
         'channel_mask',
         'hand',
