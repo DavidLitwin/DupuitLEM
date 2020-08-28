@@ -352,7 +352,7 @@ output_fields = [
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
 
-pickle.dump(df_z_change, open(path_or_buf='../post_proc/%s/z_change_%d.csv'%(base_output_path, ID), 'wb'))
+pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.csv'%(base_output_path, ID), 'wb'))
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_qstar, open('../post_proc/%s/q_star_ID_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
