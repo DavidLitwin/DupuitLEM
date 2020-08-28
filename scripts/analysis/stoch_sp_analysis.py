@@ -247,9 +247,14 @@ Q_max = np.max(Q_all,axis=1)
 percs = [90,50,10]
 
 Q_star_percs = np.zeros((Q_all.shape[1],len(percs)))
-for i in range(len(percs)):
-    index = np.where(Q_max==weighted_percentile(Q_max, percs[i], weights=dt))[0][0]
-    Q_star_percs[:,i] = Q_all[index,:]/(mg.at_node['drainage_area']*df_params['p'][ID])
+try:
+    for i in range(len(percs)):
+        index = np.where(Q_max==weighted_percentile(Q_max, percs[i], weights=dt))[0][0]
+        Q_star_percs[:,i] = Q_all[index,:]/(mg.at_node['drainage_area']*df_params['p'][ID])
+except:
+    print('could not fit percentiles')
+    Q_star_percs[:] = np.nan
+    
 df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
 df_qstar['max'] = np.where(Q_max==max(Q_max))[0][0]
 df_qstar['max'] = np.where(Q_max==min(Q_max))[0][0]
@@ -352,7 +357,7 @@ output_fields = [
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
 
-pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.csv'%(base_output_path, ID), 'wb'))
+pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_qstar, open('../post_proc/%s/q_star_ID_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
