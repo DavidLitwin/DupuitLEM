@@ -86,12 +86,13 @@ hm = HydrologySteadyStreamPower(
 )
 
 #run model
-N = int(5e3) # max number of timesteps to take
-wt_max_change = np.zeros(N)
-for i in range(N):
-    zwt_0 = zwt.copy()
-    hm.run_step()
-    wt_max_change = max(abs(zwt_0-zwt)/Th)
+hm.run_step()
+# N = int(5e3) # max number of timesteps to take
+# wt_max_change = np.zeros(N)
+# for i in range(N):
+#     zwt_0 = zwt.copy()
+#     hm.run_step()
+#     wt_max_change = max(abs(zwt_0-zwt)/Th)
 
     # if wt_max_change < 1e-14:
     #     break
