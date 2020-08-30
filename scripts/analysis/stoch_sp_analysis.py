@@ -4,18 +4,17 @@ Analysis of results on HPC for stochastic stream power model runs.
 
 import os
 import glob
+import pickle
 from re import sub
 import numpy as np
-import pickle
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
+from statsmodels.stats.weightstats import DescrStatsW
 
-from landlab import imshow_grid
+from landlab import imshow_grid, RasterModelGrid, LinkStatus
 from landlab.io.netcdf import read_netcdf, write_raster_netcdf
-
-from landlab import RasterModelGrid, LinkStatus
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -139,6 +138,9 @@ df_output = {}
 
 #load the full storage discharge dataset that was just generated
 df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','i', 'qs', 'S', 'qs_cells'])
+# remove the first row (test row written by init of gdp)
+df.drop(0, inplace=True)
+df.reset_index(drop=True, inplace=True)
 
 ##### recession
 def power_law(x, a, b, c):
@@ -210,7 +212,7 @@ steepness[:] = np.sqrt(A)*S
 
 ######## Runoff generation
 # find times with rain. Note in df qs and S are at the end of the timestep.
-# is is at the beginning of the timestep.
+# i is at the beginning of the timestep. Assumes timeseries starts with rain.
 df['t'] = np.cumsum(df['dt'])
 is_rain = df['i'] > 0.0
 pre_rain = np.where(np.diff(is_rain*1)>0.0)[0] #last data point before rain
@@ -219,10 +221,11 @@ end_rain = np.where(np.diff(is_rain*1)<0.0)[0][1:] #last data point where there 
 # make a linear-type baseflow separation, where baseflow during rain increases
 # linearly from its initial qs before rain to its final qs after rain.
 qb = df['qs'].copy()
+q = df['qs']
 t = df['t']
 for i in range(len(pre_rain)-1): # added -1 but FIX THIS.
-    slope = (qb[end_rain[i]+1] - qb[pre_rain[i]])/(t[end_rain[i]+1]-t[pre_rain[i]])
-    qb[pre_rain[i]+1:end_rain[i]+1] = qb[pre_rain[i]]+slope*(t[pre_rain[i]+1:end_rain[i]+1] - t[pre_rain[i]])
+    slope = (q[end_rain[i]+1] - q[pre_rain[i]])/(t[end_rain[i]+1]-t[pre_rain[i]])
+    qb[pre_rain[i]+1:end_rain[i]+1] = q[pre_rain[i]]+slope*(t[pre_rain[i]+1:end_rain[i]+1] - t[pre_rain[i]])
 
 df['qb'] = qb
 qe = df['qs'] - df['qb']
@@ -240,6 +243,7 @@ df_output['RR'] = qe_tot/p_tot #runoff ratio
 #quantiles of Q*
 #these are maps of Q* when the max discharge is at percs percentile.
 # Quantiles and the mean are time-weighted.
+# Future: use DescrStatsW
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
 intensity = hm.intensity
@@ -254,7 +258,7 @@ try:
 except:
     print('could not fit percentiles')
     Q_star_percs[:] = np.nan
-    
+
 df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
 df_qstar['max'] = np.where(Q_max==max(Q_max))[0][0]
 df_qstar['max'] = np.where(Q_max==min(Q_max))[0][0]
@@ -270,6 +274,20 @@ for i in range(1,len(Q_all)):
         Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
 df_qstar['mean no interevent'] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*df_params['p'][ID])
 df_qstar.fillna(value=0,inplace=True)
+
+# mean and variance of saturtation
+wt_all = hm.wt_all[1:,:]
+base_all = np.ones(wt_all.shape)*mg.at_node['aquifer_base__elevation']
+elev_all = np.ones(wt_all.shape)*mg.at_node['topographic__elevation']
+sat_all = np.zeros(wt_all.shape)
+sat_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
+sat_mean = mg.add_zeros('node', 'sat_mean')
+sat_std = mg.add_zeros('node', 'sat_std')
+
+for i in range(len(sat_mean)):
+    ws = DescrStatsW(sat_all[:,i], weights=dt, ddof=0)
+    sat_mean[i] = ws.mean
+    sat_std[i] = ws.std
 
 
 ######## Calculate HAND
@@ -352,6 +370,8 @@ output_fields = [
         'drainage_area',
         'curvature',
         'steepness',
+        'sat_mean',
+        'sat_std',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
