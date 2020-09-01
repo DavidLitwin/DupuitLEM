@@ -3,7 +3,7 @@
 Created on Mon Jul 27 12:11:59 2020
 
 A simple streampower diffusion model, to test the length scales in the
-nondimensionalization introduced by Nikos Theodoratos.
+nondimensionalization introduced by Nikos Theodoratos. Using a hexagonal grid.
 
 @author: dgbli
 """
@@ -12,7 +12,7 @@ import os
 import time
 import numpy as np
 
-from landlab import RasterModelGrid
+from landlab import HexModelGrid
 from landlab.components import (
     LinearDiffuser,
     FlowAccumulator,
@@ -23,10 +23,11 @@ from landlab.io.netcdf import write_raster_netcdf
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
-base_path = './data/simple_lem_1_'
+base_path = './data/simple_lem_3_'
 
 dx = 16.0
 lg_all = dx/np.array([0.9, 0.8, 0.75, 0.7, 0.6])
+Nx = 125
 
 lg = lg_all[ID]
 
@@ -43,18 +44,21 @@ N = int(T//dt)
 output_interval = 1000
 
 np.random.seed(12345)
-grid = RasterModelGrid((125,125), xy_spacing=dx)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
-                                top=grid.BC_NODE_IS_CLOSED,
-                                left=grid.BC_NODE_IS_FIXED_VALUE,
-                                bottom=grid.BC_NODE_IS_CLOSED,
-)
+grid = HexModelGrid((Nx, Nx), node_layout="rect", spacing=dx)
+
+indices = np.arange(Nx**2).reshape((Nx,Nx))
+indices_flat = np.arange(Nx**2)
+grid.status_at_node[indices_flat%Nx==0] = 4
+grid.status_at_node[(indices_flat-Nx-1)%Nx==0] = 4
+grid.status_at_node[indices_flat>=Nx*(Nx-1)] = 4
+
+status = grid.status_at_node.reshape((125,125))
 
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.01*hg*np.random.rand(len(z))
 
 
-fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes')
+fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='FlowDirectorSteepest', depression_finder='LakeMapperBarnes')
 ld = LinearDiffuser(grid, D)
 sp = FastscapeEroder(grid, K_sp=K, m_sp=m, n_sp=n)
 
