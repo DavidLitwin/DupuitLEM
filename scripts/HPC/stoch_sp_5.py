@@ -47,7 +47,7 @@ def ds_fun(U, K, n, alpha, gam, lam):
 
 def tr_fun(U, K, p, n, alpha, gam, lam, rho):
     return (U*n*alpha*gam*lam*rho)/(K*p)
-    
+
 def tb_fun(U, K, p, n, alpha, gam, lam, rho):
     return (U*n*alpha*gam*lam*rho)/(K*p)*(1-rho)/rho
 
@@ -79,9 +79,10 @@ lam_gam_id1 = np.array(list(product(alpha_all, rho_all, lam_gam_id)), dtype=int)
 lam1 = lam_all_prod[lam_gam_id1]
 gam1 = gam_all_prod[lam_gam_id1]
 
+lg = 15
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
-K1 = 1e-4/(365*24*3600) # Streampower incision coefficient [1/s]
+K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 p1 = 0.75/(365*24*3600) # average rainfall rate [m/s]
 n1 = 0.1 # drainable porosity [-]
 
@@ -137,7 +138,7 @@ output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((125, 125), xy_spacing=0.8*lg)
+grid = RasterModelGrid((125, 125), xy_spacing=0.7*lg)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
