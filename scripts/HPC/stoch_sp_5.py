@@ -39,59 +39,60 @@ ID = int(task_id)
 def b_fun(U, K, gam, lam):
     return (U*gam*lam)/K
 
-def ksat_fun(D, U, tr, n, alpha, gam, rho):
-    return (D*n*alpha*gam*rho)/(U*tr)
+def ksat_fun(D, U, K, p, lam):
+    return (D*K*p)/(U**2*lam)
 
 def ds_fun(U, K, n, alpha, gam, lam):
     return (U*n*alpha*gam*lam)/K
 
-def tb_fun(tr, rho):
-    return tr*(1-rho)/rho
+def tr_fun(U, K, p, n, alpha, gam, lam, rho):
+    return (U*n*alpha*gam*lam*rho)/(K*p)
+    
+def tb_fun(U, K, p, n, alpha, gam, lam, rho):
+    return (U*n*alpha*gam*lam*rho)/(K*p)*(1-rho)/rho
 
-def p_fun(U, K, tr, n, alpha, gam, lam, rho):
-    return (U*n*alpha*gam*lam*rho)/(K*tr)
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, tr, n, alpha, gam, lam, rho):
+def generate_parameters(D, U, K, p, n, alpha, gam, lam, rho):
 
     b = b_fun(U, K, gam, lam)
-    ksat = ksat_fun(D, U, tr, n, alpha, gam, rho)
-    tb = tb_fun(tr, rho)
+    ksat = ksat_fun(D, U, K, p, lam)
     ds = ds_fun(U, K, n, alpha, gam, lam)
-    p = p_fun(U, K, tr, n, alpha, gam, lam, rho)
+    tr = tr_fun(U, K, p, n, alpha, gam, lam, rho)
+    tb = tb_fun(U, K, p, n, alpha, gam, lam, rho)
 
     return K, D, U, ksat, p, b, ds, tr, tb, n, alpha, gam, lam, rho
 
 #parameters
 lam_all = np.geomspace(0.2,2.0,5)
 gam_all = np.geomspace(0.5,5.0,5)
-eta_all_prod = np.array(list(product(lam_all, gam_all)))[:,0]
+lam_all_prod = np.array(list(product(lam_all, gam_all)))[:,0]
 gam_all_prod = np.array(list(product(lam_all, gam_all)))[:,1]
-eta_gam_id = np.array([0, 4, 12, 20, 24])
+lam_gam_id = np.array([0, 4, 12, 20, 24])
 
 alpha_all = np.array([0.01, 0.05, 0.1])
 rho_all = np.array([0.01, 0.1, 0.5])
 
-alpha1 = np.array(list(product(alpha_all, rho_all, eta_gam_id)))[:,0]
-rho1 = np.array(list(product(alpha_all, rho_all, eta_gam_id)))[:,1]
-eta_gam_id1 = np.array(list(product(alpha_all, rho_all, eta_gam_id)), dtype=int)[:,2]
-eta1 = eta_all_prod[eta_gam_id1]
-gam1 = gam_all_prod[eta_gam_id1]
+alpha1 = np.array(list(product(alpha_all, rho_all, lam_gam_id)))[:,0]
+rho1 = np.array(list(product(alpha_all, rho_all, lam_gam_id)))[:,1]
+lam_gam_id1 = np.array(list(product(alpha_all, rho_all, lam_gam_id)), dtype=int)[:,2]
+lam1 = lam_all_prod[lam_gam_id1]
+gam1 = gam_all_prod[lam_gam_id1]
 
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
 K1 = 1e-4/(365*24*3600) # Streampower incision coefficient [1/s]
-tr1 = 4*3600 # mean storm duration [s]
+p1 = 0.75/(365*24*3600) # average rainfall rate [m/s]
 n1 = 0.1 # drainable porosity [-]
 
-Tg_nd = 800 # total duration in units of tg [-]
+Tg_nd = 1000 # total duration in units of tg [-]
 dtg_nd = 1e-2 # geomorphic timestep in units of tg [-]
 Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
 
-params = np.zeros((len(eta1),14))
-for i in range(len(eta1)):
+params = np.zeros((len(lam1),14))
+for i in range(len(lam1)):
 
-    params[i,:] = generate_parameters(D1, U1, K1, tr1, n1, alpha1[i], gam1[i], eta1[i], rho1[i])
+    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, alpha1[i], gam1[i], lam1[i], rho1[i])
 
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'eta', 'rho'])
 df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
@@ -131,7 +132,7 @@ output["output_fields"] = [
         "aquifer_base__elevation",
         "water_table__elevation",
         ]
-output["base_output_path"] = './data/stoch_sp_4_'
+output["base_output_path"] = './data/stoch_sp_5_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
