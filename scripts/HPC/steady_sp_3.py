@@ -8,7 +8,7 @@ and gamma.
 \[lambda] == (p K D)/(ks U^2),
 \[Gamma] == (ks b U)/(p D),
 
-Date: 18 Aug 2020
+Date: 1 Sept 2020
 """
 import os
 import numpy as np

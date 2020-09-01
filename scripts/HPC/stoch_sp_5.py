@@ -3,14 +3,14 @@ Stochastic recharge + constant thickness + StreamPowerModel
 
 This script uses dimensionless parameters based on Theodoratos method of
 nondimensionalizing the governing landscape evolution equation. Vary alpha
-and rho for several different eta-gamma combinations.
+and rho for several different gamma-lambda combinations.
 
-\[Eta] == (b Km)/U,
+\[lambda] == (p K D)/(ks U^2),
 \[Gamma] == (ks b U)/(p Dm),
 \[Alpha] == (i tr)/(b n),
 \[Rho] == p/i = tr/(tb + tr)
 
-Date: 19 Aug 2020
+Date: 1 Sept 2020
 """
 import os
 import numpy as np
@@ -36,37 +36,37 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def b_fun(U, K, eta):
-    return (U*eta)/K
+def b_fun(U, K, gam, lam):
+    return (U*gam*lam)/K
 
 def ksat_fun(D, U, tr, n, alpha, gam, rho):
     return (D*n*alpha*gam*rho)/(U*tr)
 
-def ds_fun(U, K, n, alpha, eta):
-    return (U*n*alpha*eta)/K
+def ds_fun(U, K, n, alpha, gam, lam):
+    return (U*n*alpha*gam*lam)/K
 
 def tb_fun(tr, rho):
     return tr*(1-rho)/rho
 
-def p_fun(U, K, tr, n, alpha, eta, rho):
-    return (U*n*alpha*eta*rho)/(K*tr)
+def p_fun(U, K, tr, n, alpha, gam, lam, rho):
+    return (U*n*alpha*gam*lam*rho)/(K*tr)
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, tr, n, alpha, gam, eta, rho):
+def generate_parameters(D, U, K, tr, n, alpha, gam, lam, rho):
 
-    b = b_fun(U, K, eta)
+    b = b_fun(U, K, gam, lam)
     ksat = ksat_fun(D, U, tr, n, alpha, gam, rho)
     tb = tb_fun(tr, rho)
-    ds = ds_fun(U, K, n, alpha, eta)
-    p = p_fun(U, K, tr, n, alpha, eta, rho)
+    ds = ds_fun(U, K, n, alpha, gam, lam)
+    p = p_fun(U, K, tr, n, alpha, gam, lam, rho)
 
-    return K, D, U, ksat, p, b, ds, tr, tb, n, alpha, gam, eta, rho
+    return K, D, U, ksat, p, b, ds, tr, tb, n, alpha, gam, lam, rho
 
 #parameters
-eta_all = np.geomspace(0.1,10,5)
-gam_all = np.geomspace(0.01,1.0,5)
-eta_all_prod = np.array(list(product(eta_all, gam_all)))[:,0]
-gam_all_prod = np.array(list(product(eta_all, gam_all)))[:,1]
+lam_all = np.geomspace(0.2,2.0,5)
+gam_all = np.geomspace(0.5,5.0,5)
+eta_all_prod = np.array(list(product(lam_all, gam_all)))[:,0]
+gam_all_prod = np.array(list(product(lam_all, gam_all)))[:,1]
 eta_gam_id = np.array([0, 4, 12, 20, 24])
 
 alpha_all = np.array([0.01, 0.05, 0.1])
