@@ -76,9 +76,9 @@ for i in range(N):
         print('finished iteration %d'%i)
         filename = base_path + '%d_grid_%d.nc'%(ID,i)
         write_raster_netcdf(filename, grid, names = "topographic__elevation", format="NETCDF4")
-        
+
         t = time.time()
-        times[i] = t-t1
+        times[i//output_interval] = t-t1
         t1 = t
-        
+
 np.savetxt('times.out', times)
