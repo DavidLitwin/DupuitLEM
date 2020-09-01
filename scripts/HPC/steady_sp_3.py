@@ -2,10 +2,10 @@
 Steady recharge + constant thickness + StreamPowerModel
 
 This script uses dimensionless parameters based on Theodoratos method of
-nondimensionalizing the governing landscape evolution equation. Vary eta
+nondimensionalizing the governing landscape evolution equation. Vary lambda
 and gamma.
 
-\[Eta] == (b K)/U,
+\[lambda] == (p K D)/(ks U^2),
 \[Gamma] == (ks b U)/(p D),
 
 Date: 18 Aug 2020
@@ -33,42 +33,43 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def b_fun(U, K, eta):
-    return (U*eta)/K
+def b_fun(U, K, gam, lam):
+    return (U*gam*lam)/K
 
-def ksat_fun(D, U, p, K, gam, eta):
-    return (D*p*K*gam)/(U**2*eta)
+def ksat_fun(D, U, p, K, lam):
+    return (D*p*K)/(U**2*lam)
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, p, n, gam, eta):
+def generate_parameters(D, U, K, p, n, gam, lam):
 
-    b = b_fun(U, K, eta)
-    ksat = ksat_fun(D, U, p, K, gam, eta)
+    b = b_fun(U, K, gam, lam)
+    ksat = ksat_fun(D, U, p, K, lam)
 
-    return K, D, U, ksat, p, b, n, gam, eta
+    return K, D, U, ksat, p, b, n, gam, lam
 
 #parameters
-eta_all = np.geomspace(0.1,10,5)
-gam_all = np.geomspace(0.01,1.0,5)
+lam_all = np.geomspace(0.2,2,5)
+gam_all = np.geomspace(0.5,5,5)
+lg = 15
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
-K1 = 1e-4/(365*24*3600) # Streampower incision coefficient [1/s]
+K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 n1 = 0.1 # drainable porosity [-]
-p1 = 1/(365*24*3600) # steady precipitation rate
+p1 = 0.75/(365*24*3600) # steady precipitation rate
 
 Tg_nd = 800 # total duration in units of tg [-]
 dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
-eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
-gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
+lam1 = np.array(list(product(lam_all, gam_all)))[:,0]
+gam1 = np.array(list(product(lam_all, gam_all)))[:,1]
 
-params = np.zeros((len(eta1),9))
-for i in range(len(eta1)):
+params = np.zeros((len(lam1),9))
+for i in range(len(lam1)):
 
-    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, gam1[i], eta1[i])
+    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, gam1[i], lam1[i])
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'gam', 'eta'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'gam', 'lam'])
 df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
 df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
 df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
