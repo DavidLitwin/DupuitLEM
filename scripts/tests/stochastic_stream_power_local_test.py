@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
+    FlowDirectorD8,
+    FlowAccumulator,
+    LakeMapperBarnes,
     LinearDiffuser,
     FastscapeEroder,
     PrecipitationDistribution,
@@ -74,6 +77,18 @@ wt[:] = elev.copy()
 gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
                                   regularization_f=r, \
                                   courant_coefficient=c, vn_coefficient = vn)
+fd = FlowDirectorD8(grid)
+fa = FlowAccumulator(grid,
+				        surface='topographic__elevation',
+						flow_director=fd,
+						runoff_rate='average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
+						  surface='topographic__elevation',
+						  fill_surface='topographic__elevation',
+						  redirect_flow_steepest_descent=False,
+						  reaccumulate_flow=False,
+						  track_lakes=False,
+						  ignore_overfill=True)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
 
 pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
@@ -86,6 +101,9 @@ hm = HydrologyEventStreamPower(
         grid,
         precip_generator=pd,
         groundwater_model=gdp,
+        flow_director=fd,
+        flow_accumulator=fa,
+        lake_mapper=lmb,
 )
 
 sp = FastscapeEroder(grid, K_sp = Ksp, m_sp = m, n_sp=n, discharge_field='surface_water_area_norm__discharge')

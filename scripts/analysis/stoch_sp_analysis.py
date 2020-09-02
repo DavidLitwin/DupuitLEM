@@ -17,6 +17,9 @@ from landlab import imshow_grid, RasterModelGrid, LinkStatus
 from landlab.io.netcdf import read_netcdf, write_raster_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
+    FlowDirectorD8,
+    FlowAccumulator,
+    LakeMapperBarnes,
     PrecipitationDistribution,
     HeightAboveDrainageCalculator,
     DrainageDensity,
@@ -77,7 +80,7 @@ b = df_params['b'][ID] #characteristic depth  [m]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 365*24*3600 #total hydrological time [s]
+T_h = df_params['Th'][ID] #total hydrological time [s]
 
 #initialize grid
 dx = grid.dx
@@ -115,7 +118,18 @@ gdp = GroundwaterDupuitPercolator(mg,
                                   vn_coefficient = 0.01*Ks/1e-5,
                                   callback_fun = write_SQ,
                                   )
-
+fd = FlowDirectorD8(mg)
+fa = FlowAccumulator(mg,
+				        surface='topographic__elevation',
+						flow_director=fd,
+						runoff_rate='average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(mg, method='D8', fill_flat=False,
+						  surface='topographic__elevation',
+						  fill_surface='topographic__elevation',
+						  redirect_flow_steepest_descent=False,
+						  reaccumulate_flow=False,
+						  track_lakes=False,
+						  ignore_overfill=True)
 pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
     mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
@@ -123,8 +137,11 @@ pdr.seed_generator(seedval=2)
 
 hm = HydrologyEventStreamPower(
         mg,
-        precip_generator=pdr,
+        precip_generator=pd,
         groundwater_model=gdp,
+        flow_director=fd,
+        flow_accumulator=fa,
+        lake_mapper=lmb,
 )
 
 #run model

@@ -11,6 +11,9 @@ import numpy as np
 from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
+    FlowDirectorD8,
+    FlowAccumulator,
+    LakeMapperBarnes,
     LinearDiffuser,
     PrecipitationDistribution,
     )
@@ -72,8 +75,10 @@ ss_chezy_fun = bind_shear_stress_chezy(c_chezy=chezy_c)
 #initialize grid
 np.random.seed(2)
 grid = RasterModelGrid((100, 100), xy_spacing=10.0)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
-                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
+grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
+                                 top=grid.BC_NODE_IS_CLOSED,
+                                 left=grid.BC_NODE_IS_FIXED_VALUE,
+                                 bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = d_eq + 0.1*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
@@ -84,6 +89,18 @@ wt[:] = elev.copy()
 gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
                                   regularization_f=r, \
                                   courant_coefficient=c, vn_coefficient = vn)
+fd = FlowDirectorD8(grid)
+fa = FlowAccumulator(grid,
+				        surface='topographic__elevation',
+						flow_director=fd,
+						runoff_rate='average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
+						  surface='topographic__elevation',
+						  fill_surface='topographic__elevation',
+						  redirect_flow_steepest_descent=False,
+						  reaccumulate_flow=False,
+						  track_lakes=False,
+						  ignore_overfill=True)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
 pd = PrecipitationDistribution(grid, mean_storm_duration=storm_dt,
     mean_interstorm_duration=interstorm_dt, mean_storm_depth=p_d,
@@ -95,6 +112,9 @@ hm = HydrologyEventShearStress(
         grid,
         precip_generator=pd,
         groundwater_model=gdp,
+        flow_director=fd,
+        flow_accumulator=fa,
+        lake_mapper=lmb,
         shear_stress_function=ss_chezy_fun,
         erosion_rate_function=ss_erosion_fun,
 )

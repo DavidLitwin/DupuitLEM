@@ -16,6 +16,9 @@ from landlab.io.netcdf import read_netcdf, write_raster_netcdf
 from landlab import RasterModelGrid, LinkStatus
 from landlab.components import (
     GroundwaterDupuitPercolator,
+    FlowDirectorD8,
+    FlowAccumulator,
+    LakeMapperBarnes,
     HeightAboveDrainageCalculator,
     DrainageDensity,
     )
@@ -78,10 +81,24 @@ gdp = GroundwaterDupuitPercolator(mg,
           courant_coefficient=0.9,
           vn_coefficient = 0.9,
 )
-
+fd = FlowDirectorD8(mg)
+fa = FlowAccumulator(mg,
+				        surface='topographic__elevation',
+						flow_director=fd,
+						runoff_rate='average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(mg, method='D8', fill_flat=False,
+						  surface='topographic__elevation',
+						  fill_surface='topographic__elevation',
+						  redirect_flow_steepest_descent=False,
+						  reaccumulate_flow=False,
+						  track_lakes=False,
+						  ignore_overfill=True)
 hm = HydrologySteadyStreamPower(
         mg,
         groundwater_model=gdp,
+        flow_director=fd,
+        flow_accumulator=fa,
+        lake_mapper=lmb,
         hydrological_timestep=Th,
 )
 

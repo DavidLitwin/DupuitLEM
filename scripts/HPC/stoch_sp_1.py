@@ -16,6 +16,9 @@ import pickle
 from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
+    FlowDirectorD8,
+    FlowAccumulator,
+    LakeMapperBarnes,
     LinearDiffuser,
     FastscapeEroder,
     PrecipitationDistribution,
@@ -110,13 +113,15 @@ output["base_output_path"] = './data/stoch_sp_1_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid_functions
-ksat_fun = bind_avg_hydraulic_conductivity(Ks,K0,b) # hydraulic conductivity [m/s]
+ksat_func = bind_avg_hydraulic_conductivity(Ks,K0,b) # hydraulic conductivity [m/s]
 
 #initialize grid
 np.random.seed(1234)
 grid = RasterModelGrid((100, 100), xy_spacing=10.0)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
-                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
+grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
+                                 top=grid.BC_NODE_IS_CLOSED,
+                                 left=grid.BC_NODE_IS_FIXED_VALUE,
+                                 bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = b + 0.1*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
@@ -124,10 +129,26 @@ wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 
 #initialize landlab components
-gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
-                                  regularization_f=0.01, recharge_rate=0.0, \
-                                  courant_coefficient=0.9, vn_coefficient = 0.9)
-pd = PrecipitationDistribution(grid, mean_storm_duration=tr,
+gdp = GroundwaterDupuitPercolator(grid,
+                                    porosity=n,
+                                    hydraulic_conductivity=ksat_func,
+                                    regularization_f=0.01,
+                                    recharge_rate=0.0,
+                                    courant_coefficient=0.9,
+                                    vn_coefficient = 0.9)
+fd = FlowDirectorD8(grid)
+fa = FlowAccumulator(grid,
+				        surface='topographic__elevation',
+						flow_director=fd,
+						runoff_rate='average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
+						  surface='topographic__elevation',
+						  fill_surface='topographic__elevation',
+						  redirect_flow_steepest_descent=False,
+						  reaccumulate_flow=False,
+						  track_lakes=False,
+						  ignore_overfill=True)
+pdr = PrecipitationDistribution(grid, mean_storm_duration=tr,
     mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
 pd.seed_generator(seedval=1235)
@@ -136,8 +157,11 @@ ld = LinearDiffuser(grid, linear_diffusivity=D)
 #initialize other models
 hm = HydrologyEventStreamPower(
         grid,
-        precip_generator=pd,
+        precip_generator=pdr,
         groundwater_model=gdp,
+        flow_director=fd,
+        flow_accumulator=fa,
+        lake_mapper=lmb,
 )
 
 #use surface_water_effective__discharge for stochastic case

@@ -21,6 +21,9 @@ from landlab.components import (
     GroundwaterDupuitPercolator,
     LinearDiffuser,
     FastscapeEroder,
+    FlowDirectorD8,
+    FlowAccumulator,
+    LakeMapperBarnes,
     )
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
@@ -105,7 +108,7 @@ output["output_fields"] = [
         "aquifer_base__elevation",
         "water_table__elevation",
         ]
-output["base_output_path"] = './data/steady_sp_2_'
+output["base_output_path"] = './data/steady_sp_3_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
@@ -132,12 +135,27 @@ gdp = GroundwaterDupuitPercolator(grid,
         courant_coefficient=0.9,
         vn_coefficient = 0.9,
 )
+fd = FlowDirectorD8(grid)
+fa = FlowAccumulator(grid,
+				        surface='topographic__elevation',
+						flow_director=fd,
+						runoff_rate='average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
+						  surface='topographic__elevation',
+						  fill_surface='topographic__elevation',
+						  redirect_flow_steepest_descent=False,
+						  reaccumulate_flow=False,
+						  track_lakes=False,
+						  ignore_overfill=True)
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
 #initialize other models
 hm = HydrologySteadyStreamPower(
         grid,
         groundwater_model=gdp,
+        flow_director=fd,
+        flow_accumulator=fa,
+        lake_mapper=lmb,
         hydrological_timestep=Th,
 )
 

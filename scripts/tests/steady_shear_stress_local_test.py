@@ -10,6 +10,9 @@ from landlab import RasterModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
     LinearDiffuser,
+    FlowDirectorD8,
+    FlowAccumulator,
+    LakeMapperBarnes,
     )
 from DupuitLEM import ShearStressModel
 from DupuitLEM.auxiliary_models import HydrologySteadyShearStress, RegolithConstantThickness
@@ -62,12 +65,27 @@ wt[:] = elev.copy()
 gdp = GroundwaterDupuitPercolator(grid, porosity=n, hydraulic_conductivity=ksat_fun, \
                                   regularization_f=r, recharge_rate = R, \
                                   courant_coefficient=c, vn_coefficient = vn)
+fd = FlowDirectorD8(grid)
+fa = FlowAccumulator(grid,
+				        surface='topographic__elevation',
+						flow_director=fd,
+						runoff_rate='average_surface_water__specific_discharge')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False,
+						  surface='topographic__elevation',
+						  fill_surface='topographic__elevation',
+						  redirect_flow_steepest_descent=False,
+						  reaccumulate_flow=False,
+						  track_lakes=False,
+						  ignore_overfill=True)
 ld = LinearDiffuser(grid, linear_diffusivity = D)
 
 #initialize other models
 hm = HydrologySteadyShearStress(
         grid,
         groundwater_model=gdp,
+        flow_director=fd,
+        flow_accumulator=fa,
+        lake_mapper=lmb,
         shear_stress_function=ss_chezy_fun,
         erosion_rate_function=ss_erosion_fun,
         hydrological_timestep = dt_h
