@@ -8,13 +8,7 @@ over the hydrological model run time.
 """
 
 import numpy as np
-
-from landlab.components import (
-    FlowDirectorD8,
-    FlowAccumulator,
-    LakeMapperBarnes,
-    DepressionFinderAndRouter,
-    )
+from landlab.components import DepressionFinderAndRouter
 
 class HydrologicalModel:
     """
@@ -25,21 +19,21 @@ class HydrologicalModel:
     grid: a landlab grid with GroundwaterDupuitPercolator already instantiated
 
     """
-    def __init__(self, grid):
+    def __init__(self,
+                 grid,
+                 flow_director,
+                 flow_accumulator,
+                 lake_mapper,
+                 groundwater_model,
+                 ):
 
         self._grid = grid
+        self._gdp = groundwater_model
+        self._fd = flow_director
+        self._fa = flow_accumulator
+        self._lmb = lake_mapper
 
-        self.fd = FlowDirectorD8(self._grid)
-        self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director=self.fd,  \
-                              runoff_rate='average_surface_water__specific_discharge')
-        self.lmb = LakeMapperBarnes(self._grid, method='D8', fill_flat=False,
-                                      surface='topographic__elevation',
-                                      fill_surface='topographic__elevation',
-                                      redirect_flow_steepest_descent=False,
-                                      reaccumulate_flow=False,
-                                      track_lakes=False,
-                                      ignore_overfill=True)
-        self.dfr = DepressionFinderAndRouter(self._grid)
+        self._dfr = DepressionFinderAndRouter(self._grid)
 
     def run_step(self):
         raise NotImplementedError
@@ -53,15 +47,18 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
     A trapezoidal integration method is used to find effective
     shear stress and erosion rate.
 
-    Note: This method may overestimate shear stress and erosion rate during the recession period.
+    Note: This method may overestimate shear stress and erosion rate during
+    the recession period.
 
     Parameters
     -----
     grid: landlab grid
     precip_generator: instantiated PrecipitationDistribution
     groundwater_model: instantiated GroundwaterDupuitPercolator
-    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
-    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
+    shear_stress_function: function that takes a grid with topography
+        and discharge and returns shear stress at node
+    erosion_rate_function: function that takes grid with topography and
+        shear stress and returns erosion rate
     tauc: shear stress threshold for erosion
 
     """
@@ -71,28 +68,35 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
         grid,
         precip_generator=None,
         groundwater_model=None,
+        flow_director=None,
+        flow_accumulator=None,
+        lake_mapper=None,
         shear_stress_function=None,
         erosion_rate_function=None,
         tauc = 0,
         ):
-        super().__init__(grid)
+        super().__init__(grid,
+                         flow_director,
+                         flow_accumulator,
+                         lake_mapper,
+                         groundwater_model,
+                         )
 
         self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
-        self.pd = precip_generator
-        self.gdp = groundwater_model
+        self._pd = precip_generator
         self.calc_shear_stress = shear_stress_function
         self.calc_erosion_from_shear_stress = erosion_rate_function
         self._tauc = tauc
-        self.T_h = self.pd._run_time
+        self.T_h = self._pd._run_time
 
     @staticmethod
     def calc_storm_eff_shear_stress(tau0,tau1,tau2,tauc,tr,tb):
         """
         Calculate effective shear stress over the course of an event-interevent
         period using a trapezoidal approximation, which accounts for the linear
-        interpolation of when the threshold shear stress is exceeded. Note that this
-        method may overestimate shear stress during interevent if it quickly drops
-        below the threshold value.
+        interpolation of when the threshold shear stress is exceeded. Note that
+        this method may overestimate shear stress during interevent if it
+        quickly drops below the threshold value.
         """
 
         tauint1 = np.zeros_like(tau0)
@@ -128,7 +132,7 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
         interstorm_dts = []
         intensities = []
 
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+        for (storm_dt, interstorm_dt) in self._pd.yield_storms():
             storm_dts.append(storm_dt)
             interstorm_dts.append(interstorm_dt)
             intensities.append(float(self._grid.at_grid['rainfall__flux']))
@@ -140,20 +144,20 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
     def run_step(self):
 
         """
-        Hydrological model for series of event-interevent pairs, calculate shear stresses
-        at end of event and interevent, calculate erosion rate.
+        Hydrological model for series of event-interevent pairs, calculate shear
+        stresses at end of event and interevent, calculate erosion rate.
         """
 
         #generate new precip time series
         self.generate_exp_precip()
 
         #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        self._dfr._find_pits()
+        if self._dfr._number_of_pits > 0:
+            self._lmb.run_one_step()
 
         #update flow directions
-        self.fd.run_one_step()
+        self._fd.run_one_step()
 
         self.dzdt = np.zeros_like(self._tau)
         tau2 = self._tau.copy()
@@ -161,19 +165,20 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
             tau0 = tau2.copy() #save prev end of interstorm shear stress
 
             #run event, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = self.intensities[i]
+            self._gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,_ = self._fa.accumulate_flow(update_flow_director=False)
             tau1 = self.calc_shear_stress(self._grid)
 
             #run interevent, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = 0.0
+            self._gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i], 1e-15))
+            _,_ = self._fa.accumulate_flow(update_flow_director=False)
             tau2 = self.calc_shear_stress(self._grid)
 
             #calculate effective shear stress across event-interevent pair
-            self._tau[:] = calc_storm_eff_shear_stress(tau0,tau1,tau2,self._tauc,self.storm_dts[i],self.interstorm_dts[i])
+            self._tau[:] = calc_storm_eff_shear_stress(tau0, tau1, tau2, \
+                self._tauc, self.storm_dts[i], self.interstorm_dts[i])
 
             #calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             dzdt = calc_erosion_from_shear_stress(self._grid)
@@ -203,18 +208,25 @@ class HydrologyEventShearStress(HydrologicalModel):
         grid,
         precip_generator=None,
         groundwater_model=None,
+        flow_director=None,
+        flow_accumulator=None,
+        lake_mapper=None,
         shear_stress_function=None,
         erosion_rate_function=None,
     ):
 
-        super().__init__(grid)
+        super().__init__(grid,
+                 flow_director,
+                 flow_accumulator,
+                 lake_mapper,
+                 groundwater_model,
+                 )
 
         self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
-        self.pd = precip_generator
-        self.gdp = groundwater_model
+        self._pd = precip_generator
         self.calc_shear_stress = shear_stress_function
         self.calc_erosion_from_shear_stress = erosion_rate_function
-        self.T_h = self.pd._run_time
+        self.T_h = self._pd._run_time
 
     def generate_exp_precip(self):
 
@@ -222,7 +234,7 @@ class HydrologyEventShearStress(HydrologicalModel):
         interstorm_dts = []
         intensities = []
 
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+        for (storm_dt, interstorm_dt) in self._pd.yield_storms():
             storm_dts.append(storm_dt)
             interstorm_dts.append(interstorm_dt)
             intensities.append(float(self._grid.at_grid['rainfall__flux']))
@@ -242,12 +254,12 @@ class HydrologyEventShearStress(HydrologicalModel):
         self.generate_exp_precip()
 
         #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        self._dfr._find_pits()
+        if self._dfr._number_of_pits > 0:
+            self._lmb.run_one_step()
 
         #update flow directions
-        self.fd.run_one_step()
+        self._fd.run_one_step()
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -257,20 +269,20 @@ class HydrologyEventShearStress(HydrologicalModel):
             dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
 
             #run event, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = self.intensities[i]
+            self._gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,_ = self._fa.accumulate_flow(update_flow_director=False)
             self._tau[:] = self.calc_shear_stress(self._grid)
             dzdt1 = self.calc_erosion_from_shear_stress(self._grid)
-            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
+            self.max_substeps_storm = max(self.max_substeps_storm,self._gdp.number_of_substeps)
 
             #run interevent, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = 0.0
+            self._gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
+            _,_ = self._fa.accumulate_flow(update_flow_director=False)
             self._tau[:] = self.calc_shear_stress(self._grid)
             dzdt2 = self.calc_erosion_from_shear_stress(self._grid)
-            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
+            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self._gdp.number_of_substeps)
 
             #calculate erosion, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
             #note that this only accounts for erosion during the storm period
@@ -304,12 +316,12 @@ class HydrologyEventShearStress(HydrologicalModel):
         self.max_substeps_interstorm = 0
 
         #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        self._dfr._find_pits()
+        if self._dfr._number_of_pits > 0:
+            self._lmb.run_one_step()
 
         #update flow directions
-        self.fd.run_one_step()
+        self._fd.run_one_step()
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -319,15 +331,15 @@ class HydrologyEventShearStress(HydrologicalModel):
             dzdt0 = dzdt2.copy() #save prev end of interstorm erosion rate
 
             #run event, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = self.intensities[i]
+            self._gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,_ = self._fa.accumulate_flow(update_flow_director=False)
             self._tau[:] = self.calc_shear_stress(self._grid)
             dzdt1 = self.calc_erosion_from_shear_stress(self._grid)
-            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
+            self.max_substeps_storm = max(self.max_substeps_storm,self._gdp.number_of_substeps)
 
             #record event
-            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
+            self.max_substeps_storm = max(self.max_substeps_storm,self._gdp.number_of_substeps)
             self.time[i*2+1] = self.time[i*2]+self.storm_dts[i]
             self.intensity[i*2] = self.intensities[i]
             self.tau_all[i*2+1,:] = self._tau
@@ -336,15 +348,15 @@ class HydrologyEventShearStress(HydrologicalModel):
             self.qs_all[i*2+1,:] = self._grid.at_node['surface_water__specific_discharge']
 
             #run interevent, accumulate flow, and calculate resulting shear stress
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
-            _,_ = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = 0.0
+            self._gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            _,_ = self._fa.accumulate_flow(update_flow_director=False)
             self._tau[:] = self.calc_shear_stress(self._grid)
             dzdt2 = self.calc_erosion_from_shear_stress(self._grid)
-            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
+            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self._gdp.number_of_substeps)
 
             #record interevent
-            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
+            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self._gdp.number_of_substeps)
             self.time[i*2+2] = self.time[i*2+1]+self.interstorm_dts[i]
             self.tau_all[i*2+2,:] = self._tau
             self.Q_all[i*2+2,:] = self._grid.at_node['surface_water__discharge']
@@ -374,14 +386,21 @@ class HydrologySteadyShearStress(HydrologicalModel):
         self,
         grid,
         groundwater_model=None,
+        flow_director=None,
+        flow_accumulator=None,
+        lake_mapper=None,
         shear_stress_function=None,
         erosion_rate_function=None,
         hydrological_timestep = 1e5
         ):
-        super().__init__(grid)
+        super().__init__(grid,
+                 flow_director,
+                 flow_accumulator,
+                 lake_mapper,
+                 groundwater_model,
+                 )
 
         self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
-        self.gdp = groundwater_model
         self.calc_shear_stress = shear_stress_function
         self.calc_erosion_from_shear_stress = erosion_rate_function
         self.T_h = hydrological_timestep
@@ -393,16 +412,16 @@ class HydrologySteadyShearStress(HydrologicalModel):
         """
 
         #run gw model
-        self.gdp.run_with_adaptive_time_step_solver(self.T_h)
-        self.number_substeps = self.gdp.number_of_substeps
+        self._gdp.run_with_adaptive_time_step_solver(self.T_h)
+        self.number_substeps = self._gdp.number_of_substeps
 
         #find pits for flow accumulation
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        self._dfr._find_pits()
+        if self._dfr._number_of_pits > 0:
+            self._lmb.run_one_step()
 
         #run flow accumulation
-        self.fa.run_one_step()
+        self._fa.run_one_step()
 
         #calc shear stress and erosion
         self._tau[:] = self.calc_shear_stress(self._grid)
@@ -434,16 +453,23 @@ class HydrologyEventStreamPower(HydrologicalModel):
         grid,
         precip_generator=None,
         groundwater_model=None,
+        flow_director=None,
+        flow_accumulator=None,
+        lake_mapper=None,
     ):
 
-        super().__init__(grid)
+        super().__init__(grid,
+                 flow_director,
+                 flow_accumulator,
+                 lake_mapper,
+                 groundwater_model,
+                 )
 
         self.q_eff = self._grid.add_zeros("node","surface_water_effective__discharge")
         self.q_an = self._grid.add_zeros("node","surface_water_area_norm__discharge")
         self.area = self._grid.at_node["drainage_area"]
-        self.pd = precip_generator
-        self.gdp = groundwater_model
-        self.T_h = self.pd._run_time
+        self._pd = precip_generator
+        self.T_h = self._pd._run_time
 
     def generate_exp_precip(self):
 
@@ -451,7 +477,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
         interstorm_dts = []
         intensities = []
 
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+        for (storm_dt, interstorm_dt) in self._pd.yield_storms():
             storm_dts.append(storm_dt)
             interstorm_dts.append(interstorm_dt)
             intensities.append(float(self._grid.at_grid['rainfall__flux']))
@@ -471,12 +497,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.generate_exp_precip()
 
         #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        self._dfr._find_pits()
+        if self._dfr._number_of_pits > 0:
+            self._lmb.run_one_step()
 
         #update flow directions
-        self.fd.run_one_step()
+        self._fd.run_one_step()
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -486,18 +512,18 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q0 = q2.copy() #save prev end of interstorm flow rate
 
             #run event, accumulate flow
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,q = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = self.intensities[i]
+            self._gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,q = self._fa.accumulate_flow(update_flow_director=False)
             q1 = q.copy()
-            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
+            self.max_substeps_storm = max(self.max_substeps_storm,self._gdp.number_of_substeps)
 
             #run interevent, accumulate flow
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
-            _,q = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = 0.0
+            self._gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
+            _,q = self._fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
-            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
+            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self._gdp.number_of_substeps)
 
             #volume of runoff contributed during timestep
             q_total_vol += 0.5*(q0+q1)*self.storm_dts[i]
@@ -525,12 +551,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.generate_exp_precip()
 
         #find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        self._dfr._find_pits()
+        if self._dfr._number_of_pits > 0:
+            self._lmb.run_one_step()
 
         #update flow directions
-        self.fd.run_one_step()
+        self._fd.run_one_step()
 
         #fields to record:
         self.time = np.zeros(2*len(self.storm_dts)+1)
@@ -548,11 +574,11 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q0 = q2.copy() #save prev end of interstorm flow rate
 
             #run event, accumulate flow
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
-            _,q = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = self.intensities[i]
+            self._gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            _,q = self._fa.accumulate_flow(update_flow_director=False)
             q1 = q.copy()
-            self.max_substeps_storm = max(self.max_substeps_storm,self.gdp.number_of_substeps)
+            self.max_substeps_storm = max(self.max_substeps_storm,self._gdp.number_of_substeps)
 
             #record event
             self.time[i*2+1] = self.time[i*2]+self.storm_dts[i]
@@ -562,11 +588,11 @@ class HydrologyEventStreamPower(HydrologicalModel):
             self.qs_all[i*2+1,:] = self._grid.at_node['average_surface_water__specific_discharge']
 
             #run interevent, accumulate flow
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
-            _,q = self.fa.accumulate_flow(update_flow_director=False)
+            self._gdp.recharge = 0.0
+            self._gdp.run_with_adaptive_time_step_solver(max(self.interstorm_dts[i],1e-15))
+            _,q = self._fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
-            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self.gdp.number_of_substeps)
+            self.max_substeps_interstorm = max(self.max_substeps_interstorm,self._gdp.number_of_substeps)
 
             #record interevent
             self.time[i*2+2] = self.time[i*2+1]+self.interstorm_dts[i]
@@ -587,11 +613,18 @@ class HydrologySteadyStreamPower(HydrologicalModel):
         self,
         grid,
         groundwater_model=None,
+        flow_director=None,
+        flow_accumulator=None,
+        lake_mapper=None,
         hydrological_timestep=1e5,
         ):
-        super().__init__(grid)
+        super().__init__(grid,
+                 flow_director,
+                 flow_accumulator,
+                 lake_mapper,
+                 groundwater_model,
+                 )
 
-        self.gdp = groundwater_model
         self.T_h = hydrological_timestep
 
         self.q_an = self._grid.add_zeros("node","surface_water_area_norm__discharge")
@@ -605,16 +638,16 @@ class HydrologySteadyStreamPower(HydrologicalModel):
         """
 
         #run gw model
-        self.gdp.run_with_adaptive_time_step_solver(self.T_h)
-        self.number_substeps = self.gdp.number_of_substeps
+        self._gdp.run_with_adaptive_time_step_solver(self.T_h)
+        self.number_substeps = self._gdp.number_of_substeps
 
         #find pits for flow accumulation
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
+        self._dfr._find_pits()
+        if self._dfr._number_of_pits > 0:
+            self._lmb.run_one_step()
 
         #run flow accumulation on average_surface_water__specific_discharge
-        self.fa.run_one_step()
+        self._fa.run_one_step()
 
         #discharge field with form for Q*
         self.q_an[:] = self.q/np.sqrt(self.area)
