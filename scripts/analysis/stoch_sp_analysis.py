@@ -14,7 +14,7 @@ from scipy.interpolate import interp1d
 from statsmodels.stats.weightstats import DescrStatsW
 
 from landlab import imshow_grid, RasterModelGrid, LinkStatus
-from landlab.io.netcdf import read_netcdf, write_raster_netcdf
+from landlab.io.netcdf import to_netcdf, from_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     FlowDirectorD8,
@@ -54,7 +54,7 @@ files = sorted(grid_files, key=lambda x:float(sub("\D", "", x[25:-3])))
 path = files[-1]
 iteration = int(sub("\D", "", path[25:-3]))
 
-grid = read_netcdf(path)
+grid = from_netcdf(path)
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
@@ -352,11 +352,11 @@ crit_twi[:] = TI >= twi_contour
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),5))
-grid = read_netcdf(files[0])
+grid = from_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 for i in range(1,len(files)):
 
-    grid = read_netcdf(files[i])
+    grid = from_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
 
     elev_diff = abs(elev-elev0)
@@ -373,26 +373,26 @@ df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 pe
 ####### save things
 
 output_fields = [
-        "topographic__elevation",
-        "aquifer_base__elevation",
-        'channel_mask_min',
-        'channel_mask_max',
-        'channel_mask_med',
-        'hand_min',
-        'hand_max',
-        'hand_med',
-        'topographic__index',
-        'TI_exceedence_contour',
-        'slope',
-        'drainage_area',
-        'curvature',
-        'steepness',
-        'sat_mean',
-        'sat_std',
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        'at_node:channel_mask_min',
+        'at_node:channel_mask_max',
+        'at_node:channel_mask_med',
+        'at_node:hand_min',
+        'at_node:hand_max',
+        'at_node:hand_med',
+        'at_node:topographic__index',
+        'at_node:TI_exceedence_contour',
+        'at_node:slope',
+        'at_node:drainage_area',
+        'at_node:curvature',
+        'at_node:steepness',
+        'at_node:sat_mean',
+        'at_node:sat_std',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
-write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
+to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))

@@ -17,7 +17,7 @@ from landlab.components import (
     FlowAccumulator,
     FastscapeEroder,
     )
-from landlab.io.netcdf import write_raster_netcdf
+from landlab.io.netcdf import to_netcdf
 
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
@@ -71,7 +71,8 @@ for i in range(N):
     if i%output_interval==0:
         print('finished iteration %d'%i)
         filename = base_path + '%d_grid_%d.nc'%(ID,i)
-        write_raster_netcdf(filename, grid, names = "topographic__elevation", format="NETCDF4")
+        to_netcdf(grid, filename, include="at_node:topographic__elevation")
+
 
     # check stopping condition
     # if i > 0:

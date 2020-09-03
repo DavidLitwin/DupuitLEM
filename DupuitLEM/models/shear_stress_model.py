@@ -6,7 +6,7 @@ Author: David Litwin
 import time
 import numpy as np
 
-from landlab.io.netcdf import write_raster_netcdf
+from landlab.io.netcdf import to_netcdf
 
 
 class ShearStressModel:
@@ -26,6 +26,36 @@ class ShearStressModel:
         output_dict = None,
         verbose=False,
         ):
+        """
+        Initialize ShearStressModel.
+
+        Parameters:
+        --------
+        hydrology_model: an instance of a DupuitLEM hydrology model, either
+            HydrologyEventShearStress or HydrologySteadyShearStress.
+            default: None
+        diffusion_model: an instance of a landlab diffusion component.
+            default: None
+        regolith_model: an instance of a DupuitLEM regolith model.
+            default: None
+        morphologic_scaling_factor: float. Multiplying factor on the hydrological
+            timestep to calculate the morphologic timestep.
+            default: 500
+        total_morphological_time: float. Total model duration.
+            default: 1e6*365*24*3600 (1Myr)
+        output_dict: dict containing fields to specify output behavior.
+            default: None
+            dict contains the following fields:
+                output_interval: int. The number of model iterations between saving output
+                output_fields: list of string(s). Fields at node that will be saved
+                    to netcdf file. Field should also include the specifier for
+                    the grid element location of the specified field. For example,
+                    "at_node:topographic__elevation".
+                base_path: string. The path and folder base name where the output will
+                    be saved.
+                id: int. The identifying number of the particular run. Output files
+                    are saved to (base_path)-(id)/grid_(id).nc
+        """
 
         self.verboseprint = print if verbose else lambda *a, **k: None
 
@@ -105,7 +135,7 @@ class ShearStressModel:
                     self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
 
                     filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'
-                    write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
+                    to_netcdf(self._grid, filename, include=self.output_fields, format="NETCDF4")
                     print('Completed loop %d' % i)
 
                     filename = self.base_path + str(self.id) + '_max_rel_change' + '.txt'

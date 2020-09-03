@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from landlab import imshow_grid
-from landlab.io.netcdf import read_netcdf, write_raster_netcdf
+from landlab.io.netcdf import to_netcdf, from_netcdf
 
 from landlab import RasterModelGrid, LinkStatus
 from landlab.components import (
@@ -35,7 +35,7 @@ files = sorted(grid_files, key=lambda x:float(sub("\D", "", x[25:-3])))
 path = files[-1]
 iteration = int(sub("\D", "", path[25:-3]))
 
-grid = read_netcdf(path)
+grid = from_netcdf(path)
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
@@ -171,11 +171,11 @@ TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),5))
-grid = read_netcdf(files[0])
+grid = from_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 for i in range(1,len(files)):
 
-    grid = read_netcdf(files[i])
+    grid = from_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
 
     elev_diff = abs(elev-elev0)
@@ -192,21 +192,21 @@ df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 pe
 ####### save things
 
 output_fields = [
-        "topographic__elevation",
-        "aquifer_base__elevation",
-        "water_table__elevation",
-        'topographic__index',
-        'channel_mask',
-        'hand',
-        'slope',
-        'drainage_area',
-        'curvature',
-        'steepness',
-        'qstar',
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        "at_node:water_table__elevation",
+        'at_node:topographic__index',
+        'at_node:channel_mask',
+        'at_node:hand',
+        'at_node:slope',
+        'at_node:drainage_area',
+        'at_node:curvature',
+        'at_node:steepness',
+        'at_node:qstar',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
-write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
+to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))

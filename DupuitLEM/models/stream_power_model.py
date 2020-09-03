@@ -7,7 +7,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from landlab.io.netcdf import read_netcdf, write_raster_netcdf
+from landlab.io.netcdf import to_netcdf, from_netcdf
 
 
 class StreamPowerModel:
@@ -55,7 +55,9 @@ class StreamPowerModel:
             dict contains the following fields:
                 output_interval: int. The number of model iterations between saving output
                 output_fields: list of string(s). Fields at node that will be saved
-                    to netcdf file.
+                    to netcdf file. Field should also include the specifier for
+                    the grid element location of the specified field. For example,
+                    "at_node:topographic__elevation".
                 base_path: string. The path and folder base name where the output will
                     be saved.
                 id: int. The identifying number of the particular run. Output files
@@ -182,7 +184,7 @@ class StreamPowerModel:
                     # save the specified grid fields
                     self._gw_flux[:] = self.hm._gdp.calc_gw_flux_at_node()
                     filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'
-                    write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
+                    to_netcdf(self._grid, filename, include=self.output_fields, format="NETCDF4")
 
                     # save elevation change information
                     df_ouput = pd.DataFrame(data=z_change, columns=['max_abs','90_abs', '50_abs', 'mean_abs', 'mean'])
@@ -193,7 +195,7 @@ class StreamPowerModel:
                     if self.stop_cond and i > 0:
 
                         filename0 = self.base_path + str(self.id) + '_grid_' + str(i-self.output_interval) + '.nc'
-                        grid0 = read_netcdf(filename0)
+                        grid0 = from_netcdf(filename0)
                         elev0 = grid0.at_node['topographic__elevation']
                         dzdt = self.calc_rate_of_change(self._elev, elev0, self.dt_m, self.output_interval)
 
