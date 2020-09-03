@@ -55,6 +55,9 @@ class ShearStressModel:
                     be saved.
                 id: int. The identifying number of the particular run. Output files
                     are saved to (base_path)-(id)/grid_(id).nc
+        verbose: bool. Whether periodic print statements will be made as the
+            model runs. 
+            default: False
         """
 
         self.verboseprint = print if verbose else lambda *a, **k: None

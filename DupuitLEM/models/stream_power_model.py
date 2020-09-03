@@ -75,7 +75,9 @@ class StreamPowerModel:
                 how: string. Either 'mean' (find the mean elevation change rate)
                     or 'percentile' (find the corresponding percentile of change)
                 value: float. if 'how' is 'percentile', this is the chosen percentile.
-
+        verbose: bool. Whether periodic print statements will be made as the
+            model runs.
+            default: False
         """
 
         self.verboseprint = print if verbose else lambda *a, **k: None
