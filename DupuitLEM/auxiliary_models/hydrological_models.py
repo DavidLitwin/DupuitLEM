@@ -1,8 +1,20 @@
 """
-Combined hydrological and fluvial erosion models for DupuitLEM. Take instantiated
-landlab components and functions indicating how the shear stress and erosion
-should be calculated from overland flow, and return an effective erosion rate
-over the hydrological model run time.
+Hydrological models for DupuitLEM.
+
+Models based on the shear stress forumulation:
+    HydrologyEventShearStress, HydrologySteadyShearStress
+    Designed for use with ShearStressModel class. Calculate hydrological state
+    and fluvial erosion rate.
+    Warning: shear stress models here calculate erosion with an explicit finite
+    difference scheme that can be unstable and poorly behaved when incised
+    channels approach baselevel. Recommended to not use these...
+
+Models based on streampower forumulation:
+    HydrologyEventStreamPower, HydrologySteadyStreamPower
+    Designed for use with StreamPowerModel class. Calculate hydrological state
+    and update fields that are used by FastscapeEroder in the StreamPowerModel
+    to calculate erosion rates.
+
 
 19 May 2020
 """
@@ -12,11 +24,19 @@ from landlab.components import DepressionFinderAndRouter
 
 class HydrologicalModel:
     """
-    Base class for hydrological model.
+    Base class for hydrological model. Does not operate independently.
 
     Parameters
     -----
     grid: a landlab grid with GroundwaterDupuitPercolator already instantiated
+    flow_director: an instance of a FlowDirector component. Should be either
+        FlowDirectorD8, or FlowDirectorSteepest. A class instantiated independently
+        from a FlowAccumulator is required because flow directions are not
+        updated every time flow accumulation is updated.
+    flow_accumulator: an instance of a FlowAccumulator component.
+    lake_mapper: an instance of LakeMapperBarnes, used to fill and route flow
+        across depressions.
+    groundwater_model: an instance of a GroundwaterDupuitPercolator component.
 
     """
     def __init__(self,
@@ -55,6 +75,13 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
     grid: landlab grid
     precip_generator: instantiated PrecipitationDistribution
     groundwater_model: instantiated GroundwaterDupuitPercolator
+    flow_director: an instance of a FlowDirector component. Should be either
+        FlowDirectorD8, or FlowDirectorSteepest. A class instantiated independently
+        from a FlowAccumulator is required because flow directions are not
+        updated every time flow accumulation is updated.
+    flow_accumulator: an instance of a FlowAccumulator component.
+    lake_mapper: an instance of LakeMapperBarnes, used to fill and route flow
+        across depressions.
     shear_stress_function: function that takes a grid with topography
         and discharge and returns shear stress at node
     erosion_rate_function: function that takes grid with topography and
@@ -198,8 +225,17 @@ class HydrologyEventShearStress(HydrologicalModel):
     grid: landlab grid
     precip_generator: instantiated PrecipitationDistribution
     groundwater_model: instantiated GroundwaterDupuitPercolator
-    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
-    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
+    flow_director: an instance of a FlowDirector component. Should be either
+        FlowDirectorD8, or FlowDirectorSteepest. A class instantiated independently
+        from a FlowAccumulator is required because flow directions are not
+        updated every time flow accumulation is updated.
+    flow_accumulator: an instance of a FlowAccumulator component.
+    lake_mapper: an instance of LakeMapperBarnes, used to fill and route flow
+        across depressions.
+    shear_stress_function: function that takes a grid with topography and
+        discharge and returns shear stress at node
+    erosion_rate_function: function that takes grid with topography and shear
+        stress and returns erosion rate
 
     """
 
@@ -245,9 +281,9 @@ class HydrologyEventShearStress(HydrologicalModel):
 
     def run_step(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
-        is from event period only.
+        Run hydrological model for series of event-interevent pairs, calculate
+        shear stresses and calculate effective erosion rate over the
+        total_hydrological_time. Erosion rate is from event period only.
         """
 
         #generate new precip time series
@@ -292,8 +328,9 @@ class HydrologyEventShearStress(HydrologicalModel):
 
     def run_step_record_state(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time
+        Run hydrological model for series of event-interevent pairs, calculate
+        shear stresses and calculate effective erosion rate over the
+        total_hydrological_time.
 
         track the state of the model:
             time: (s)
@@ -377,6 +414,13 @@ class HydrologySteadyShearStress(HydrologicalModel):
     -----
     grid: landlab grid
     groundwater_model: instantiated GroundwaterDupuitPercolator
+    flow_director: an instance of a FlowDirector component. Should be either
+        FlowDirectorD8, or FlowDirectorSteepest. A class instantiated independently
+        from a FlowAccumulator is required because flow directions are not
+        updated every time flow accumulation is updated.
+    flow_accumulator: an instance of a FlowAccumulator component.
+    lake_mapper: an instance of LakeMapperBarnes, used to fill and route flow
+        across depressions.
     shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
     erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
 
@@ -407,8 +451,8 @@ class HydrologySteadyShearStress(HydrologicalModel):
 
     def run_step(self):
         """
-        Run steady model one step. Update groundwater state, route and accumulate flow,
-        calculate shear stress and erosion rate.
+        Run steady model one step. Update groundwater state, route and
+        accumulate flow, calculate shear stress and erosion rate.
         """
 
         #run gw model
@@ -434,17 +478,26 @@ class HydrologyEventStreamPower(HydrologicalModel):
     instantaneous flow rate at the beginning and end of event. This method
     assumes erosion is negligible during the interevent periods.
     HydrologyEventStreamPower is meant to be passed to
-    StochasticRechargeStreamPower, where erosion rate is calcualted.
+    StochasticRechargeStreamPower, where erosion rate is calculated.
 
     An additional field, surface_water_area_norm__discharge is calculated
     by dividing the effective discharge by the square root of the drainage area.
     This accounts for how channel width varies with the square root of area.
+    When combined with FastscapeEroder with m=1 and n=1, this produces erosion
+    with the form E = Q* sqrt(A) S, where Q*=Q/(pA).
 
     Parameters
     -----
     grid: landlab grid
     precip_generator: instantiated PrecipitationDistribution
     groundwater_model: instantiated GroundwaterDupuitPercolator
+    flow_director: an instance of a FlowDirector component. Should be either
+        FlowDirectorD8, or FlowDirectorSteepest. A class instantiated independently
+        from a FlowAccumulator is required because flow directions are not
+        updated every time flow accumulation is updated.
+    flow_accumulator: an instance of a FlowAccumulator component.
+    lake_mapper: an instance of LakeMapperBarnes, used to fill and route flow
+        across depressions.
 
     """
 
@@ -488,9 +541,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
     def run_step(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
-        is from event period only.
+        Run hydrological model for series of event-interevent pairs, calculate
+        flow rates at end of events and interevents over total_hydrological_time.
+        Effective flow rates are calculated during event periods only.
+
+        Update groundwater state, routes and accumulates flow, update
+        surface_water_effective__discharge and surface_water_area_norm__discharge.
         """
 
         #generate new precip time series
@@ -534,9 +590,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
     def run_step_record_state(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
-        is from event period only.
+        Run hydrological model for series of event-interevent pairs, calculate
+        flow rates at end of events and interevents over total_hydrological_time.
+        Effective flow rates are calculated during event periods only.
+
+        Update groundwater state, routes and accumulates flow, update
+        surface_water_effective__discharge and surface_water_area_norm__discharge.
 
         track the state of the model:
             time: (s)
@@ -608,6 +667,32 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
 
 class HydrologySteadyStreamPower(HydrologicalModel):
+    """"
+    Run hydrological model for steady recharge provided to the
+    GroundwaterDupuitPercolator. HydrologySteadyStreamPower is meant to be
+    passed to the StreamPowerModel, where erosion rate is calculated.
+
+    An additional field, surface_water_area_norm__discharge is calculated
+    by dividing the effective discharge by the square root of the drainage area.
+    This accounts for how channel width varies with the square root of area.
+    When combined with FastscapeEroder with m=1 and n=1, this produces erosion
+    with the form E = Q* sqrt(A) S, where Q*=Q/(pA).
+
+    Parameters
+    -----
+    grid: landlab grid
+    precip_generator: instantiated PrecipitationDistribution
+    groundwater_model: instantiated GroundwaterDupuitPercolator
+    flow_director: an instance of a FlowDirector component. Should be either
+        FlowDirectorD8, or FlowDirectorSteepest. A class instantiated independently
+        from a FlowAccumulator is required because flow directions are not
+        updated every time flow accumulation is updated.
+    flow_accumulator: an instance of a FlowAccumulator component.
+    lake_mapper: an instance of LakeMapperBarnes, used to fill and route flow
+        across depressions.
+
+    """
+
 
     def __init__(
         self,
@@ -633,8 +718,9 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
     def run_step(self):
         """
-        Run steady model one step. Update groundwater state, route and accumulate flow,
-        updating surface_water__discharge.
+        Run steady model one step. Update groundwater state, route and
+        accumulate flow, updating surface_water__discharge and
+        surface_water_area_norm__discharge.
         """
 
         #run gw model

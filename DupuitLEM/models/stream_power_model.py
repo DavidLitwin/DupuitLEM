@@ -117,7 +117,7 @@ class StreamPowerModel:
                 self.calc_rate_of_change = lambda elev, elev0, dtm, N: np.percentile(abs(elev-elev0),c)/(N*dtm)
 
             else:
-                print('stopping condition method %s is not supported'%stopping_cond['how'])
+                raise ValueError('stopping condition method %s is not supported'%stopping_cond['how'])
         else:
             self.stop_cond = False
 
