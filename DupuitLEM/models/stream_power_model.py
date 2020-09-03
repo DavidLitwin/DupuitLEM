@@ -180,7 +180,7 @@ class StreamPowerModel:
                 if i % self.output_interval == 0 or i==max(range(N)):
 
                     # save the specified grid fields
-                    self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
+                    self._gw_flux[:] = self.hm._gdp.calc_gw_flux_at_node()
                     filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'
                     write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
 

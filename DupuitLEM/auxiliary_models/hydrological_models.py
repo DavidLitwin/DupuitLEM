@@ -3,6 +3,8 @@ Hydrological models for DupuitLEM.
 
 Models based on the shear stress forumulation:
     HydrologyEventShearStress, HydrologySteadyShearStress
+    --------
+    Notes:
     Designed for use with ShearStressModel class. Calculate hydrological state
     and fluvial erosion rate.
     Warning: shear stress models here calculate erosion with an explicit finite
@@ -11,6 +13,8 @@ Models based on the shear stress forumulation:
 
 Models based on streampower forumulation:
     HydrologyEventStreamPower, HydrologySteadyStreamPower
+    --------
+    Notes:
     Designed for use with StreamPowerModel class. Calculate hydrological state
     and update fields that are used by FastscapeEroder in the StreamPowerModel
     to calculate erosion rates.
