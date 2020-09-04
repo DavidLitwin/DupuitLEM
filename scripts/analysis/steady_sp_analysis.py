@@ -168,9 +168,10 @@ hand[:] = mg.at_node["height_above_drainage__elevation"].copy()
 df_output['mean_hand'] = np.mean(hand[mg.core_nodes])
 
 ######## Calculate drainage density
-dd = DrainageDensity(mg, channel__mask=np.uint8(network))
-channel_mask = mg.at_node['channel__mask']
-df_output['drainage_density'] = dd.calculate_drainage_density()
+if isinstance(mg, RasterModelGrid):
+    dd = DrainageDensity(mg, channel__mask=np.uint8(network))
+    channel_mask = mg.at_node['channel__mask']
+    df_output['drainage_density'] = dd.calculate_drainage_density()
 
 ######## Topogrpahic index
 TI = mg.add_zeros('node', 'topographic__index')
