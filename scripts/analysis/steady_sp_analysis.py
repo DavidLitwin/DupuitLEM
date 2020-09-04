@@ -13,10 +13,11 @@ import pandas as pd
 from landlab import imshow_grid
 from landlab.io.netcdf import to_netcdf, from_netcdf
 
-from landlab import RasterModelGrid, LinkStatus
+from landlab import RasterModelGrid, HexModelGrid, LinkStatus
 from landlab.components import (
     GroundwaterDupuitPercolator,
     FlowDirectorD8,
+    FlowDirectorSteepest,
     FlowAccumulator,
     LakeMapperBarnes,
     HeightAboveDrainageCalculator,
@@ -35,14 +36,14 @@ files = sorted(grid_files, key=lambda x:float(sub("\D", "", x[25:-3])))
 path = files[-1]
 iteration = int(sub("\D", "", path[25:-3]))
 
-grid = from_netcdf(path)
-elev = grid.at_node['topographic__elevation']
-base = grid.at_node['aquifer_base__elevation']
-wt = grid.at_node['water_table__elevation']
+mg = from_netcdf(path)
+elev = mg.at_node['topographic__elevation']
+base = mg.at_node['aquifer_base__elevation']
+wt = mg.at_node['water_table__elevation']
 
 # elevation
 plt.figure(figsize=(8,6))
-imshow_grid(grid,elev, cmap='gist_earth', colorbar_label = 'Elevation [m]', grid_units=('m','m'))
+imshow_grid(mg, elev, cmap='gist_earth', colorbar_label='Elevation [m]', grid_units=('m','m'))
 plt.title('ID %d, Iteration %d'%(ID,iteration))
 plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
 plt.close()
@@ -61,17 +62,15 @@ n = df_params['n'][ID] # drainable porosity [-]
 b = df_params['b'][ID] # characteristic depth  [m]
 Th = df_params['Th'][ID] # hydrological timestep
 
-#initialize grid
-dx = grid.dx
-mg = RasterModelGrid(grid.shape, xy_spacing=dx)
-mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
-                              left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
-z = mg.add_zeros('node', 'topographic__elevation')
-z[:] = elev
-zb = mg.add_zeros('node', 'aquifer_base__elevation')
-zb[:] = base
-zwt = mg.add_zeros('node', 'water_table__elevation')
-zwt[:] = wt
+# initialize components
+if isinstance(mg, RasterModelGrid):
+    method = 'D8'
+    fd = FlowDirectorD8(mg)
+elif isinstance(mg, HexModelGrid):
+    method = 'Steepest'
+    fd = FlowDirectorSteepest(mg)
+else:
+    raise TypeError("grid should be Raster or Hex")
 
 gdp = GroundwaterDupuitPercolator(mg,
           porosity=n,
@@ -81,12 +80,11 @@ gdp = GroundwaterDupuitPercolator(mg,
           courant_coefficient=0.9,
           vn_coefficient = 0.9,
 )
-fd = FlowDirectorD8(mg)
 fa = FlowAccumulator(mg,
 				        surface='topographic__elevation',
 						flow_director=fd,
 						runoff_rate='average_surface_water__specific_discharge')
-lmb = LakeMapperBarnes(mg, method='D8', fill_flat=False,
+lmb = LakeMapperBarnes(mg, method=method, fill_flat=False,
 						  surface='topographic__elevation',
 						  fill_surface='topographic__elevation',
 						  redirect_flow_steepest_descent=False,
@@ -127,7 +125,7 @@ Qstar = mg.add_zeros('node', 'qstar')
 Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
 
 #find number of saturated cells
-Q_nodes = Q > 1e-6
+Q_nodes = Q > p*mg.cell_area_at_node
 
 #set fields
 network = mg.add_zeros('node', 'channel_mask')
@@ -139,17 +137,27 @@ A = mg.at_node['drainage_area']
 curvature = mg.add_zeros('node', 'curvature')
 steepness = mg.add_zeros('node', 'steepness')
 
-#slope is the absolute value of D8 gradient associated with flow direction. Same as FastscapeEroder.
-#curvature is divergence of gradient. Same as LinearDiffuser.
-dzdx_D8 = mg.calc_grad_at_d8(elev)
-dzdx_D4 = mg.calc_grad_at_link(elev)
-dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
-S[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
+if isinstance(mg, RasterModelGrid):
+    #slope is the absolute value of D8 gradient associated with flow direction. Same as FastscapeEroder.
+    #curvature is divergence of gradient. Same as LinearDiffuser.
+    dzdx_D8 = mg.calc_grad_at_d8(elev)
+    dzdx_D4 = mg.calc_grad_at_link(elev)
+    dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
+    S[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
 
-curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
-steepness[:] = np.sqrt(A)*S
+    curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
+    steepness[:] = np.sqrt(A)*S
+elif isinstance(mg, HexModelGrid):
+    #slope is max of the absolute value of gradient.
+    #curvature is divergence of gradient. Same as LinearDiffuser.
+    dzdx_D6 = mg.calc_grad_at_link(elev)
+    dzdx_D6[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
+    S[:] = abs(dzdx_D6[mg.at_node['flow__link_to_receiver_node']])
 
-
+    curvature[:] = mg.calc_flux_div_at_node(dzdx_D6)
+    steepness[:] = np.sqrt(A)*S
+else:
+    raise TypeError("grid should be Raster or Hex")
 
 ######## Calculate HAND
 hand = mg.add_zeros('node', 'hand')
