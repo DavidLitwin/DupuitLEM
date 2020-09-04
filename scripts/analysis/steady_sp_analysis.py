@@ -147,6 +147,8 @@ if isinstance(mg, RasterModelGrid):
 
     curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
     steepness[:] = np.sqrt(A)*S
+    
+    width = mg.dx
 elif isinstance(mg, HexModelGrid):
     #slope is max of the absolute value of gradient.
     #curvature is divergence of gradient. Same as LinearDiffuser.
@@ -156,6 +158,8 @@ elif isinstance(mg, HexModelGrid):
 
     curvature[:] = mg.calc_flux_div_at_node(dzdx_D6)
     steepness[:] = np.sqrt(A)*S
+    
+    width = mg.spacing
 else:
     raise TypeError("grid should be Raster or Hex")
 
@@ -176,7 +180,7 @@ if isinstance(mg, RasterModelGrid):
 ######## Topogrpahic index
 TI = mg.add_zeros('node', 'topographic__index')
 S = mg.calc_slope_at_node(elev)
-TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
+TI[:] = mg.at_node['drainage_area']/(S*width)
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),5))
