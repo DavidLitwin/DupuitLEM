@@ -77,8 +77,8 @@ gdp = GroundwaterDupuitPercolator(mg,
           hydraulic_conductivity=Ks,
           regularization_f=0.01,
           recharge_rate=p,
-          courant_coefficient=0.9,
-          vn_coefficient = 0.9,
+          courant_coefficient=0.01*Ks/1e-5,
+          vn_coefficient = 0.01*Ks/1e-5,
 )
 fa = FlowAccumulator(mg,
 				        surface='topographic__elevation',
@@ -147,7 +147,7 @@ if isinstance(mg, RasterModelGrid):
 
     curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
     steepness[:] = np.sqrt(A)*S
-    
+
     width = mg.dx
 elif isinstance(mg, HexModelGrid):
     #slope is max of the absolute value of gradient.
@@ -158,7 +158,7 @@ elif isinstance(mg, HexModelGrid):
 
     curvature[:] = mg.calc_flux_div_at_node(dzdx_D6)
     steepness[:] = np.sqrt(A)*S
-    
+
     width = mg.spacing
 else:
     raise TypeError("grid should be Raster or Hex")
