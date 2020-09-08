@@ -75,8 +75,8 @@ gdp = GroundwaterDupuitPercolator(mg,
           hydraulic_conductivity=Ks,
           regularization_f=0.01,
           recharge_rate=p,
-          courant_coefficient=0.9,
-          vn_coefficient = 0.9,
+          courant_coefficient=0.01*Ks/1e-5,
+          vn_coefficient = 0.01*Ks/1e-5,
 )
 
 hm = HydrologySteadyStreamPower(
