@@ -182,17 +182,17 @@ Q_all = hm.Q_all[30:,:]
 Q_nodes = Q_all > 1e-10
 count_Q_nodes = np.sum(Q_nodes,axis=1)
 #find channel network with min, max, and median number of contributing cells
-min_network_id = np.where(count_Q_nodes == min(count_Q_nodes))[0][0]
-max_network_id = np.where(count_Q_nodes == max(count_Q_nodes))[0][0]
-med_network_id = np.where(count_Q_nodes == np.median(count_Q_nodes))[0][0]
+# min_network_id = np.where(count_Q_nodes == min(count_Q_nodes))[0][0]
+# max_network_id = np.where(count_Q_nodes == max(count_Q_nodes))[0][0]
+# med_network_id = np.where(count_Q_nodes == np.median(count_Q_nodes))[0][0]
 
 #set fields
 min_network = mg.add_zeros('node', 'channel_mask_min')
 max_network = mg.add_zeros('node', 'channel_mask_max')
 med_network = mg.add_zeros('node', 'channel_mask_med')
-min_network[:] = Q_nodes[min_network_id,:]
-max_network[:] = Q_nodes[max_network_id,:]
-med_network[:] = Q_nodes[med_network_id,:]
+# min_network[:] = Q_nodes[min_network_id,:]
+# max_network[:] = Q_nodes[max_network_id,:]
+# med_network[:] = Q_nodes[med_network_id,:]
 
 ##### steepness and curvature
 S = mg.add_zeros('node', 'slope')
@@ -295,33 +295,33 @@ hand_min = mg.add_zeros('node', 'hand_min')
 hand_max = mg.add_zeros('node', 'hand_max')
 hand_med = mg.add_zeros('node', 'hand_med')
 
-hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
-
-hd.run_one_step()
-hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
-
-hd.channel_mask = max_network
-hd.run_one_step()
-hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
-
-hd.channel_mask = med_network
-hd.run_one_step()
-hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
+# hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
+#
+# hd.run_one_step()
+# hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
+# df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
+#
+# hd.channel_mask = max_network
+# hd.run_one_step()
+# hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
+# df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
+#
+# hd.channel_mask = med_network
+# hd.run_one_step()
+# hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
+# df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
 
 ######## Calculate drainage density
 
-dd = DrainageDensity(mg, channel__mask=np.uint8(min_network))
-channel_mask = mg.at_node['channel__mask']
-df_output['dd_min'] = dd.calculate_drainage_density()
-
-# channel_mask[:] = np.uint8(max_network)
-# df_output['dd_max'] = dd.calculate_drainage_density()
-
-channel_mask[:] = np.uint8(med_network)
-df_output['dd_med'] = dd.calculate_drainage_density()
+# dd = DrainageDensity(mg, channel__mask=np.uint8(min_network))
+# channel_mask = mg.at_node['channel__mask']
+# df_output['dd_min'] = dd.calculate_drainage_density()
+#
+# # channel_mask[:] = np.uint8(max_network)
+# # df_output['dd_max'] = dd.calculate_drainage_density()
+#
+# channel_mask[:] = np.uint8(med_network)
+# df_output['dd_med'] = dd.calculate_drainage_density()
 
 ####### calculate topographic index
 TI = mg.add_zeros('node', 'topographic__index')
