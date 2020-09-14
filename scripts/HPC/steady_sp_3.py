@@ -5,7 +5,7 @@ This script uses dimensionless parameters based on Theodoratos method of
 nondimensionalizing the governing landscape evolution equation. Vary lambda
 and gamma.
 
-\[lambda] == (p K D)/(ks U^2),
+\[lambda] == (ks U^2)/(p K D),
 \[Gamma] == (ks b U)/(p D),
 
 Date: 1 Sept 2020
@@ -34,10 +34,10 @@ ID = int(task_id)
 
 #dim equations
 def b_fun(U, K, gam, lam):
-    return (U*gam*lam)/K
+    return (U*gam)/(K*lam)
 
 def ksat_fun(D, U, p, K, lam):
-    return (D*p*K)/(U**2*lam)
+    return (D*p*K*lam)/(U**2)
 
 #generate dimensioned parameters
 def generate_parameters(D, U, K, p, n, gam, lam):
@@ -48,8 +48,8 @@ def generate_parameters(D, U, K, p, n, gam, lam):
     return K, D, U, ksat, p, b, n, gam, lam
 
 #parameters
-lam_all = np.geomspace(0.2,2,5)
-gam_all = np.geomspace(0.5,5,5)
+lam_all = np.geomspace(0.5, 5, 5)
+gam_all = np.geomspace(0.5, 5, 5)
 lg = 15
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
@@ -57,7 +57,7 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 800 # total duration in units of tg [-]
+Tg_nd = 1200 # total duration in units of tg [-]
 dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
@@ -105,7 +105,7 @@ output["output_fields"] = [
         "aquifer_base__elevation",
         "water_table__elevation",
         ]
-output["base_output_path"] = './data/steady_sp_2_'
+output["base_output_path"] = './data/steady_sp_3_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
@@ -129,8 +129,8 @@ gdp = GroundwaterDupuitPercolator(grid,
         hydraulic_conductivity=ksat,
         regularization_f=0.01,
         recharge_rate=p,
-        courant_coefficient=0.9,
-        vn_coefficient = 0.9,
+        courant_coefficient=0.1,
+        vn_coefficient = 0.1,
 )
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
