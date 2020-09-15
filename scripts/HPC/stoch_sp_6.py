@@ -2,9 +2,8 @@
 Stochastic recharge + constant thickness + StreamPowerModel
 
 This script uses dimensionless parameters based on Theodoratos method of
-nondimensionalizing the governing landscape evolution equation. Vary alpha
-and rho for several different gamma-lambda combinations. The corresponding
-steady cases in gamma-lambda space are found in steady_sp_3.
+nondimensionalizing the governing landscape evolution equation. Vary beta
+and rho for several different gamma-lambda combinations.
 
 \[lambda] == (ks U^2)/(p K D),
 \[Gamma] == (ks b U)/(p Dm),
@@ -43,26 +42,26 @@ def b_fun(U, K, gam, lam):
 def ksat_fun(D, U, K, p, lam):
     return (D*K*p*lam)/(U**2)
 
-def ds_fun(U, K, n, alpha, gam, lam):
-    return (U*n*alpha*gam)/(K*lam)
+def ds_fun(U, K, n, beta, lam):
+    return (U*n*beta)/(K*lam)
 
-def tr_fun(U, K, p, n, alpha, gam, lam, rho):
-    return (U*n*alpha*gam*rho)/(K*p*lam)
+def tr_fun(U, K, p, n, beta, lam, rho):
+    return (U*n*beta*rho)/(K*p*lam)
 
-def tb_fun(U, K, p, n, alpha, gam, lam, rho):
-    return (U*n*alpha*gam)*(1-rho)/(K*p*lam)
+def tb_fun(U, K, p, n, beta, lam, rho):
+    return (U*n*beta)*(1-rho)/(K*p*lam)
 
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, p, n, alpha, gam, lam, rho):
+def generate_parameters(D, U, K, p, n, beta, gam, lam, rho):
 
     b = b_fun(U, K, gam, lam)
     ksat = ksat_fun(D, U, K, p, lam)
-    ds = ds_fun(U, K, n, alpha, gam, lam)
-    tr = tr_fun(U, K, p, n, alpha, gam, lam, rho)
-    tb = tb_fun(U, K, p, n, alpha, gam, lam, rho)
+    ds = ds_fun(U, K, n, beta, lam)
+    tr = tr_fun(U, K, p, n, beta, lam, rho)
+    tb = tb_fun(U, K, p, n, beta, lam, rho)
 
-    return K, D, U, ksat, p, b, ds, tr, tb, n, alpha, gam, lam, rho
+    return K, D, U, ksat, p, b, ds, tr, tb, n, beta, gam, lam, rho
 
 #parameters
 lam_all = np.geomspace(0.5, 5.0, 5)
@@ -71,12 +70,12 @@ lam_all_prod = np.array(list(product(lam_all, gam_all)))[:,0]
 gam_all_prod = np.array(list(product(lam_all, gam_all)))[:,1]
 lam_gam_id = np.array([0, 4, 12, 20, 24])
 
-alpha_all = np.array([0.01, 0.05, 0.1])
+beta_all = np.array([0.5, 1.0, 5.0])
 rho_all = np.array([0.01, 0.1, 0.5])
 
-alpha1 = np.array(list(product(alpha_all, rho_all, lam_gam_id)))[:,0]
-rho1 = np.array(list(product(alpha_all, rho_all, lam_gam_id)))[:,1]
-lam_gam_id1 = np.array(list(product(alpha_all, rho_all, lam_gam_id)), dtype=int)[:,2]
+beta1 = np.array(list(product(beta_all, rho_all, lam_gam_id)))[:,0]
+rho1 = np.array(list(product(beta_all, rho_all, lam_gam_id)))[:,1]
+lam_gam_id1 = np.array(list(product(beta_all, rho_all, lam_gam_id)), dtype=int)[:,2]
 lam1 = lam_all_prod[lam_gam_id1]
 gam1 = gam_all_prod[lam_gam_id1]
 
@@ -94,9 +93,10 @@ Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
 params = np.zeros((len(lam1),14))
 for i in range(len(lam1)):
 
-    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, alpha1[i], gam1[i], lam1[i], rho1[i])
+    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, beta1[i], gam1[i], lam1[i], rho1[i])
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'lam', 'rho'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'ds', 'tr', 'tb', 'n', 'beta', 'gam', 'lam', 'rho'])
+df_params['alpha'] = df_params['beta']/df_params['gam'] # dimensionless number alpha
 df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
 df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
 df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
@@ -134,7 +134,7 @@ output["output_fields"] = [
         "aquifer_base__elevation",
         "water_table__elevation",
         ]
-output["base_output_path"] = './data/stoch_sp_5_'
+output["base_output_path"] = './data/stoch_sp_6_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
