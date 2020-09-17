@@ -14,7 +14,7 @@ from scipy.interpolate import interp1d
 from statsmodels.stats.weightstats import DescrStatsW
 
 from landlab import imshow_grid, RasterModelGrid, LinkStatus
-from landlab.io.netcdf import read_netcdf, write_raster_netcdf
+from landlab.io.netcdf import to_netcdf, from_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -51,7 +51,7 @@ files = sorted(grid_files, key=lambda x:float(sub("\D", "", x[25:-3])))
 path = files[-1]
 iteration = int(sub("\D", "", path[25:-3]))
 
-grid = read_netcdf(path)
+grid = from_netcdf(path)
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
@@ -77,7 +77,7 @@ b = df_params['b'][ID] #characteristic depth  [m]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 365*24*3600 #total hydrological time [s]
+T_h = df_params['Th'][ID] #total hydrological time [s]
 
 #initialize grid
 dx = grid.dx
@@ -106,16 +106,23 @@ def write_SQ(grid, r, dt, file=f):
 
     file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
 
+#initialize components
+if isinstance(mg, RasterModelGrid):
+    method = 'D8'
+elif isinstance(mg, HexModelGrid):
+    method = 'Steepest'
+else:
+    raise TypeError("grid should be Raster or Hex")
+
 gdp = GroundwaterDupuitPercolator(mg,
                                   porosity=n,
                                   hydraulic_conductivity=Ks,
                                   regularization_f=0.01,
                                   recharge_rate=0.0,
-                                  courant_coefficient=0.1*Ks/1e-5,
-                                  vn_coefficient = 0.1*Ks/1e-5,
+                                  courant_coefficient=0.01*Ks/1e-5,
+                                  vn_coefficient = 0.01*Ks/1e-5,
                                   callback_fun = write_SQ,
                                   )
-
 pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
     mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
@@ -123,6 +130,7 @@ pdr.seed_generator(seedval=2)
 
 hm = HydrologyEventStreamPower(
         mg,
+        routing_method=method
         precip_generator=pdr,
         groundwater_model=gdp,
 )
@@ -182,17 +190,17 @@ Q_all = hm.Q_all[30:,:]
 Q_nodes = Q_all > 1e-10
 count_Q_nodes = np.sum(Q_nodes,axis=1)
 #find channel network with min, max, and median number of contributing cells
-# min_network_id = np.where(count_Q_nodes == min(count_Q_nodes))[0][0]
-# max_network_id = np.where(count_Q_nodes == max(count_Q_nodes))[0][0]
-# med_network_id = np.where(count_Q_nodes == np.median(count_Q_nodes))[0][0]
+min_network_id = np.where(count_Q_nodes == min(count_Q_nodes))[0][0]
+max_network_id = np.where(count_Q_nodes == max(count_Q_nodes))[0][0]
+med_network_id = np.where(count_Q_nodes == np.median(count_Q_nodes))[0][0]
 
 #set fields
 min_network = mg.add_zeros('node', 'channel_mask_min')
 max_network = mg.add_zeros('node', 'channel_mask_max')
 med_network = mg.add_zeros('node', 'channel_mask_med')
-# min_network[:] = Q_nodes[min_network_id,:]
-# max_network[:] = Q_nodes[max_network_id,:]
-# med_network[:] = Q_nodes[med_network_id,:]
+min_network[:] = Q_nodes[min_network_id,:]
+max_network[:] = Q_nodes[max_network_id,:]
+med_network[:] = Q_nodes[med_network_id,:]
 
 ##### steepness and curvature
 S = mg.add_zeros('node', 'slope')
@@ -295,33 +303,33 @@ hand_min = mg.add_zeros('node', 'hand_min')
 hand_max = mg.add_zeros('node', 'hand_max')
 hand_med = mg.add_zeros('node', 'hand_med')
 
-# hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
-#
-# hd.run_one_step()
-# hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
-# df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
-#
-# hd.channel_mask = max_network
-# hd.run_one_step()
-# hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
-# df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
-#
-# hd.channel_mask = med_network
-# hd.run_one_step()
-# hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
-# df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
+hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
+
+hd.run_one_step()
+hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
+df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
+
+hd.channel_mask = max_network
+hd.run_one_step()
+hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
+df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
+
+hd.channel_mask = med_network
+hd.run_one_step()
+hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
+df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
 
 ######## Calculate drainage density
 
-# dd = DrainageDensity(mg, channel__mask=np.uint8(min_network))
-# channel_mask = mg.at_node['channel__mask']
-# df_output['dd_min'] = dd.calculate_drainage_density()
-#
-# # channel_mask[:] = np.uint8(max_network)
-# # df_output['dd_max'] = dd.calculate_drainage_density()
-#
-# channel_mask[:] = np.uint8(med_network)
-# df_output['dd_med'] = dd.calculate_drainage_density()
+dd = DrainageDensity(mg, channel__mask=np.uint8(min_network))
+channel_mask = mg.at_node['channel__mask']
+df_output['dd_min'] = dd.calculate_drainage_density()
+
+# channel_mask[:] = np.uint8(max_network)
+# df_output['dd_max'] = dd.calculate_drainage_density()
+
+channel_mask[:] = np.uint8(med_network)
+df_output['dd_med'] = dd.calculate_drainage_density()
 
 ####### calculate topographic index
 TI = mg.add_zeros('node', 'topographic__index')
@@ -335,11 +343,11 @@ crit_twi[:] = TI >= twi_contour
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),5))
-grid = read_netcdf(files[0])
+grid = from_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 for i in range(1,len(files)):
 
-    grid = read_netcdf(files[i])
+    grid = from_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
 
     elev_diff = abs(elev-elev0)
@@ -356,26 +364,26 @@ df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 pe
 ####### save things
 
 output_fields = [
-        "topographic__elevation",
-        "aquifer_base__elevation",
-        'channel_mask_min',
-        'channel_mask_max',
-        'channel_mask_med',
-        'hand_min',
-        'hand_max',
-        'hand_med',
-        'topographic__index',
-        'TI_exceedence_contour',
-        'slope',
-        'drainage_area',
-        'curvature',
-        'steepness',
-        'sat_mean',
-        'sat_std',
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        'at_node:channel_mask_min',
+        'at_node:channel_mask_max',
+        'at_node:channel_mask_med',
+        'at_node:hand_min',
+        'at_node:hand_max',
+        'at_node:hand_med',
+        'at_node:topographic__index',
+        'at_node:TI_exceedence_contour',
+        'at_node:slope',
+        'at_node:drainage_area',
+        'at_node:curvature',
+        'at_node:steepness',
+        'at_node:sat_mean',
+        'at_node:sat_std',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
-write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
+to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))

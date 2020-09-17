@@ -3,10 +3,10 @@ from .hydrological_models import (
     HydrologyEventShearStress,
     HydrologySteadyShearStress,
     HydrologyEventStreamPower,
-    HydrologySteadyStreamPower
-    )
+    HydrologySteadyStreamPower,
+)
 from .regolith_models import (
     RegolithConstantThickness,
     RegolithExponentialProduction,
     RegolithConstantThicknessPerturbed,
-    )
+)
