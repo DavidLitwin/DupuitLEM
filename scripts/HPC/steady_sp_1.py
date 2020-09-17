@@ -85,11 +85,9 @@ n = df_params['n'][ID]
 output = {}
 output["output_interval"] = 1000
 output["output_fields"] = [
-        "topographic__elevation",
-        "aquifer_base__elevation",
-        "water_table__elevation",
-        "surface_water__discharge",
-        "groundwater__specific_discharge_node",
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        "at_node:water_table__elevation",
         ]
 output["base_output_path"] = './data/steady_sp_1_'
 output["run_id"] = ID #make this task_id if multiple runs

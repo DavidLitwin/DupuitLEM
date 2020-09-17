@@ -10,7 +10,6 @@ nondimensionalization introduced by Nikos Theodoratos. Using a hexagonal grid.
 
 import os
 import time
-import pickle
 import numpy as np
 
 from landlab import HexModelGrid
@@ -19,8 +18,7 @@ from landlab.components import (
     FlowAccumulator,
     FastscapeEroder,
     )
-from landlab.io.netcdf import write_raster_netcdf
-
+from landlab.io.netcdf import to_netcdf
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -75,8 +73,8 @@ for i in range(N):
 
     if i%output_interval==0:
         print('finished iteration %d'%i)
-        filename = base_path + '%d_grid_%d.p'%(ID,i)
-        pickle.dump(grid, open(filename, 'wb'))
+        filename = base_path + '%d_grid_%d.nc'%(ID,i)
+        to_netcdf(grid, filename, include="at_node:topographic__elevation")
 
         t = time.time()
         times[i//output_interval] = t-t1
