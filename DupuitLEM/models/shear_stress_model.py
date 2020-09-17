@@ -3,7 +3,6 @@ Author: David Litwin
 
 19 May 2020
 """
-import time
 import numpy as np
 
 from landlab.io.netcdf import to_netcdf
@@ -98,7 +97,6 @@ class ShearStressModel:
         N = self.N
         max_rel_change = np.zeros(N)
         perc90_rel_change = np.zeros(N)
-        num_pits = np.zeros(N)
 
         # Run model forward
         for i in range(N):

@@ -3,7 +3,6 @@ Author: David Litwin
 
 26 May 2020
 """
-import time
 import numpy as np
 import pandas as pd
 
@@ -125,7 +124,7 @@ class StreamPowerModel:
             else:
                 print(
                     "stopping condition method %s is not supported"
-                    % stopping_cond["how"]
+                    % steady_state_condition["how"]
                 )
         else:
             self.stop_cond = False
@@ -235,7 +234,7 @@ class StreamPowerModel:
                         )
 
                         if dzdt < self.stop_rate:
-                            verboseprint(
+                            self.verboseprint(
                                 "Stopping rate condition met, dzdt = %.4e" % dzdt
                             )
                             break

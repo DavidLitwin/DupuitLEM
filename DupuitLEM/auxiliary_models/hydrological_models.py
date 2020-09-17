@@ -220,12 +220,12 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
             tau2 = self.calc_shear_stress(self._grid)
 
             # calculate effective shear stress across event-interevent pair
-            self._tau[:] = calc_storm_eff_shear_stress(
+            self._tau[:] = self.calc_storm_eff_shear_stress(
                 tau0, tau1, tau2, self._tauc, self.storm_dts[i], self.interstorm_dts[i]
             )
 
             # calculate erosion rate, and then add time-weighted erosion rate to get effective erosion rate at the end of for loop
-            dzdt = calc_erosion_from_shear_stress(self._grid)
+            dzdt = self.calc_erosion_from_shear_stress(self._grid)
             self.dzdt += (self.storm_dts[i] + self.interstorm_dts[i]) / self.T_h * dzdt
 
 
