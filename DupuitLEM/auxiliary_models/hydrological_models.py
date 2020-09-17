@@ -1,8 +1,23 @@
 """
-Combined hydrological and fluvial erosion models for DupuitLEM. Take instantiated
-landlab components and functions indicating how the shear stress and erosion
-should be calculated from overland flow, and return an effective erosion rate
-over the hydrological model run time.
+Hydrological models for DupuitLEM.
+
+Models based on the shear stress forumulation:
+    HydrologyEventShearStress, HydrologySteadyShearStress
+    --------
+    Notes:
+    Designed for use with ShearStressModel class. Calculate hydrological state
+    and fluvial erosion rate.
+    Warning: shear stress models here calculate erosion with an explicit finite
+    difference scheme that can be unstable and poorly behaved when incised
+    channels approach baselevel. Recommended to not use these...
+Models based on streampower forumulation:
+    HydrologyEventStreamPower, HydrologySteadyStreamPower
+    --------
+    Notes:
+    Designed for use with StreamPowerModel class. Calculate hydrological state
+    and update fields that are used by FastscapeEroder in the StreamPowerModel
+    to calculate erosion rates.
+
 
 19 May 2020
 """
@@ -11,6 +26,7 @@ import numpy as np
 
 from landlab.components import (
     FlowDirectorD8,
+    FlowDirectorSteepest,
     FlowAccumulator,
     LakeMapperBarnes,
     DepressionFinderAndRouter,
@@ -23,16 +39,26 @@ class HydrologicalModel:
     Parameters
     -----
     grid: a landlab grid with GroundwaterDupuitPercolator already instantiated
+    routing_method: Either 'D8' or 'Steepest'. This is the routing method for the
+        FlowDirector component. 'Steepest' allows the use of non-raster grids.
 
     """
-    def __init__(self, grid):
+    def __init__(self, grid, routing_method):
 
         self._grid = grid
 
-        self.fd = FlowDirectorD8(self._grid)
-        self.fa = FlowAccumulator(self._grid, surface='topographic__elevation', flow_director=self.fd,  \
-                              runoff_rate='average_surface_water__specific_discharge')
-        self.lmb = LakeMapperBarnes(self._grid, method='D8', fill_flat=False,
+        if routing_method == 'D8':
+            self.fd = FlowDirectorD8(self._grid)
+        elif routing_method == 'Steepest':
+            self.fd = FlowDirectorSteepest(self._grid)
+        else:
+            raise ValueError("routing_method must be either D8 or Steepest.")
+
+        self.fa = FlowAccumulator(self._grid,
+                                    surface='topographic__elevation',
+                                    flow_director=self.fd,
+                                    runoff_rate='average_surface_water__specific_discharge')
+        self.lmb = LakeMapperBarnes(self._grid, method=routing_method, fill_flat=False,
                                       surface='topographic__elevation',
                                       fill_surface='topographic__elevation',
                                       redirect_flow_steepest_descent=False,
@@ -53,15 +79,17 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
     A trapezoidal integration method is used to find effective
     shear stress and erosion rate.
 
-    Note: This method may overestimate shear stress and erosion rate during the recession period.
+    Note: This method may overestimate shear stress and erosion rate during the
+    recession period.
 
     Parameters
     -----
     grid: landlab grid
     precip_generator: instantiated PrecipitationDistribution
     groundwater_model: instantiated GroundwaterDupuitPercolator
-    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
-    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
+    shear_stress_function: function that takes a grid with topography and
+        discharge and returns shear stress at node erosion_rate_function: function
+        that takes grid with topography and shear stress and returns erosion rate
     tauc: shear stress threshold for erosion
 
     """
@@ -69,13 +97,14 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
     def __init__(
         self,
         grid,
+        routing_method='D8',
         precip_generator=None,
         groundwater_model=None,
         shear_stress_function=None,
         erosion_rate_function=None,
         tauc = 0,
         ):
-        super().__init__(grid)
+        super().__init__(grid, routing_method)
 
         self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
         self.pd = precip_generator
@@ -140,8 +169,8 @@ class HydrologyIntegrateShearStress(HydrologicalModel):
     def run_step(self):
 
         """
-        Hydrological model for series of event-interevent pairs, calculate shear stresses
-        at end of event and interevent, calculate erosion rate.
+        Hydrological model for series of event-interevent pairs, calculate shear
+        stresses at end of event and interevent, calculate erosion rate.
         """
 
         #generate new precip time series
@@ -193,21 +222,24 @@ class HydrologyEventShearStress(HydrologicalModel):
     grid: landlab grid
     precip_generator: instantiated PrecipitationDistribution
     groundwater_model: instantiated GroundwaterDupuitPercolator
-    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
-    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
+    shear_stress_function: function that takes a grid with topography and
+        discharge and returns shear stress at node erosion_rate_function:
+        function that takes grid with topography and shear stress and returns
+        erosion rate
 
     """
 
     def __init__(
         self,
         grid,
+        routing_method='D8',
         precip_generator=None,
         groundwater_model=None,
         shear_stress_function=None,
         erosion_rate_function=None,
     ):
 
-        super().__init__(grid)
+        super().__init__(grid, routing_method)
 
         self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
         self.pd = precip_generator
@@ -233,9 +265,9 @@ class HydrologyEventShearStress(HydrologicalModel):
 
     def run_step(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
-        is from event period only.
+        Run hydrological model for series of event-interevent pairs, calculate
+        shear stresses and calculate effective erosion rate over the
+        total_hydrological_time. Erosion rate is from event period only.
         """
 
         #generate new precip time series
@@ -280,8 +312,9 @@ class HydrologyEventShearStress(HydrologicalModel):
 
     def run_step_record_state(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time
+        Run hydrological model for series of event-interevent pairs, calculate
+        shear stresses and calculate effective erosion rate over the
+        total_hydrological_time
 
         track the state of the model:
             time: (s)
@@ -365,20 +398,23 @@ class HydrologySteadyShearStress(HydrologicalModel):
     -----
     grid: landlab grid
     groundwater_model: instantiated GroundwaterDupuitPercolator
-    shear_stress_function: function that takes a grid with topography and discharge and returns shear stress at node
-    erosion_rate_function: function that takes grid with topography and shear stress and returns erosion rate
+    shear_stress_function: function that takes a grid with topography and
+        discharge and returns shear stress at node
+    erosion_rate_function: function that takes grid with topography and shear
+        stress and returns erosion rate
 
     """
 
     def __init__(
         self,
         grid,
+        routing_method='D8',
         groundwater_model=None,
         shear_stress_function=None,
         erosion_rate_function=None,
         hydrological_timestep = 1e5
         ):
-        super().__init__(grid)
+        super().__init__(grid, routing_method)
 
         self._tau = self._grid.add_zeros("node","surface_water__shear_stress")
         self.gdp = groundwater_model
@@ -415,11 +451,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
     instantaneous flow rate at the beginning and end of event. This method
     assumes erosion is negligible during the interevent periods.
     HydrologyEventStreamPower is meant to be passed to
-    StochasticRechargeStreamPower, where erosion rate is calcualted.
-
+    StochasticRechargeStreamPower, where erosion rate is calculated.
     An additional field, surface_water_area_norm__discharge is calculated
     by dividing the effective discharge by the square root of the drainage area.
     This accounts for how channel width varies with the square root of area.
+    When combined with FastscapeEroder with m=1 and n=1, this produces erosion
+    with the form E = Q* sqrt(A) S, where Q*=Q/(pA).
 
     Parameters
     -----
@@ -432,11 +469,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
     def __init__(
         self,
         grid,
+        routing_method='D8',
         precip_generator=None,
         groundwater_model=None,
     ):
 
-        super().__init__(grid)
+        super().__init__(grid, routing_method)
 
         self.q_eff = self._grid.add_zeros("node","surface_water_effective__discharge")
         self.q_an = self._grid.add_zeros("node","surface_water_area_norm__discharge")
@@ -462,9 +500,11 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
     def run_step(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
-        is from event period only.
+        Run hydrological model for series of event-interevent pairs, calculate
+        flow rates at end of events and interevents over total_hydrological_time.
+        Effective flow rates are calculated during event periods only.
+        Update groundwater state, routes and accumulates flow, update
+        surface_water_effective__discharge and surface_water_area_norm__discharge.
         """
 
         #generate new precip time series
@@ -508,9 +548,11 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
     def run_step_record_state(self):
         """"
-        Run hydrological model for series of event-interevent pairs, calculate shear stresses
-        and calculate effective erosion rate over the total_hydrological_time. Erosion rate
-        is from event period only.
+        Run hydrological model for series of event-interevent pairs, calculate
+        flow rates at end of events and interevents over total_hydrological_time.
+        Effective flow rates are calculated during event periods only.
+        Update groundwater state, routes and accumulates flow, update
+        surface_water_effective__discharge and surface_water_area_norm__discharge.
 
         track the state of the model:
             time: (s)
@@ -582,14 +624,31 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
 
 class HydrologySteadyStreamPower(HydrologicalModel):
+    """"
+    Run hydrological model for steady recharge provided to the
+    GroundwaterDupuitPercolator. HydrologySteadyStreamPower is meant to be
+    passed to the StreamPowerModel, where erosion rate is calculated.
+    An additional field, surface_water_area_norm__discharge is calculated
+    by dividing the effective discharge by the square root of the drainage area.
+    This accounts for how channel width varies with the square root of area.
+    When combined with FastscapeEroder with m=1 and n=1, this produces erosion
+    with the form E = Q* sqrt(A) S, where Q*=Q/(pA).
+
+    Parameters
+    -----
+    grid: landlab grid
+    precip_generator: instantiated PrecipitationDistribution
+    groundwater_model: instantiated GroundwaterDupuitPercolator
+    """
 
     def __init__(
         self,
         grid,
+        routing_method='D8',
         groundwater_model=None,
         hydrological_timestep=1e5,
         ):
-        super().__init__(grid)
+        super().__init__(grid, routing_method)
 
         self.gdp = groundwater_model
         self.T_h = hydrological_timestep
@@ -600,8 +659,8 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
     def run_step(self):
         """
-        Run steady model one step. Update groundwater state, route and accumulate flow,
-        updating surface_water__discharge.
+        Run steady model one step. Update groundwater state, route and
+        accumulate flow, updating surface_water__discharge.
         """
 
         #run gw model

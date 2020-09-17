@@ -6,7 +6,7 @@ Author: David Litwin
 import time
 import numpy as np
 
-from landlab.io.netcdf import write_raster_netcdf
+from landlab.io.netcdf import to_netcdf
 
 
 class ShearStressModel:
@@ -105,7 +105,7 @@ class ShearStressModel:
                     self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
 
                     filename = self.base_path + str(self.id) + '_grid_' + str(i) + '.nc'
-                    write_raster_netcdf(filename, self._grid, names = self.output_fields, format="NETCDF4")
+                    to_netcdf(self._grid, filename, include=self.output_fields, format="NETCDF4")
                     print('Completed loop %d' % i)
 
                     filename = self.base_path + str(self.id) + '_max_rel_change' + '.txt'
