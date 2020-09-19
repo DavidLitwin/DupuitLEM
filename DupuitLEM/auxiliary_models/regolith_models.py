@@ -13,6 +13,7 @@ class RegolithModel:
 
         self._elev = grid.at_node["topographic__elevation"]
         self._base = grid.at_node["aquifer_base__elevation"]
+        self._wt = grid.at_node["water_table__elevation"]
         self._cores = grid.core_nodes
 
     def run_step(self):
@@ -40,10 +41,15 @@ class RegolithConstantThickness(RegolithModel):
 
     def run_step(self, dt_m):
 
+        # aquifer storage, assume porosity constant
+        h = self._wt - self._base
+
         # uplift and regolith production
         self._elev[self._cores] += self.U * dt_m
         self._base[self._cores] = self._elev[self._cores] - self.d_eq
 
+        # update water table
+        self._wt[:] = self._base + h
 
 class RegolithConstantThicknessPerturbed(RegolithModel):
     """
@@ -74,11 +80,17 @@ class RegolithConstantThicknessPerturbed(RegolithModel):
 
     def run_step(self, dt_m):
 
+        # aquifer storage, assume porosity constant
+        h = self._wt - self._base
+
         # uplift and regolith production
         self._elev[self._cores] += self.U * dt_m + self.std * self.r.randn(
             len(self._cores)
         )
         self._base[self._cores] = self._elev[self._cores] - self.d_eq
+
+        # update water table
+        self._wt[:] = self._base + h
 
 
 class RegolithExponentialProduction(RegolithModel):
@@ -110,11 +122,14 @@ class RegolithExponentialProduction(RegolithModel):
 
     def run_step(self, dt_m):
 
+        # aquifer storage, assume porosity constant
+        h = self._wt - self._base
+        b0 = self._elev - self._base
+
         # uplift and regolith production
         self._elev[self._cores] += self.U * dt_m
-        self._base[self._cores] += (
-            self.U * dt_m
-            - self.w0
-            * np.exp(-(self._elev[self._cores] - self._base[self._cores]) / self.d_s)
-            * dt_m
-        )
+        self._base[self._cores] = self._elev[self._cores] - self.d_s*np.log((self.d_s*np.exp(b0[self._cores]/self.d_s) + dt_m*self.w0) / self.d_s)
+
+
+        # update water table
+        self._wt[:] = self._base + h
