@@ -19,12 +19,8 @@ def test_steady_sp_raster():
     """
 
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
-    mg.set_status_at_node_on_edges(
-        right=mg.BC_NODE_IS_CLOSED,
-        top=mg.BC_NODE_IS_CLOSED,
-        left=mg.BC_NODE_IS_CLOSED,
-        bottom=mg.BC_NODE_IS_FIXED_VALUE,
-    )
+    mg.status_at_node[mg.status_at_node == 1] = 4
+    mg.status_at_node[0] = 1
     mg.add_ones("node", "topographic__elevation")
     mg.add_zeros("node", "aquifer_base__elevation")
     mg.add_ones("node", "water_table__elevation")
@@ -151,7 +147,7 @@ def test_stoch_sp_raster_record_state():
     """
     Initialize HydrologyEventStreamPower on a raster grid.
     Use several storm-interstorm pairs and make sure state recorded
-    as expected. 
+    as expected.
     """
 
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
