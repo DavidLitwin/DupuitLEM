@@ -631,18 +631,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.time = np.zeros(2 * len(self.storm_dts) + 1)
         self.intensity = np.zeros(2 * len(self.storm_dts) + 1)
         # all discharge
-        self.Q_all = np.zeros(
-            (2 * len(self.storm_dts) + 1, len(self.q_eff))
-        )
+        self.Q_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
         # water table elevation
-        self.wt_all = np.zeros(
-            (2 * len(self.storm_dts) + 1, len(self.q_eff))
-        )
-        self.wt_all[0,:] = self._grid.at_node["water_table__elevation"].copy()
+        self.wt_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
         # all surface water specific discharge
-        self.qs_all = np.zeros(
-            (2 * len(self.storm_dts) + 1, len(self.q_eff))
-        )
+        self.qs_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0

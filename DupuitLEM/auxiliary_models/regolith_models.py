@@ -1,5 +1,5 @@
 """
-Models to update regolith state - topographic__elevation and aquifer_base__elevation
+Models to update regolith state: topographic__elevation and aquifer_base__elevation
 given uplift and regolith production.
 
 19 May 2020
@@ -50,6 +50,7 @@ class RegolithConstantThickness(RegolithModel):
 
         # update water table
         self._wt[:] = self._base + h
+
 
 class RegolithConstantThicknessPerturbed(RegolithModel):
     """
@@ -122,14 +123,14 @@ class RegolithExponentialProduction(RegolithModel):
 
     def run_step(self, dt_m):
 
-        # aquifer storage, assume porosity constant
-        h = self._wt - self._base
-        b0 = self._elev - self._base
+        h = self._wt - self._base  # aquifer storage, assume const n
+        b0 = self._elev - self._base  # current thickness
 
-        # uplift and regolith production
+        # uplift and regolith prod, using analytical sol for new thickness
         self._elev[self._cores] += self.U * dt_m
-        self._base[self._cores] = self._elev[self._cores] - self.d_s*np.log((self.d_s*np.exp(b0[self._cores]/self.d_s) + dt_m*self.w0) / self.d_s)
-
+        self._base[self._cores] = self._elev[self._cores] - self.d_s * np.log(
+            (self.d_s * np.exp(b0[self._cores] / self.d_s) + dt_m * self.w0) / self.d_s
+        )
 
         # update water table
         self._wt[:] = self._base + h
