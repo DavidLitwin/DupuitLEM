@@ -55,12 +55,6 @@ Th = df_params['Th'][ID] # hydrological timestep
 
 
 ############### Run hydrological model to determine Q
-if isinstance(mg, RasterModelGrid):
-    method = 'D8'
-elif isinstance(mg, HexModelGrid):
-    method = 'Steepest'
-else:
-    raise TypeError("grid should be Raster or Hex")
 
 gdp = GroundwaterDupuitPercolator(mg,
           porosity=n,
@@ -74,7 +68,6 @@ gdp = GroundwaterDupuitPercolator(mg,
 hm = HydrologySteadyStreamPower(
         mg,
         groundwater_model=gdp,
-        routing_method=method,
         hydrological_timestep=Th,
 )
 
