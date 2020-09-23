@@ -71,7 +71,7 @@ class StreamPowerModel:
                 stop_at_rate: float. the critical rate of elevation change [m/yr]
                 how: string. Either 'mean' (find the mean elevation change rate)
                     or 'percentile' (find the corresponding percentile of change)
-                value: float. if 'how' is 'percentile', this is the chosen percentile.
+                percentile_value: float. if 'how' is 'percentile', this is the chosen percentile.
 
         """
 
@@ -116,7 +116,7 @@ class StreamPowerModel:
                 ) / (N * dtm)
 
             elif steady_state_condition["how"] == "percentile":
-                c = steady_state_condition["value"]
+                c = steady_state_condition["percentile_value"]
                 self.calc_rate_of_change = lambda elev, elev0, dtm, N: np.percentile(
                     abs(elev - elev0), c
                 ) / (N * dtm)
@@ -201,7 +201,7 @@ class StreamPowerModel:
 
                     # save the specified grid fields
                     self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
-                    filename = self.base_path + str(self.id) + "_grid_" + str(i) + ".nc"
+                    filename = self.base_path + '%d_grid_%d.nc'%(self.id,i)
                     to_netcdf(
                         self._grid,
                         filename,
@@ -214,19 +214,13 @@ class StreamPowerModel:
                         data=z_change,
                         columns=["max_abs", "90_abs", "50_abs", "mean_abs", "mean"],
                     )
-                    filename = self.base_path + str(self.id) + "_elev_change.csv"
+                    filename = self.base_path + "%d_elev_change.csv"%self.id
                     df_ouput.to_csv(filename, index=False, float_format="%.3e")
 
                     # check stopping condition
                     if self.stop_cond and i > 0:
 
-                        filename0 = (
-                            self.base_path
-                            + str(self.id)
-                            + "_grid_"
-                            + str(i - self.output_interval)
-                            + ".nc"
-                        )
+                        filename0 = self.base_path + '%d_grid_%d.nc'%(self.id,i-self.output_interval)
                         grid0 = from_netcdf(filename0)
                         elev0 = grid0.at_node["topographic__elevation"]
                         dzdt = self.calc_rate_of_change(

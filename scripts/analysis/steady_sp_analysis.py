@@ -78,7 +78,7 @@ gdp = GroundwaterDupuitPercolator(mg,
 hm = HydrologySteadyStreamPower(
         mg,
         groundwater_model=gdp,
-        routing_method=method
+        routing_method=method,
         hydrological_timestep=Th,
 )
 
