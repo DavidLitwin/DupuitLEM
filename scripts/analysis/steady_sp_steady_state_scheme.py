@@ -129,20 +129,21 @@ for i in range(N):
         filename = './data/ssrun_%d_grid_%d.nc'%(ID,i)
         write_raster_netcdf(filename, mg, names="topographic__elevation", format="NETCDF4")
 
-        # open previous saved file, find max rate of change
-        filename0 = './data/ssrun_%d_grid_%d.nc'%(ID,i-output_interval)
-        grid0 = read_netcdf(filename0)
-        elev0 = grid0.at_node["topographic__elevation"]
-        dzdt = calc_rate_of_change(
-            elev, elev0, dt, output_interval
-        )
-
-        # stop if rate is met
-        if dzdt/U < stop_rate:
-            print(
-                "Stopping rate condition met, dzdt = %.4e" % dzdt
+        if i > 0:
+            # open previous saved file, find max rate of change
+            filename0 = './data/ssrun_%d_grid_%d.nc'%(ID,i-output_interval)
+            grid0 = read_netcdf(filename0)
+            elev0 = grid0.at_node["topographic__elevation"]
+            dzdt = calc_rate_of_change(
+                elev, elev0, dt, output_interval
             )
-            break
+
+            # stop if rate is met
+            if dzdt/U < stop_rate:
+                print(
+                    "Stopping rate condition met, dzdt = %.4e" % dzdt
+                )
+                break
 
 
     if dzdt/U >= stop_rate:
