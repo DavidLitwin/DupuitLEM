@@ -31,6 +31,11 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = os.environ['BASE_OUTPUT_FOLDER']
 
+try:
+    os.mkdir('./steady_state')
+    os.mkdir('./postrun')
+except:
+    print('Directories already exist')
 
 # Load parameters and last grid file from steady sp
 df_params = pickle.load(open('./parameters.p','rb'))
@@ -126,12 +131,12 @@ for i in range(N):
         print('finished iteration %d'%i)
 
         # save output at specified interval
-        filename = './data/ssrun_%d_grid_%d.nc'%(ID,i)
+        filename = './data/steady_state/%d_grid_%d.nc'%(ID,i)
         write_raster_netcdf(filename, mg, names="topographic__elevation", format="NETCDF4")
 
         if i > 0:
             # open previous saved file, find max rate of change
-            filename0 = './data/ssrun_%d_grid_%d.nc'%(ID,i-output_interval)
+            filename0 = './data/steady_state/%d_grid_%d.nc'%(ID,i-output_interval)
             grid0 = read_netcdf(filename0)
             elev0 = grid0.at_node["topographic__elevation"]
             dzdt = calc_rate_of_change(
@@ -163,7 +168,7 @@ output["output_fields"] = [
         "aquifer_base__elevation",
         "water_table__elevation",
         ]
-output["base_output_path"] = './data/postrun_'
+output["base_output_path"] = './data/postrun/%s'%base_path[0:12]
 output["run_id"] = ID #make this task_id if multiple runs
 
 postrun_ss_cond = {}
