@@ -161,7 +161,7 @@ dtm = MSF*hm.T_h
 Tg = N*dtm
 
 output = {}
-output["output_interval"] = 1000
+output["output_interval"] = 500
 output["output_fields"] = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
