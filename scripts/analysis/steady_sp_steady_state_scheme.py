@@ -32,8 +32,8 @@ ID = int(task_id)
 base_path = os.environ['BASE_OUTPUT_FOLDER']
 
 try:
-    os.mkdir('.data/steady_state')
-    os.mkdir('.data/postrun')
+    os.mkdir('./data/steady_state')
+    os.mkdir('./data/postrun')
 except:
     print('Directories already exist')
 
