@@ -77,7 +77,7 @@ b = df_params['b'][ID] #characteristic depth  [m]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 365*24*3600 #total hydrological time [s]
+T_h = 100*(df_params['tr'][ID]+df_params['tb'][ID]) #total hydrological time [s]
 
 #initialize grid
 dx = grid.dx
