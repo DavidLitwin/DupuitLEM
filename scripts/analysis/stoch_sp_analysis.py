@@ -342,7 +342,7 @@ crit_twi[:] = TI >= twi_contour
 
 
 ####### calculate elevation change
-z_change = np.zeros((len(files),5))
+z_change = np.zeros((len(files),6))
 grid = from_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 for i in range(1,len(files)):
@@ -355,11 +355,12 @@ for i in range(1,len(files)):
     z_change[i,1] = np.percentile(elev_diff,90)
     z_change[i,2] = np.percentile(elev_diff,50)
     z_change[i,3] = np.percentile(elev_diff,10)
-    z_change[i,4] = np.mean(elev_diff)
+    z_change[i,4] = np.min(elev_diff)
+    z_change[i,5] = np.mean(elev_diff)
 
     elev0 = elev.copy()
 
-df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'mean'])
+df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
 
 ####### save things
 
