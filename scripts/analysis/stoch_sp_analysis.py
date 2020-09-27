@@ -269,7 +269,7 @@ except:
 
 df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
 df_qstar['max'] = np.where(Q_max==max(Q_max))[0][0]
-df_qstar['max'] = np.where(Q_max==min(Q_max))[0][0]
+df_qstar['min'] = np.where(Q_max==min(Q_max))[0][0]
 
 # this is the mean of all Q leaving during storm events and interevents
 Qmass_all = (Q_all.T * dt).T
@@ -304,32 +304,36 @@ hand_max = mg.add_zeros('node', 'hand_max')
 hand_med = mg.add_zeros('node', 'hand_med')
 
 hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
+try:
+    hd.run_one_step()
+    hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
+    df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
 
-hd.run_one_step()
-hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
+    hd.channel_mask = max_network
+    hd.run_one_step()
+    hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
+    df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
 
-hd.channel_mask = max_network
-hd.run_one_step()
-hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
-
-hd.channel_mask = med_network
-hd.run_one_step()
-hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
+    hd.channel_mask = med_network
+    hd.run_one_step()
+    hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
+    df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
+except:
+    print('failed to calculate HAND')
 
 ######## Calculate drainage density
-
 dd = DrainageDensity(mg, channel__mask=np.uint8(min_network))
-channel_mask = mg.at_node['channel__mask']
-df_output['dd_min'] = dd.calculate_drainage_density()
+try:
+    channel_mask = mg.at_node['channel__mask']
+    df_output['dd_min'] = dd.calculate_drainage_density()
 
-# channel_mask[:] = np.uint8(max_network)
-# df_output['dd_max'] = dd.calculate_drainage_density()
+    channel_mask[:] = np.uint8(max_network)
+    df_output['dd_max'] = dd.calculate_drainage_density()
 
-channel_mask[:] = np.uint8(med_network)
-df_output['dd_med'] = dd.calculate_drainage_density()
+    channel_mask[:] = np.uint8(med_network)
+    df_output['dd_med'] = dd.calculate_drainage_density()
+except:
+    print('failed to find drainage density')
 
 ####### calculate topographic index
 TI = mg.add_zeros('node', 'topographic__index')
