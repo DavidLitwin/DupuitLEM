@@ -77,7 +77,7 @@ b = df_params['b'][ID] #characteristic depth  [m]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 100*(df_params['tr'][ID]+df_params['tb'][ID]) #total hydrological time [s]
+T_h = 10*df_params['Th'][ID] #total hydrological time [s]
 
 #initialize grid
 dx = grid.dx
@@ -175,25 +175,6 @@ except:
     print("error fitting recession")
     df_output['rec_a_linear'] = 0.0
 
-##### channel network
-Q_all = hm.Q_all[30:,:]
-
-#find number of saturated cells
-Q_nodes = Q_all > 1e-10
-count_Q_nodes = np.sum(Q_nodes,axis=1)
-# find channel network with min, max, and median number of contributing cells
-min_network_id = np.where(count_Q_nodes == min(count_Q_nodes))[0][0]
-max_network_id = np.where(count_Q_nodes == max(count_Q_nodes))[0][0]
-med_network_id = np.where(count_Q_nodes == np.median(count_Q_nodes))[0][0]
-
-#set fields
-min_network = mg.add_zeros('node', 'channel_mask_min')
-max_network = mg.add_zeros('node', 'channel_mask_max')
-med_network = mg.add_zeros('node', 'channel_mask_med')
-min_network[:] = Q_nodes[min_network_id,:]
-max_network[:] = Q_nodes[max_network_id,:]
-med_network[:] = Q_nodes[med_network_id,:]
-
 ##### steepness and curvature
 S = mg.add_zeros('node', 'slope')
 A = mg.at_node['drainage_area']
@@ -240,90 +221,89 @@ p_tot = np.sum(df['dt']*df['i'])
 df_output['BFI'] = qb_tot/qs_tot #baseflow index
 df_output['RR'] = qe_tot/p_tot #runoff ratio
 
-#quantiles of Q*
-#these are maps of Q* when the max discharge is at percs percentile.
-# Quantiles and the mean are time-weighted.
-# Future: use DescrStatsW
+###### spatial runoff related quantities
+
+# effective Qstar
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
-intensity = hm.intensity
-Q_max = np.max(Q_all,axis=1)
-percs = [90,50,10]
-
-Q_star_percs = np.zeros((Q_all.shape[1],len(percs)))
-try:
-    for i in range(len(percs)):
-        index = np.where(Q_max==weighted_percentile(Q_max, percs[i], weights=dt))[0][0]
-        Q_star_percs[:,i] = Q_all[index,:]/(mg.at_node['drainage_area']*df_params['p'][ID])
-except:
-    print('could not fit percentiles')
-    Q_star_percs[:] = np.nan
-
-df_qstar = pd.DataFrame(data=Q_star_percs, columns=percs)
-df_qstar['max'] = np.where(Q_max==max(Q_max))[0][0]
-df_qstar['min'] = np.where(Q_max==min(Q_max))[0][0]
-
-# this is the mean of all Q leaving during storm events and interevents
-Qmass_all = (Q_all.T * dt).T
-df_qstar['mean'] = (np.sum(Qmass_all,axis=0)/np.sum(dt))/(mg.at_node['drainage_area']*df_params['p'][ID])
+intensity = hm.intensity[:-1]
+qstar_mean = mg.add_zeros('node', 'qstar_mean_no_interevent')
 
 # mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
 Q_event_sum = np.zeros(Q_all.shape[1])
 for i in range(1,len(Q_all)):
     if intensity[i] > 0.0:
         Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-df_qstar['mean no interevent'] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*df_params['p'][ID])
-df_qstar.fillna(value=0,inplace=True)
+qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*df_params['p'][ID])
+qstar_mean[np.isnan(qstar_mean)] = 0.0
 
-# mean and variance of saturtation
+# mean and variance of water table
 wt_all = hm.wt_all[1:,:]
 base_all = np.ones(wt_all.shape)*mg.at_node['aquifer_base__elevation']
 elev_all = np.ones(wt_all.shape)*mg.at_node['topographic__elevation']
-sat_all = np.zeros(wt_all.shape)
-sat_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
-sat_mean = mg.add_zeros('node', 'sat_mean')
-sat_std = mg.add_zeros('node', 'sat_std')
+wtrel_all = np.zeros(wt_all.shape)
+wtrel_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
+wtrel_mean = mg.add_zeros('node', 'wtrel_mean')
+wtrel_std = mg.add_zeros('node', 'wtrel_std')
 
-for i in range(len(sat_mean)):
-    ws = DescrStatsW(sat_all[:,i], weights=dt, ddof=0)
-    sat_mean[i] = ws.mean
-    sat_std[i] = ws.std
+for i in range(len(wtrel_mean)):
+    ws = DescrStatsW(wtrel_all[:,i], weights=dt, ddof=0)
+    wtrel_mean[i] = ws.mean
+    wtrel_std[i] = ws.std
+
+# water table and saturation at end of storm and interstorm
+sat_all = (Q_all > 1e-10)
+wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
+wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
+sat_end_interstorm = mg.add_zeros('node', 'sat_mean_end_interstorm')
+sat_end_storm = mg.add_zeros('node', 'sat_mean_end_storm')
+
+wtrel_end_storm[:] = np.mean(wtrel_all[intensity>0,:], axis=0)
+wtrel_end_interstorm[:] = np.mean(wtrel_all[intensity==0.0,:], axis=0)
+sat_end_storm[:] = np.mean(sat_all[intensity>0,:], axis=0)
+sat_end_interstorm[:] = np.mean(sat_all[intensity==0.0,:], axis=0)
+
+##### channel network
+#find number of saturated cells
+count_sat_nodes = np.sum(sat_all,axis=1)
+# find median channel network at end of storm and end of interstorm
+interstorm_network_id = np.where(count_sat_nodes == np.median(count_sat_nodes[intensity==0]))[0][0]
+storm_network_id = np.where(count_sat_nodes == np.median(count_sat_nodes[intensity>0]))[0][0]
+
+#set fields
+storm_network = mg.add_zeros('node', 'channel_mask_storm')
+interstorm_network = mg.add_zeros('node', 'channel_mask_interstorm')
+storm_network[:] = sat_all[storm_network_id,:]
+interstorm_network[:] = sat_all[interstorm_network_id,:]
 
 
 ######## Calculate HAND
-hand_min = mg.add_zeros('node', 'hand_min')
-hand_max = mg.add_zeros('node', 'hand_max')
-hand_med = mg.add_zeros('node', 'hand_med')
+hand_storm = mg.add_zeros('node', 'hand_storm')
+hand_interstorm = mg.add_zeros('node', 'hand_interstorm')
 
-hd = HeightAboveDrainageCalculator(mg, channel_mask=min_network)
+hd = HeightAboveDrainageCalculator(mg, channel_mask=storm_network)
 try:
     hd.run_one_step()
-    hand_min[:] = mg.at_node["height_above_drainage__elevation"].copy()
-    df_output['mean_hand_min'] = np.mean(hand_min[mg.core_nodes])
+    hand_storm[:] = mg.at_node["height_above_drainage__elevation"].copy()
+    df_output['mean_hand_storm'] = np.mean(hand_storm[mg.core_nodes])
 
-    hd.channel_mask = max_network
+    hd.channel_mask = interstorm_network
     hd.run_one_step()
-    hand_max[:] = mg.at_node["height_above_drainage__elevation"].copy()
-    df_output['mean_hand_max'] = np.mean(hand_max[mg.core_nodes])
+    hand_interstorm[:] = mg.at_node["height_above_drainage__elevation"].copy()
+    df_output['mean_hand_interstorm'] = np.mean(hand_interstorm[mg.core_nodes])
 
-    hd.channel_mask = med_network
-    hd.run_one_step()
-    hand_med[:] = mg.at_node["height_above_drainage__elevation"].copy()
-    df_output['mean_hand_med'] = np.mean(hand_med[mg.core_nodes])
 except:
     print('failed to calculate HAND')
 
 ######## Calculate drainage density
-dd = DrainageDensity(mg, channel__mask=np.uint8(min_network))
+dd = DrainageDensity(mg, channel__mask=np.uint8(storm_network))
 try:
     channel_mask = mg.at_node['channel__mask']
-    df_output['dd_min'] = dd.calculate_drainage_density()
+    df_output['dd_storm'] = dd.calculate_drainage_density()
 
-    channel_mask[:] = np.uint8(max_network)
-    df_output['dd_max'] = dd.calculate_drainage_density()
+    channel_mask[:] = np.uint8(interstorm_network)
+    df_output['dd_interstorm'] = dd.calculate_drainage_density()
 
-    channel_mask[:] = np.uint8(med_network)
-    df_output['dd_med'] = dd.calculate_drainage_density()
 except:
     print('failed to calculate drainage density')
 
@@ -331,11 +311,6 @@ except:
 TI = mg.add_zeros('node', 'topographic__index')
 S = mg.calc_slope_at_node(elev)
 TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
-
-crit_twi = mg.add_zeros('node', 'TI_exceedence_contour')
-twi_contour = df_params['ksat'][ID]/(df_output['rec_a_linear']*df_params['n'][ID])
-crit_twi[:] = TI >= twi_contour
-
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),6))
@@ -363,20 +338,22 @@ df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 pe
 output_fields = [
         "topographic__elevation",
         "aquifer_base__elevation",
-        'channel_mask_min',
-        'channel_mask_max',
-        'channel_mask_med',
-        'hand_min',
-        'hand_max',
-        'hand_med',
+        'channel_mask_storm',
+        'channel_mask_interstorm',
+        'hand_storm',
+        'hand_interstorm',
         'topographic__index',
-        'TI_exceedence_contour',
         'slope',
         'drainage_area',
         'curvature',
         'steepness',
-        'sat_mean',
-        'sat_std',
+        'wtrel_mean',
+        'wtrel_std',
+        'qstar_mean_no_interevent',
+        'wtrel_mean_end_interstorm',
+        'wtrel_mean_end_storm',
+        'sat_mean_end_interstorm',
+        'sat_mean_end_storm',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
@@ -384,5 +361,4 @@ write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
 
 pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
-pickle.dump(df_qstar, open('../post_proc/%s/q_star_ID_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
