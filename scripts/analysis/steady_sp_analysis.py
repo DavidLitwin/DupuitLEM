@@ -44,7 +44,6 @@ plt.title('ID %d, Iteration %d'%(ID,iteration))
 plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
 plt.close()
 
-
 ########## Run hydrological model
 df_params = pickle.load(open('./parameters.p','rb'))
 df_params['hg'] = df_params['U']/df_params['K']
@@ -87,15 +86,6 @@ hm = HydrologySteadyStreamPower(
 
 #run model
 hm.run_step()
-# N = int(5e3) # max number of timesteps to take
-# wt_max_change = np.zeros(N)
-# for i in range(N):
-#     zwt_0 = zwt.copy()
-#     hm.run_step()
-#     wt_max_change = max(abs(zwt_0-zwt)/Th)
-
-    # if wt_max_change < 1e-14:
-    #     break
 
 ##########  Analysis
 
@@ -110,7 +100,7 @@ Qstar = mg.add_zeros('node', 'qstar')
 Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
 
 #find number of saturated cells
-Q_nodes = Q > 1e-6
+Q_nodes = Q > 1e-10
 
 #set fields
 network = mg.add_zeros('node', 'channel_mask')
@@ -132,8 +122,6 @@ S[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
 curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
 steepness[:] = np.sqrt(A)*S
 
-
-
 ######## Calculate HAND
 hand = mg.add_zeros('node', 'hand')
 hd = HeightAboveDrainageCalculator(mg, channel_mask=network)
@@ -153,7 +141,7 @@ S = mg.calc_slope_at_node(elev)
 TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
 
 ####### calculate elevation change
-z_change = np.zeros((len(files),5))
+z_change = np.zeros((len(files),6))
 grid = read_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 for i in range(1,len(files)):
@@ -166,11 +154,12 @@ for i in range(1,len(files)):
     z_change[i,1] = np.percentile(elev_diff,90)
     z_change[i,2] = np.percentile(elev_diff,50)
     z_change[i,3] = np.percentile(elev_diff,10)
-    z_change[i,4] = np.mean(elev_diff)
+    z_change[i,4] = np.min(elev_diff)
+    z_change[i,5] = np.mean(elev_diff)
 
     elev0 = elev.copy()
 
-df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'mean'])
+df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
 
 ####### save things
 
