@@ -150,9 +150,8 @@ for i in range(N):
                 )
                 break
 
-
-    if dzdt/U >= stop_rate:
-        print("stopping rate not met, dzdt = %.4e" % dzdt)
+if dzdt/U >= stop_rate:
+    print("stopping rate not met, dzdt = %.4e" % dzdt)
 
 
 ########## Run full steady sp model again and check rate of change after 2k cycles
