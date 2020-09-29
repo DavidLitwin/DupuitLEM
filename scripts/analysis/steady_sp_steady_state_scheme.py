@@ -33,9 +33,12 @@ base_path = os.environ['BASE_OUTPUT_FOLDER']
 
 try:
     os.mkdir('./data/steady_state')
+except:
+    print('steady_state dir already exists')
+try:
     os.mkdir('./data/postrun')
 except:
-    print('Directories already exist')
+    print('steady_state dir already exists')
 
 # Load parameters and last grid file from steady sp
 df_params = pickle.load(open('./parameters.p','rb'))
