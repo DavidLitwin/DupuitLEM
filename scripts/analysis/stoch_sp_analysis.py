@@ -267,8 +267,8 @@ sat_end_interstorm[:] = np.mean(sat_all[intensity==0.0,:], axis=0)
 #find number of saturated cells
 count_sat_nodes = np.sum(sat_all,axis=1)
 # find median channel network at end of storm and end of interstorm
-interstorm_network_id = np.where(count_sat_nodes == np.median(count_sat_nodes[intensity==0]))[0][0]
-storm_network_id = np.where(count_sat_nodes == np.median(count_sat_nodes[intensity>0]))[0][0]
+interstorm_network_id = np.where(count_sat_nodes == np.percentile(count_sat_nodes[intensity==0], 50, interpolation='nearest'))[0][0]
+storm_network_id = np.where(count_sat_nodes == np.percentile(count_sat_nodes[intensity>0], 50, interpolation='nearest'))[0][0]
 
 #set fields
 storm_network = mg.add_zeros('node', 'channel_mask_storm')
