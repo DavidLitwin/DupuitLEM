@@ -257,11 +257,15 @@ wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
 sat_end_interstorm = mg.add_zeros('node', 'sat_mean_end_interstorm')
 sat_end_storm = mg.add_zeros('node', 'sat_mean_end_storm')
+Q_end_interstorm = mg.add_zeros('node', 'Q_mean_end_interstorm')
+Q_end_storm = mg.add_zeros('node', 'Q_mean_end_storm')
 
 wtrel_end_storm[:] = np.mean(wtrel_all[intensity>0,:], axis=0)
 wtrel_end_interstorm[:] = np.mean(wtrel_all[intensity==0.0,:], axis=0)
 sat_end_storm[:] = np.mean(sat_all[intensity>0,:], axis=0)
 sat_end_interstorm[:] = np.mean(sat_all[intensity==0.0,:], axis=0)
+Q_end_storm[:] = np.mean(Q_all[intensity>0,:], axis=0)
+Q_end_interstorm[:] = np.mean(Q_all[intensity==0.0,:], axis=0)
 
 ##### channel network
 #find number of saturated cells
@@ -354,6 +358,8 @@ output_fields = [
         'wtrel_mean_end_storm',
         'sat_mean_end_interstorm',
         'sat_mean_end_storm',
+        'Q_mean_end_interstorm',
+        'Q_mean_end_storm',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
