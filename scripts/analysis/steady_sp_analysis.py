@@ -27,10 +27,10 @@ base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
-files = sorted(grid_files, key=lambda x:float(sub("\D", "", x[25:-3])))
+files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 
 path = files[-1]
-iteration = int(sub("\D", "", path[25:-3]))
+iteration = int(path.split('_')[-1][:-3])
 
 grid = read_netcdf(path)
 elev = grid.at_node['topographic__elevation']

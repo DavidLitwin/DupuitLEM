@@ -45,9 +45,9 @@ except:
 df_params = pickle.load(open('./parameters.p','rb'))
 
 grid_files = glob.glob('./data/*.nc')
-files = sorted(grid_files, key=lambda x:float(sub("\D", "", x[25:-3])))
+files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 path = files[-1]
-iteration = int(sub("\D", "", path[25:-3]))
+iteration = int(path.split('_')[-1][:-3])
 mg = read_netcdf(path) # write_raster_netcdf and read_netcdf do not preserve boundary condtions
 mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
                               left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
