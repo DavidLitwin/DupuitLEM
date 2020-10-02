@@ -44,12 +44,8 @@ T_h = 5*df_params['Th'][paramID] #total hydrological time [s]
 
 ########## Load and basic plot
 path = './grid_%d.nc'%gridID
-
 grid = read_netcdf(path)
 elev = grid.at_node['topographic__elevation']
-base = grid.at_node['aquifer_base__elevation']
-wtrel = grid.at_node['wtrel_mean_end_interstorm']
-wt = base + wtrel*(elev-base)
 
 ########## Run hydrological model
 
@@ -61,9 +57,9 @@ mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLO
 z = mg.add_zeros('node', 'topographic__elevation')
 z[:] = elev
 zb = mg.add_zeros('node', 'aquifer_base__elevation')
-zb[:] = base
+zb[:] = elev - b
 zwt = mg.add_zeros('node', 'water_table__elevation')
-zwt[:] = wt
+zwt[:] = elev
 
 gdp = GroundwaterDupuitPercolator(mg,
                                   porosity=n,
