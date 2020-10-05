@@ -47,7 +47,7 @@ for i in range(1,len(files)):
     if i%100==0:
 
         plt.figure(figsize=(8,6))
-        imshow_grid(grid,np.log10((elev_diff/dt)/df_params['U'][ID]), limits=(1e-10, 1), cmap='plasma', colorbar_label = 'log10(dzdt/U)', grid_units=('m','m'))
+        imshow_grid(grid,np.log10((elev_diff/dt)/df_params['U'][ID]), limits=(-10, 0), cmap='plasma', colorbar_label = 'log10(dzdt/U)', grid_units=('m','m'))
         plt.title('ID %d, Iteration %d'%(ID,i))
         plt.savefig('../post_proc/%s/elev_change_%d_%d.png'%(base_output_path, ID, i))
         plt.close()
