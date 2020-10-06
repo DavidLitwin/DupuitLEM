@@ -9,7 +9,6 @@ import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from landlab import imshow_grid
 from landlab.io.netcdf import read_netcdf
 from matplotlib.colors import LightSource
 from matplotlib.colors import Normalize
@@ -49,21 +48,30 @@ for i in range(1,len(files)):
 
     if i%100==0:
 
+        field = np.log10((elev_diff/dt)/df_params['U'][ID])
+        y = np.arange(grid.shape[0] + 1) * grid.dy - grid.dy * 0.5
+        x = np.arange(grid.shape[1] + 1) * grid.dx - grid.dx * 0.5
+        
         plt.figure(figsize=(8,6))
-        imshow_grid(grid,np.log10((elev_diff/dt)/df_params['U'][ID]), limits=(-10, 0), cmap='plasma', colorbar_label = 'log10(dzdt/U)', grid_units=('m','m'))
+        im = plt.imshow(field.reshape(grid.shape).T, 
+                         origin="lower", 
+                         extent=(x[0], x[-1], y[0], y[-1]), 
+                         cmap='plasma',
+                         vmin=-10,
+                         vmax=0.0,
+                         )
+        plt.colorbar(im, label='log10(dzdt/U)')
         plt.title('ID %d, Iteration %d'%(ID,i))
         plt.savefig('../post_proc/%s/elev_change_%d_%d.png'%(base_output_path, ID, i))
         plt.close()
 
-        y = np.arange(grid.shape[0] + 1) * grid.dy - grid.dy * 0.5
-        x = np.arange(grid.shape[1] + 1) * grid.dx - grid.dx * 0.5
+
         cmap = plt.get_cmap('plasma')
-        field = np.log10((elev_diff/dt)/df_params['U'][ID])
         fig = plt.figure()
         sm = ScalarMappable(cmap=cmap, norm=Normalize(vmin=-10, vmax=1.0))
-        rgb = sm.to_rgba(field.reshape(grid.shape).T, alpha=0.5)
+        rgb = sm.to_rgba(field.reshape(grid.shape).T, alpha=0.7)
         ls = LightSource(azdeg=135, altdeg=45)
-        sr = ls.shade_rgb(rgb, elev.reshape(grid.shape).T, blend_mode='hsv', vert_exag=3, dx=grid.dx, dy=grid.dy)
+        sr = ls.shade_rgb(rgb, elev.reshape(grid.shape).T, blend_mode='hsv', vert_exag=1.2, dx=grid.dx, dy=grid.dy)
         plt.imshow(sr, origin="lower", extent=(x[0], x[-1], y[0], y[-1]),)
         cbar = fig.colorbar(sm, label='log10(dzdt/U)')
         # cbar.solids.set_edgecolor("face")
