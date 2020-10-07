@@ -28,8 +28,10 @@ dt = dt_nd*df_params['tg'][ID]
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),7))
+tot_relief = np.zeros(len(files))
 grid = read_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
+tot_relief[0] = np.sum(elev0)
 for i in range(1,len(files)):
 
     grid = read_netcdf(files[i])
@@ -46,16 +48,18 @@ for i in range(1,len(files)):
 
     elev0 = elev.copy()
 
+    tot_relief[i] = np.sum(elev)
+
     if i%100==0:
 
         field = np.log10((elev_diff/dt)/df_params['U'][ID])
         y = np.arange(grid.shape[0] + 1) * grid.dy - grid.dy * 0.5
         x = np.arange(grid.shape[1] + 1) * grid.dx - grid.dx * 0.5
-        
+
         plt.figure(figsize=(8,6))
-        im = plt.imshow(field.reshape(grid.shape).T, 
-                         origin="lower", 
-                         extent=(x[0], x[-1], y[0], y[-1]), 
+        im = plt.imshow(field.reshape(grid.shape).T,
+                         origin="lower",
+                         extent=(x[0], x[-1], y[0], y[-1]),
                          cmap='plasma',
                          vmin=-10,
                          vmax=0.0,
@@ -102,4 +106,12 @@ plt.yscale('log')
 plt.legend()
 plt.tight_layout()
 plt.savefig('../post_proc/%s/elev_change_ss_%d.png'%(base_output_path, ID), dpi=300)
+plt.close()
+
+plt.figure()
+plt.plot(t,tot_relief[1:])
+plt.xlabel('$t/t_g$ [yr]')
+plt.ylabel('sum(z) [m/yr]')
+plt.tight_layout()
+plt.savefig('../post_proc/%s/tot_relief_%d.png'%(base_output_path, ID), dpi=300)
 plt.close()
