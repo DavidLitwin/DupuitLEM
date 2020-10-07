@@ -90,10 +90,10 @@ K = df_params['K'][ID]
 Ksp = K/p # if discharge field is (Q/sqrt(A)) streampower coeff is K/p
 D = df_params['D'][ID]
 U = df_params['U'][ID]
-T = 1e4*(1/K) # total time in units of tg = 1/K
-dt = 5e-3*(1/K) # timestep in units of tg = 1/K
+T = 100*(1/K) # total time in units of tg = 1/K
+dt = 1e-3*(1/K) # timestep in units of tg = 1/K
 N = int(T//dt)
-output_interval = 1000
+output_interval = 1
 stop_rate = 1e-3 # max(dzdt)/U rate when we say steady state reached
 
 # initialize model components
