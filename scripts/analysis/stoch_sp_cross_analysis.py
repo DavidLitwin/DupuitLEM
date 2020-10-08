@@ -3,18 +3,15 @@ Analysis of results on HPC for stochastic stream power model runs.
 """
 
 import os
-import glob
 import pickle
-from re import sub
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from itertools import product
 from scipy.optimize import curve_fit
-from scipy.interpolate import interp1d
 from statsmodels.stats.weightstats import DescrStatsW
 
-from landlab import imshow_grid, RasterModelGrid, LinkStatus
-from landlab.io.netcdf import to_netcdf, from_netcdf
+from landlab import RasterModelGrid, LinkStatus
+from landlab.io.netcdf import read_netcdf, from_netcdf, to_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -23,62 +20,37 @@ from landlab.components import (
     )
 from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
 
-def weighted_percentile(data, percents, weights=None, interpolation="nearest"):
-    ''' percents in units of 1%
-        weights specifies the frequency (count) of data.
-
-        This is a generalization of the solution provided by
-        Kambrian and Max Ghenis here:
-        https://stackoverflow.com/a/31539746
-    '''
-    if weights is None:
-        return np.percentile(data, percents)
-    ind=np.argsort(data)
-    d=data[ind]
-    w=weights[ind]
-    p=1.*w.cumsum()/w.sum()*100
-    f=interp1d(p, d, kind=interpolation)
-    return f(percents)
-
+########## runID, parameterID, gridID
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
-ID = int(task_id)
-base_output_path = os.environ['BASE_OUTPUT_FOLDER']
+runID = int(task_id)
+gridIDs = [0,1,2,9,10,11,36,37,38,45,46,47]
+paramIDs = [0,1,2,9,10,11,36,37,38,45,46,47]
+
+gridIDs1 = np.array(list(product(gridIDs, paramIDs)))[:,0]
+paramIDs1 = np.array(list(product(gridIDs, paramIDs)))[:,1]
+
+gridID = gridIDs1[runID]
+paramID = paramIDs1[runID]
+
+########### Parameters
+df_params = pickle.load(open('./parameters.p','rb'))
+Ks = df_params['ksat'][paramID] #hydraulic conductivity [m/s]
+n = df_params['n'][paramID] #drainable porosity [-]
+b = df_params['b'][paramID] #characteristic depth  [m]
+tr = df_params['tr'][paramID] #mean storm duration [s]
+tb = df_params['tb'][paramID] #mean interstorm duration [s]
+ds = df_params['ds'][paramID] #mean storm depth [m]
+T_h = 5*df_params['Th'][paramID] #total hydrological time [s]
 
 ########## Load and basic plot
-grid_files = glob.glob('./data/*.nc')
-files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-iteration = int(path.split('_')[-1][:-3])
-
+path = './grid_%d.nc'%gridID
 try:
     grid = from_netcdf(files[-1])
 except KeyError:
     grid = read_netcdf(files[-1])
 elev = grid.at_node['topographic__elevation']
-base = grid.at_node['aquifer_base__elevation']
-wt = grid.at_node['water_table__elevation']
-
-# elevation
-plt.figure(figsize=(8,6))
-imshow_grid(grid, elev, cmap='gist_earth', colorbar_label='Elevation [m]', grid_units=('m','m'))
-plt.title('ID %d, Iteration %d'%(ID,iteration))
-plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
-plt.close()
-
 
 ########## Run hydrological model
-df_params = pickle.load(open('./parameters.p','rb'))
-df_params['hg'] = df_params['U']/df_params['K']
-df_params['lg'] = np.sqrt(df_params['D']/df_params['K'])
-df_params['tg'] = 1/df_params['K']
-pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
-
-Ks = df_params['ksat'][ID] #hydraulic conductivity [m/s]
-n = df_params['n'][ID] #drainable porosity [-]
-b = df_params['b'][ID] #characteristic depth  [m]
-tr = df_params['tr'][ID] #mean storm duration [s]
-tb = df_params['tb'][ID] #mean interstorm duration [s]
-ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 10*df_params['Th'][ID] #total hydrological time [s]
 
 #initialize grid
 dx = grid.dx
@@ -88,11 +60,36 @@ mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLO
 z = mg.add_zeros('node', 'topographic__elevation')
 z[:] = elev
 zb = mg.add_zeros('node', 'aquifer_base__elevation')
-zb[:] = base
+zb[:] = elev - b
 zwt = mg.add_zeros('node', 'water_table__elevation')
-zwt[:] = wt
+zwt[:] = elev
 
-f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
+gdp = GroundwaterDupuitPercolator(mg,
+                                  porosity=n,
+                                  hydraulic_conductivity=Ks,
+                                  regularization_f=0.01,
+                                  recharge_rate=0.0,
+                                  courant_coefficient=0.1*Ks/1e-5,
+                                  vn_coefficient = 0.1*Ks/1e-5,
+                                  )
+
+pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
+    mean_interstorm_duration=tb, mean_storm_depth=ds,
+    total_t=T_h)
+pdr.seed_generator(seedval=2)
+
+hm = HydrologyEventStreamPower(
+        mg,
+        precip_generator=pdr,
+        groundwater_model=gdp,
+)
+
+#run once to equilibrate to new conditions.
+hm.run_step()
+
+#run again to record state that we're interested in.
+#future: actually check some steady state criteria.
+f = open('./cross_analysis/dt_qs_s_%d_%d.csv'%(paramID, gridID), 'w')
 def write_SQ(grid, r, dt, file=f):
     cores = grid.core_nodes
     h = grid.at_node["aquifer__thickness"]
@@ -106,37 +103,7 @@ def write_SQ(grid, r, dt, file=f):
     r_tot = np.sum(r[cores]*area[cores])
 
     file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
-
-#initialize components
-if isinstance(mg, RasterModelGrid):
-    method = 'D8'
-elif isinstance(mg, HexModelGrid):
-    method = 'Steepest'
-else:
-    raise TypeError("grid should be Raster or Hex")
-
-gdp = GroundwaterDupuitPercolator(mg,
-                                  porosity=n,
-                                  hydraulic_conductivity=Ks,
-                                  regularization_f=0.01,
-                                  recharge_rate=0.0,
-                                  courant_coefficient=0.01*Ks/1e-5,
-                                  vn_coefficient = 0.01*Ks/1e-5,
-                                  callback_fun = write_SQ,
-                                  )
-pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
-    mean_interstorm_duration=tb, mean_storm_depth=ds,
-    total_t=T_h)
-pdr.seed_generator(seedval=2)
-
-hm = HydrologyEventStreamPower(
-        mg,
-        routing_method=method
-        precip_generator=pdr,
-        groundwater_model=gdp,
-)
-
-#run model
+gdp.callback_fun = write_SQ
 hm.run_step_record_state()
 f.close()
 
@@ -146,7 +113,11 @@ f.close()
 df_output = {}
 
 #load the full storage discharge dataset that was just generated
-df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','i', 'qs', 'S', 'qs_cells'])
+df = pd.read_csv('./cross_analysis/dt_qs_s_%d_%d.csv'%(paramID, gridID),
+                    sep=',',
+                    header=None,
+                    names=['dt','i', 'qs', 'S', 'qs_cells'],
+)
 # remove the first row (test row written by init of gdp)
 df.drop(0, inplace=True)
 df.reset_index(drop=True, inplace=True)
@@ -243,7 +214,7 @@ Q_event_sum = np.zeros(Q_all.shape[1])
 for i in range(1,len(Q_all)):
     if intensity[i] > 0.0:
         Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*df_params['p'][ID])
+qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*df_params['p'][paramID])
 qstar_mean[np.isnan(qstar_mean)] = 0.0
 
 # mean and variance of water table
@@ -325,57 +296,33 @@ TI = mg.add_zeros('node', 'topographic__index')
 S = mg.calc_slope_at_node(elev)
 TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
 
-####### calculate elevation change
-z_change = np.zeros((len(files),6))
-try:
-    grid = from_netcdf(files[0])
-except KeyError:
-    grid = read_netcdf(files[0])
-elev0 = grid.at_node['topographic__elevation']
-for i in range(1,len(files)):
-
-    try:
-        grid = from_netcdf(files[i])
-    except KeyError:
-        grid = read_netcdf(files[i])
-    elev = grid.at_node['topographic__elevation']
-
-    elev_diff = abs(elev-elev0)
-    z_change[i,0] = np.max(elev_diff)
-    z_change[i,1] = np.percentile(elev_diff,90)
-    z_change[i,2] = np.percentile(elev_diff,50)
-    z_change[i,3] = np.percentile(elev_diff,10)
-    z_change[i,4] = np.min(elev_diff)
-    z_change[i,5] = np.mean(elev_diff)
-
-    elev0 = elev.copy()
-
-df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
-
 ####### save things
 
 output_fields = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
-        'at_node:channel_mask_min',
-        'at_node:channel_mask_max',
-        'at_node:channel_mask_med',
-        'at_node:hand_min',
-        'at_node:hand_max',
-        'at_node:hand_med',
+        'at_node:channel_mask_storm',
+        'at_node:channel_mask_interstorm',
+        'at_node:hand_storm',
+        'at_node:hand_interstorm',
         'at_node:topographic__index',
-        'at_node:TI_exceedence_contour',
         'at_node:slope',
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',
-        'at_node:sat_mean',
-        'at_node:sat_std',
+        'at_node:wtrel_mean',
+        'at_node:wtrel_std',
+        'at_node:qstar_mean_no_interevent',
+        'at_node:wtrel_mean_end_interstorm',
+        'at_node:wtrel_mean_end_storm',
+        'at_node:sat_mean_end_interstorm',
+        'at_node:sat_mean_end_storm',
+        'at_node:Q_mean_end_interstorm',
+        'at_node:Q_mean_end_storm',
         ]
 
-filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
+filename = './cross_analysis/grid_%d_%d.nc'%(paramID, gridID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
-pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))
-pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
-pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
+pickle.dump(df_output, open('./cross_analysis/output_%d_%d.p'%(paramID, gridID), 'wb'))
+pickle.dump(df, open('./cross_analysis/q_s_dt_%d_%d.p'%(paramID, gridID), 'wb'))

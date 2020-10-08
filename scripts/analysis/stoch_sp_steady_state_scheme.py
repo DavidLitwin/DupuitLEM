@@ -1,9 +1,9 @@
 """
 Scheme to get to steady state topography:
-- load completed steady sp results
-- run HydrologySteadyStreamPower to find Q
+- load completed stoch sp results
+- run HydrologyEventStreamPower to find Q
 - run a simple model until steady state without changing Q
-- check by running the steady sp model again
+- check by running the stoch sp model again
 """
 
 import os
@@ -18,11 +18,12 @@ from landlab.io.netcdf import read_netcdf, from_netcdf, to_netcdf
 from landlab import RasterModelGrid, HexModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
+    PrecipitationDistribution,
     LinearDiffuser,
     FastscapeEroder,
     )
 from DupuitLEM.auxiliary_models import (
-    HydrologySteadyStreamPower,
+    HydrologyEventStreamPower,
     RegolithConstantThickness,
     )
 from DupuitLEM import StreamPowerModel
@@ -61,8 +62,10 @@ Ks = df_params['ksat'][ID] # hydraulic conductivity [m/s]
 p = df_params['p'][ID] # recharge rate [m/s]
 n = df_params['n'][ID] # drainable porosity [-]
 b = df_params['b'][ID] # characteristic depth  [m]
-Th = df_params['Th'][ID] # hydrological timestep
-
+tr = df_params['tr'][ID] #mean storm duration [s]
+tb = df_params['tb'][ID] #mean interstorm duration [s]
+ds = df_params['ds'][ID] #mean storm depth [m]
+T_h = df_params['Th'][ID] #total hydrological time [s]
 
 ############### Run hydrological model to determine Q
 
@@ -74,11 +77,15 @@ gdp = GroundwaterDupuitPercolator(mg,
           courant_coefficient=0.1,
           vn_coefficient = 0.1,
 )
+pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
+    mean_interstorm_duration=tb, mean_storm_depth=ds,
+    total_t=T_h)
+pdr.seed_generator(seedval=2)
 
-hm = HydrologySteadyStreamPower(
+hm = HydrologyEventStreamPower(
         mg,
+        precip_generator=pdr,
         groundwater_model=gdp,
-        hydrological_timestep=Th,
 )
 
 #run model
@@ -86,16 +93,16 @@ hm.run_step()
 
 ############ Run the simple model to steady state
 # parameters
-Q = mg.at_node["surface_water__discharge"]
+Q = mg.at_node["surface_water_effective__discharge"]
 
 K = df_params['K'][ID]
 Ksp = K/p # if discharge field is (Q/sqrt(A)) streampower coeff is K/p
 D = df_params['D'][ID]
 U = df_params['U'][ID]
-T = 100*(1/K) # total time in units of tg = 1/K
-dt = 1e-3*(1/K) # timestep in units of tg = 1/K
+T = 1e4*(1/K) # total time in units of tg = 1/K
+dt = 5e-3*(1/K) # timestep in units of tg = 1/K
 N = int(T//dt)
-output_interval = 1
+output_interval = 1000
 stop_rate = 1e-3 # max(dzdt)/U rate when we say steady state reached
 
 # initialize model components
@@ -161,7 +168,7 @@ if dzdt/U >= stop_rate:
 
 ########## Run full steady sp model again and check rate of change after 2k cycles
 MSF = df_params['MSF'][ID]
-N = 2002
+N = 5000
 dtm = MSF*hm.T_h
 Tg = N*dtm
 
