@@ -9,7 +9,7 @@ import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from landlab.io.netcdf import read_netcdf
+from landlab.io.netcdf import read_netcdf, from_netcdf
 from matplotlib.colors import LightSource
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
@@ -29,12 +29,18 @@ dt = dt_nd*df_params['tg'][ID]
 ####### calculate elevation change
 z_change = np.zeros((len(files),7))
 tot_relief = np.zeros(len(files))
-grid = read_netcdf(files[0])
+try:
+    grid = from_netcdf(files[0])
+except KeyError:
+    grid = read_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 tot_relief[0] = np.sum(elev0)
 for i in range(1,len(files)):
 
-    grid = read_netcdf(files[i])
+    try:
+        grid = from_netcdf(files[i])
+    except KeyError:
+        grid = read_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
 
     elev_diff = abs(elev-elev0)

@@ -11,7 +11,7 @@ from scipy.optimize import curve_fit
 from statsmodels.stats.weightstats import DescrStatsW
 
 from landlab import RasterModelGrid, LinkStatus
-from landlab.io.netcdf import read_netcdf, write_raster_netcdf
+from landlab.io.netcdf import read_netcdf, from_netcdf, to_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -44,7 +44,10 @@ T_h = 5*df_params['Th'][paramID] #total hydrological time [s]
 
 ########## Load and basic plot
 path = './grid_%d.nc'%gridID
-grid = read_netcdf(path)
+try:
+    grid = from_netcdf(files[-1])
+except KeyError:
+    grid = read_netcdf(files[-1])
 elev = grid.at_node['topographic__elevation']
 
 ########## Run hydrological model
@@ -296,30 +299,30 @@ TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
 ####### save things
 
 output_fields = [
-        "topographic__elevation",
-        "aquifer_base__elevation",
-        'channel_mask_storm',
-        'channel_mask_interstorm',
-        'hand_storm',
-        'hand_interstorm',
-        'topographic__index',
-        'slope',
-        'drainage_area',
-        'curvature',
-        'steepness',
-        'wtrel_mean',
-        'wtrel_std',
-        'qstar_mean_no_interevent',
-        'wtrel_mean_end_interstorm',
-        'wtrel_mean_end_storm',
-        'sat_mean_end_interstorm',
-        'sat_mean_end_storm',
-        'Q_mean_end_interstorm',
-        'Q_mean_end_storm',
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        'at_node:channel_mask_storm',
+        'at_node:channel_mask_interstorm',
+        'at_node:hand_storm',
+        'at_node:hand_interstorm',
+        'at_node:topographic__index',
+        'at_node:slope',
+        'at_node:drainage_area',
+        'at_node:curvature',
+        'at_node:steepness',
+        'at_node:wtrel_mean',
+        'at_node:wtrel_std',
+        'at_node:qstar_mean_no_interevent',
+        'at_node:wtrel_mean_end_interstorm',
+        'at_node:wtrel_mean_end_storm',
+        'at_node:sat_mean_end_interstorm',
+        'at_node:sat_mean_end_storm',
+        'at_node:Q_mean_end_interstorm',
+        'at_node:Q_mean_end_storm',
         ]
 
 filename = './cross_analysis/grid_%d_%d.nc'%(paramID, gridID)
-write_raster_netcdf(filename, mg, names = output_fields, format="NETCDF4")
+to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('./cross_analysis/output_%d_%d.p'%(paramID, gridID), 'wb'))
 pickle.dump(df, open('./cross_analysis/q_s_dt_%d_%d.p'%(paramID, gridID), 'wb'))

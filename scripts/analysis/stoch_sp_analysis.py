@@ -47,18 +47,19 @@ base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-
-path = files[-1]
 iteration = int(path.split('_')[-1][:-3])
 
-grid = from_netcdf(path)
+try:
+    grid = from_netcdf(files[-1])
+except KeyError:
+    grid = read_netcdf(files[-1])
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
 
 # elevation
 plt.figure(figsize=(8,6))
-imshow_grid(grid,elev, cmap='gist_earth', colorbar_label = 'Elevation [m]', grid_units=('m','m'))
+imshow_grid(grid, elev, cmap='gist_earth', colorbar_label='Elevation [m]', grid_units=('m','m'))
 plt.title('ID %d, Iteration %d'%(ID,iteration))
 plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
 plt.close()
@@ -326,11 +327,17 @@ TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),6))
-grid = from_netcdf(files[0])
+try:
+    grid = from_netcdf(files[0])
+except KeyError:
+    grid = read_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
 for i in range(1,len(files)):
 
-    grid = from_netcdf(files[i])
+    try:
+        grid = from_netcdf(files[i])
+    except KeyError:
+        grid = read_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
 
     elev_diff = abs(elev-elev0)

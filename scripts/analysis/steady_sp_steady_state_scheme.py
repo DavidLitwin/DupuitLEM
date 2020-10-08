@@ -13,7 +13,7 @@ import numpy as np
 import pickle
 import pandas as pd
 
-from landlab.io.netcdf import read_netcdf, write_raster_netcdf
+from landlab.io.netcdf import read_netcdf, from_netcdf, to_netcdf
 
 from landlab import RasterModelGrid, HexModelGrid
 from landlab.components import (
@@ -45,9 +45,11 @@ df_params = pickle.load(open('./parameters.p','rb'))
 
 grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-path = files[-1]
 iteration = int(path.split('_')[-1][:-3])
-mg = read_netcdf(path) # write_raster_netcdf and read_netcdf do not preserve boundary condtions
+try:
+    mg = from_netcdf(files[-1])
+except KeyError:
+    mg = read_netcdf(files[-1])
 mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
                               left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
 
@@ -135,12 +137,12 @@ for i in range(N):
 
         # save output at specified interval
         filename = './data/steady_state/%d_grid_%d.nc'%(ID,i)
-        write_raster_netcdf(filename, mg, names="topographic__elevation", format="NETCDF4")
+        to_netcdf(mg, filename, include="at_node:topographic__elevation", format="NETCDF4")
 
         if i > 0:
             # open previous saved file, find max rate of change
             filename0 = './data/steady_state/%d_grid_%d.nc'%(ID,i-output_interval)
-            grid0 = read_netcdf(filename0)
+            grid0 = from_netcdf(filename0)
             elev0 = grid0.at_node["topographic__elevation"]
             dzdt = calc_rate_of_change(
                 elev, elev0, dt, output_interval
