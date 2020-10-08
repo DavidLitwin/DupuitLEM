@@ -4,7 +4,6 @@ Analysis of results on HPC for steady stream power model runs.
 
 import os
 import glob
-from re import sub
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
@@ -28,7 +27,7 @@ base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-iteration = int(path.split('_')[-1][:-3])
+iteration = int(files[-1].split('_')[-1][:-3])
 
 try:
     grid = from_netcdf(files[-1])

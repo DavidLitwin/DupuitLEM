@@ -5,7 +5,6 @@ Analysis of results on HPC for stochastic stream power model runs.
 import os
 import glob
 import pickle
-from re import sub
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,8 +12,8 @@ from scipy.optimize import curve_fit
 from scipy.interpolate import interp1d
 from statsmodels.stats.weightstats import DescrStatsW
 
-from landlab import imshow_grid, RasterModelGrid, LinkStatus
-from landlab.io.netcdf import to_netcdf, from_netcdf
+from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
+from landlab.io.netcdf import to_netcdf, from_netcdf, read_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -47,7 +46,7 @@ base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-iteration = int(path.split('_')[-1][:-3])
+iteration = int(files[-1].split('_')[-1][:-3])
 
 try:
     grid = from_netcdf(files[-1])
@@ -131,7 +130,7 @@ pdr.seed_generator(seedval=2)
 
 hm = HydrologyEventStreamPower(
         mg,
-        routing_method=method
+        routing_method=method,
         precip_generator=pdr,
         groundwater_model=gdp,
 )

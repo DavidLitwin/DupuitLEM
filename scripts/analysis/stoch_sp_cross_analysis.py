@@ -45,9 +45,9 @@ T_h = 5*df_params['Th'][paramID] #total hydrological time [s]
 ########## Load and basic plot
 path = './grid_%d.nc'%gridID
 try:
-    grid = from_netcdf(files[-1])
+    grid = from_netcdf(path)
 except KeyError:
-    grid = read_netcdf(files[-1])
+    grid = read_netcdf(path)
 elev = grid.at_node['topographic__elevation']
 
 ########## Run hydrological model

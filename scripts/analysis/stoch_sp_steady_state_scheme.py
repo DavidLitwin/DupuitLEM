@@ -8,7 +8,6 @@ Scheme to get to steady state topography:
 
 import os
 import glob
-from re import sub
 import numpy as np
 import pickle
 import pandas as pd
@@ -46,7 +45,7 @@ df_params = pickle.load(open('./parameters.p','rb'))
 
 grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-iteration = int(path.split('_')[-1][:-3])
+iteration = int(files[-1].split('_')[-1][:-3])
 try:
     mg = from_netcdf(files[-1])
 except KeyError:
@@ -175,9 +174,9 @@ Tg = N*dtm
 output = {}
 output["output_interval"] = 500
 output["output_fields"] = [
-        "topographic__elevation",
-        "aquifer_base__elevation",
-        "water_table__elevation",
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        "at_node:water_table__elevation",
         ]
 output["base_output_path"] = './data/postrun/%s'%base_path[0:12]
 output["run_id"] = ID #make this task_id if multiple runs

@@ -13,7 +13,6 @@ import numpy as np
 import os
 import glob
 import imageio
-from re import sub
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
