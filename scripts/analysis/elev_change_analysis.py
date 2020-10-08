@@ -91,8 +91,8 @@ for i in range(1,len(files)):
         # plt.close()
 
 df_z_change = pd.DataFrame(z_change,columns=['max', '95 perc', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
-df_z_change['mean relief'] = relief_change[i,0]
-df_z_change['mean relief change'] = relief_change[i,1]
+df_z_change['mean relief'] = relief_change[:,0]
+df_z_change['mean relief change'] = relief_change[:,1]
 df_z_change.to_csv('../post_proc/%s/z_change_steady_state_%d.csv'%(base_output_path, ID))
 
 dzdt = (df_z_change/dt)
