@@ -184,7 +184,7 @@ output["run_id"] = ID #make this task_id if multiple runs
 postrun_ss_cond = {}
 postrun_ss_cond['stop_at_rate'] = 1e-3*U
 postrun_ss_cond['how'] = 'percentile'
-postrun_ss_cond['value'] = 100
+postrun_ss_cond['percentile_value'] = 90
 
 mdl = StreamPowerModel(mg,
         hydrology_model=hm,

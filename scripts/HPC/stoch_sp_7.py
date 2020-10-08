@@ -80,8 +80,8 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 p1 = 0.75/(365*24*3600) # average rainfall rate [m/s]
 n1 = 0.1 # drainable porosity [-]
 
-Tg_nd = 1000 # total duration in units of tg [-]
-dtg_nd = 2e-2 # geomorphic timestep in units of tg [-]
+Tg_nd = 500 # total duration in units of tg [-]
+dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
 params = np.zeros((len(beta1),14))
@@ -131,6 +131,11 @@ output["output_fields"] = [
 output["base_output_path"] = './data/stoch_sp_7_'
 output["run_id"] = ID #make this task_id if multiple runs
 
+postrun_ss_cond = {}
+postrun_ss_cond['stop_at_rate'] = 1e-3*U
+postrun_ss_cond['how'] = 'percentile'
+postrun_ss_cond['percentile_value'] = 90
+
 #initialize grid
 np.random.seed(12345)
 grid = RasterModelGrid((125, 125), xy_spacing=0.7*lg)
@@ -171,7 +176,8 @@ mdl = StreamPowerModel(grid,
         morphologic_scaling_factor=MSF,
         total_morphological_time=Tg,
         verbose=True,
-        output_dict=output,
+        # output_dict=output,
+        steady_state_condition=postrun_ss_cond,
 )
 
 mdl.run_model()

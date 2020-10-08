@@ -57,8 +57,8 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 1200 # total duration in units of tg [-]
-dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
+Tg_nd = 1500 # total duration in units of tg [-]
+dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
 lam1 = np.array(list(product(lam_all, gam_all)))[:,0]
@@ -107,6 +107,11 @@ output["output_fields"] = [
         ]
 output["base_output_path"] = './data/steady_sp_3_'
 output["run_id"] = ID #make this task_id if multiple runs
+
+postrun_ss_cond = {}
+postrun_ss_cond['stop_at_rate'] = 1e-3*U
+postrun_ss_cond['how'] = 'percentile'
+postrun_ss_cond['percentile_value'] = 90
 
 #initialize grid
 np.random.seed(12345)
@@ -159,6 +164,7 @@ mdl = StreamPowerModel(grid,
         total_morphological_time=Tg,
         verbose=True,
         output_dict=output,
+        steady_state_condition=postrun_ss_cond,
 )
 
 mdl.run_model()
