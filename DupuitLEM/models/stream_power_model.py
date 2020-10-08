@@ -201,7 +201,7 @@ class StreamPowerModel:
 
                     # save the specified grid fields
                     self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
-                    filename = self.base_path + '%d_grid_%d.nc'%(self.id,i)
+                    filename = self.base_path + "%d_grid_%d.nc" % (self.id, i)
                     to_netcdf(
                         self._grid,
                         filename,
@@ -214,13 +214,16 @@ class StreamPowerModel:
                         data=z_change,
                         columns=["max_abs", "90_abs", "50_abs", "mean_abs", "mean"],
                     )
-                    filename = self.base_path + "%d_elev_change.csv"%self.id
+                    filename = self.base_path + "%d_elev_change.csv" % self.id
                     df_ouput.to_csv(filename, index=False, float_format="%.3e")
 
                     # check stopping condition
                     if self.stop_cond and i > 0:
 
-                        filename0 = self.base_path + '%d_grid_%d.nc'%(self.id,i-self.output_interval)
+                        filename0 = self.base_path + "%d_grid_%d.nc" % (
+                            self.id,
+                            i - self.output_interval,
+                        )
                         grid0 = from_netcdf(filename0)
                         elev0 = grid0.at_node["topographic__elevation"]
                         dzdt = self.calc_rate_of_change(

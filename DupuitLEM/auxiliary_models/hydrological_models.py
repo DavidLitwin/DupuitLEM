@@ -743,8 +743,8 @@ class HydrologySteadyStreamPower(HydrologicalModel):
         self.fa.run_one_step()
 
         # add a criteria that effectively cuts Q* off at 1 (greater due to numerical issues)
-        qmax = self.gdp.recharge*self.area
-        self.q[self.q>qmax] = qmax[self.q>qmax]
+        qmax = self.gdp.recharge * self.area
+        self.q[self.q > qmax] = qmax[self.q > qmax]
 
         # discharge field with form for Q*
         self.q_an[:] = self.q / np.sqrt(self.area)
