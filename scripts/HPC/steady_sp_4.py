@@ -2,13 +2,15 @@
 Steady recharge + constant thickness + StreamPowerModel
 
 This script uses dimensionless parameters based on Theodoratos method of
-nondimensionalizing the governing landscape evolution equation. Vary eta
+nondimensionalizing the governing landscape evolution equation. Vary lambda
 and gamma.
 
-\[Eta] == (b K)/U,
+Same as steady_sp_3 but using a HexModelGrid
+
+\[lambda] == (p K D)/(ks U^2),
 \[Gamma] == (ks b U)/(p D),
 
-Date: 18 Aug 2020
+Date: 1 Sept 2020
 """
 import os
 import numpy as np
@@ -16,7 +18,7 @@ from itertools import product
 import pandas
 import pickle
 
-from landlab import RasterModelGrid
+from landlab import HexModelGrid
 from landlab.components import (
     GroundwaterDupuitPercolator,
     LinearDiffuser,
@@ -33,42 +35,43 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def b_fun(U, K, eta):
-    return (U*eta)/K
+def b_fun(U, K, gam, lam):
+    return (U*gam*lam)/K
 
-def ksat_fun(D, U, p, K, gam, eta):
-    return (D*p*K*gam)/(U**2*eta)
+def ksat_fun(D, U, p, K, lam):
+    return (D*p*K)/(U**2*lam)
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, p, n, gam, eta):
+def generate_parameters(D, U, K, p, n, gam, lam):
 
-    b = b_fun(U, K, eta)
-    ksat = ksat_fun(D, U, p, K, gam, eta)
+    b = b_fun(U, K, gam, lam)
+    ksat = ksat_fun(D, U, p, K, lam)
 
-    return K, D, U, ksat, p, b, n, gam, eta
+    return K, D, U, ksat, p, b, n, gam, lam
 
 #parameters
-eta_all = np.geomspace(0.1,10,5)
-gam_all = np.geomspace(0.01,1.0,5)
+lam_all = np.geomspace(0.2,2,5)
+gam_all = np.geomspace(0.5,5,5)
+lg = 15
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
-K1 = 1e-4/(365*24*3600) # Streampower incision coefficient [1/s]
+K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 n1 = 0.1 # drainable porosity [-]
-p1 = 1/(365*24*3600) # steady precipitation rate
+p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 800 # total duration in units of tg [-]
+Tg_nd = 1500 # total duration in units of tg [-]
 dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
-eta1 = np.array(list(product(eta_all, gam_all)))[:,0]
-gam1 = np.array(list(product(eta_all, gam_all)))[:,1]
+lam1 = np.array(list(product(lam_all, gam_all)))[:,0]
+gam1 = np.array(list(product(lam_all, gam_all)))[:,1]
 
-params = np.zeros((len(eta1),9))
-for i in range(len(eta1)):
+params = np.zeros((len(lam1),9))
+for i in range(len(lam1)):
 
-    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, gam1[i], eta1[i])
+    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, gam1[i], lam1[i])
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'gam', 'eta'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'gam', 'lam'])
 df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
 df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
 df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
@@ -96,6 +99,7 @@ lg = df_params['lg'][ID]
 Th = df_params['Th'][ID]
 Tg = df_params['Tg'][ID]
 MSF = df_params['MSF'][ID]
+Nx = 100
 
 output = {}
 output["output_interval"] = 1000
@@ -104,18 +108,18 @@ output["output_fields"] = [
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
         ]
-output["base_output_path"] = './data/steady_sp_2_'
+output["base_output_path"] = './data/steady_sp_4_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((125, 125), xy_spacing=0.8*lg)
-grid.set_status_at_node_on_edges(
-        right=grid.BC_NODE_IS_CLOSED,
-        top=grid.BC_NODE_IS_CLOSED,
-        left=grid.BC_NODE_IS_FIXED_VALUE,
-        bottom=grid.BC_NODE_IS_CLOSED,
-)
+grid = HexModelGrid((Nx, Nx), node_layout="rect", spacing=0.7*lg)
+indices = np.arange(Nx**2).reshape((Nx,Nx))
+indices_flat = np.arange(Nx**2)
+grid.status_at_node[indices_flat%Nx==0] = 4
+grid.status_at_node[(indices_flat-Nx-1)%Nx==0] = 4
+grid.status_at_node[indices_flat>=Nx*(Nx-1)] = 4
+
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = b + 0.1*hg*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
@@ -131,11 +135,13 @@ gdp = GroundwaterDupuitPercolator(grid,
         courant_coefficient=0.9,
         vn_coefficient = 0.9,
 )
+
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
 #initialize other models
 hm = HydrologySteadyStreamPower(
         grid,
+		routing_method='Steepest',
         groundwater_model=gdp,
         hydrological_timestep=Th,
 )

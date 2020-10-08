@@ -8,7 +8,7 @@ Created on Wed Jul  1 15:19:58 2020
 """
 import matplotlib.pyplot as plt
 from landlab import imshow_grid
-from landlab.io.netcdf import read_netcdf
+from landlab.io.netcdf import from_netcdf
 import numpy as np
 import os
 import glob
@@ -28,13 +28,13 @@ for i in range(len(files)):
     indices.append(files[i][25:-3])
     
 path = files[-1]
-grid = read_netcdf(path)
+grid = from_netcdf(path)
 elev = grid.at_node['topographic__elevation']
 
 
 def plot_elev(file,index):
     
-    grid = read_netcdf(file)
+    grid = from_netcdf(file)
     
     fig = plt.figure(figsize=(8,6))
     imshow_grid(grid,'topographic__elevation', cmap='gist_earth', limits=(0,max(elev)), colorbar_label = 'Elevation [m]', grid_units=('m','m'))

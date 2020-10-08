@@ -1,8 +1,12 @@
 import numpy as np
-from landlab.grid.mappers import map_mean_of_link_nodes_to_link, map_max_of_node_links_to_node
+from landlab.grid.mappers import (
+    map_mean_of_link_nodes_to_link,
+    map_max_of_node_links_to_node,
+)
 from landlab import LinkStatus
 
-def bind_avg_hydraulic_conductivity(ks,k0,dk):
+
+def bind_avg_hydraulic_conductivity(ks, k0, dk):
     def bound_avg_hydraulic_conductivity(grid):
         """
         Calculate the average hydraulic conductivity when hydraulic conductivity
@@ -25,14 +29,18 @@ def bind_avg_hydraulic_conductivity(ks,k0,dk):
         )
         blink = map_mean_of_link_nodes_to_link(grid, b)
         hlink = map_mean_of_link_nodes_to_link(grid, h)
-        b1 = blink[hlink>0.0]
-        h1 = hlink[hlink>0.0]
+        b1 = blink[hlink > 0.0]
+        h1 = hlink[hlink > 0.0]
         kavg = np.zeros_like(hlink)
-        kavg[hlink>0.0] = dk*(ks-k0)/h1 * (np.exp(-(b1-h1)/dk) - np.exp(-b1/dk)) + k0
+        kavg[hlink > 0.0] = (
+            dk * (ks - k0) / h1 * (np.exp(-(b1 - h1) / dk) - np.exp(-b1 / dk)) + k0
+        )
         return kavg
+
     return bound_avg_hydraulic_conductivity
 
-def bind_shear_stress_manning(n_manning=0.05, rho = 1000, g = 9.81):
+
+def bind_shear_stress_manning(n_manning=0.05, rho=1000, g=9.81):
     def calc_shear_stress_manning(grid):
         r"""
         Calculate the shear stress :math:`\tau` (N/m2) based upon the Manning
@@ -62,17 +70,24 @@ def bind_shear_stress_manning(n_manning=0.05, rho = 1000, g = 9.81):
         In future, should allow n_manning and dx to be fields that are spatially variable
 
         """
-        S = abs(grid.calc_grad_at_link('topographic__elevation'))
+        S = abs(grid.calc_grad_at_link("topographic__elevation"))
         S[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
         S_node = map_max_of_node_links_to_node(grid, S)[grid.core_nodes]
         Q = grid.at_node["surface_water__discharge"][grid.core_nodes]
 
         tau = np.zeros(grid.number_of_nodes)
-        tau[grid.core_nodes] = rho * g * S_node * ( (n_manning * Q)/(grid.dx * np.sqrt(S_node)) )**(3/5)
+        tau[grid.core_nodes] = (
+            rho
+            * g
+            * S_node
+            * ((n_manning * Q) / (grid.dx * np.sqrt(S_node))) ** (3 / 5)
+        )
         return tau
+
     return calc_shear_stress_manning
 
-def bind_shear_stress_chezy(c_chezy=15, rho = 1000, g = 9.81):
+
+def bind_shear_stress_chezy(c_chezy=15, rho=1000, g=9.81):
     def calc_shear_stress_chezy(grid):
         r"""
         Calculate the shear stress :math:`\tau` (N/m2) based upon the Chezy
@@ -101,17 +116,21 @@ def bind_shear_stress_chezy(c_chezy=15, rho = 1000, g = 9.81):
         In future, should allow c_chezy and dx to be fields that are spatially variable
 
         """
-        S = abs(grid.calc_grad_at_link('topographic__elevation'))
+        S = abs(grid.calc_grad_at_link("topographic__elevation"))
         S[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
         S_node = map_max_of_node_links_to_node(grid, S)[grid.core_nodes]
         Q = grid.at_node["surface_water__discharge"][grid.core_nodes]
 
         tau = np.zeros(grid.number_of_nodes)
-        tau[grid.core_nodes] = rho * g * S_node * ( Q/(grid.dx * c_chezy * np.sqrt(S_node)) )**(2/3)
+        tau[grid.core_nodes] = (
+            rho * g * S_node * (Q / (grid.dx * c_chezy * np.sqrt(S_node))) ** (2 / 3)
+        )
         return tau
+
     return calc_shear_stress_chezy
 
-def bind_erosion_from_shear_stress(tauc,K,b):
+
+def bind_erosion_from_shear_stress(tauc, K, b):
     def calc_erosion_from_shear_stress(grid):
         r"""
         Calculate erosion rate dzdt (m) using the shear stress method:
@@ -131,14 +150,15 @@ def bind_erosion_from_shear_stress(tauc,K,b):
         In future allow for K, tauc and b to be spatially variable
 
         """
-        tau = grid.at_node['surface_water__shear_stress']
+        tau = grid.at_node["surface_water__shear_stress"]
 
         core = grid.status_at_node == 0
         thresh = tau > tauc
-        update = np.logical_and(core,thresh)
+        update = np.logical_and(core, thresh)
 
         dzdt = np.zeros_like(tau)
-        dzdt[update] = -K*np.power((tau[update]-tauc),b)
+        dzdt[update] = -K * np.power((tau[update] - tauc), b)
 
         return dzdt
+
     return calc_erosion_from_shear_stress

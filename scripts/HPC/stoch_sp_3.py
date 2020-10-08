@@ -119,9 +119,9 @@ MSF = df_params['MSF'][ID]
 output = {}
 output["output_interval"] = 1000
 output["output_fields"] = [
-        "topographic__elevation",
-        "aquifer_base__elevation",
-        "water_table__elevation",
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        "at_node:water_table__elevation",
         ]
 output["base_output_path"] = './data/stoch_sp_3_'
 output["run_id"] = ID #make this task_id if multiple runs
