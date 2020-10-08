@@ -28,7 +28,7 @@ dt = dt_nd*df_params['tg'][ID]
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),7))
-relief_change = np.zeros(len(files), 2)
+relief_change = np.zeros((len(files), 2))
 try:
     grid = from_netcdf(files[0])
 except KeyError:
