@@ -55,7 +55,7 @@ for i in range(1,len(files)):
     elev0 = elev.copy()
 
     relief_change[i,0] = np.mean(elev)
-    relief_change[i,1] = np.mean(elev) - relief_change[i-1,1]
+    relief_change[i,1] = np.mean(elev) - relief_change[i-1,0]
 
     # if i%100==0:
     #
