@@ -80,7 +80,7 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 p1 = 0.75/(365*24*3600) # average rainfall rate [m/s]
 n1 = 0.1 # drainable porosity [-]
 
-Tg_nd = 500 # total duration in units of tg [-]
+Tg_nd = 300 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
