@@ -161,7 +161,7 @@ if dzdt/U >= stop_rate:
 
 ########## Run full steady sp model again and check rate of change after 2k cycles
 MSF = df_params['MSF'][ID]
-N = 2002
+N = 5000
 dtm = MSF*hm.T_h
 Tg = N*dtm
 
