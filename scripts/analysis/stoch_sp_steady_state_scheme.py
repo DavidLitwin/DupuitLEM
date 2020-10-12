@@ -113,7 +113,8 @@ sp = FastscapeEroder(mg,
         discharge_field="surface_water_area_norm__discharge",
 )
 rm = RegolithConstantThickness(mg, equilibrium_depth=b, uplift_rate=U)
-calc_rate_of_change = lambda elev, elev0, dtm, N: np.max(abs(elev - elev0)) / (N * dtm)
+# calc_rate_of_change = lambda elev, elev0, dtm, N: np.max(abs(elev - elev0)) / (N * dtm)
+calc_rate_of_change = lambda elev, elev0, dtm, N: np.percentile(abs(elev - elev0), 90) / (N * dtm)
 
 # run for some large time
 for i in range(N):
@@ -145,24 +146,24 @@ for i in range(N):
         filename = './data/steady_state/%d_grid_%d.nc'%(ID,i)
         to_netcdf(mg, filename, include="at_node:topographic__elevation", format="NETCDF4")
 
-        if i > 0:
-            # open previous saved file, find max rate of change
-            filename0 = './data/steady_state/%d_grid_%d.nc'%(ID,i-output_interval)
-            grid0 = from_netcdf(filename0)
-            elev0 = grid0.at_node["topographic__elevation"]
-            dzdt = calc_rate_of_change(
-                elev, elev0, dt, output_interval
-            )
+    if i%output_interval==0 and i > 0:
+        # open previous saved file, find max rate of change
+        filename0 = './data/steady_state/%d_grid_%d.nc'%(ID,i-output_interval)
+        grid0 = from_netcdf(filename0)
+        elev0 = grid0.at_node["topographic__elevation"]
+        dzdt = calc_rate_of_change(
+            elev, elev0, dt, output_interval
+        )
 
-            # stop if rate is met
-            if dzdt/U < stop_rate:
-                print(
-                    "Stopping rate condition met, dzdt = %.4e" % dzdt
-                )
-                break
+        # stop if rate is met
+        if dzdt/U < stop_rate:
+            print(
+                "Stopping rate condition met, dzdt/U = %.4e" % dzdt/U
+            )
+            break
 
 if dzdt/U >= stop_rate:
-    print("stopping rate not met, dzdt = %.4e" % dzdt)
+    print("stopping rate not met, dzdt/U = %.4e" % dzdt/U)
 
 
 ########## Run full steady sp model again and check rate of change after 2k cycles

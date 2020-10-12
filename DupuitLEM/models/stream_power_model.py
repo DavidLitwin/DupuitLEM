@@ -217,21 +217,21 @@ class StreamPowerModel:
                     filename = self.base_path + "%d_elev_change.csv" % self.id
                     df_ouput.to_csv(filename, index=False, float_format="%.3e")
 
+                if self.stop_cond and i % self.output_interval == 0 and i > 0:
+
                     # check stopping condition
-                    if self.stop_cond and i > 0:
+                    filename0 = self.base_path + "%d_grid_%d.nc" % (
+                        self.id,
+                        i - self.output_interval,
+                    )
+                    grid0 = from_netcdf(filename0)
+                    elev0 = grid0.at_node["topographic__elevation"]
+                    dzdt = self.calc_rate_of_change(
+                        self._elev, elev0, self.dt_m, self.output_interval
+                    )
 
-                        filename0 = self.base_path + "%d_grid_%d.nc" % (
-                            self.id,
-                            i - self.output_interval,
+                    if dzdt < self.stop_rate:
+                        self.verboseprint(
+                            "Stopping rate condition met, dzdt = %.4e" % dzdt
                         )
-                        grid0 = from_netcdf(filename0)
-                        elev0 = grid0.at_node["topographic__elevation"]
-                        dzdt = self.calc_rate_of_change(
-                            self._elev, elev0, self.dt_m, self.output_interval
-                        )
-
-                        if dzdt < self.stop_rate:
-                            self.verboseprint(
-                                "Stopping rate condition met, dzdt = %.4e" % dzdt
-                            )
-                            break
+                        break
