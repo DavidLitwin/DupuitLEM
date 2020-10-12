@@ -20,6 +20,7 @@ from landlab.components import (
     HeightAboveDrainageCalculator,
     DrainageDensity,
     )
+from landlab.grid.mappers import map_max_of_node_links_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
 
 def weighted_percentile(data, percents, weights=None, interpolation="nearest"):
@@ -320,9 +321,12 @@ except:
     print('failed to calculate drainage density')
 
 ####### calculate topographic index
-TI = mg.add_zeros('node', 'topographic__index')
-S = mg.calc_slope_at_node(elev)
-TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
+TI8 = mg.add_zeros('node', 'topographic__index_D8')
+TI8[:] = mg.at_node['drainage_area']/(S*mg.dx)
+
+TI4 = mg.add_zeros('node', 'topographic__index_D4')
+S4 = map_max_of_node_links_to_node(mg, abs(dzdx_D4))
+TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),6))
@@ -362,8 +366,8 @@ output_fields = [
         'at_node:hand_min',
         'at_node:hand_max',
         'at_node:hand_med',
-        'at_node:topographic__index',
-        'at_node:TI_exceedence_contour',
+        'at_node:topographic__index_D8',
+        'at_node:topographic__index_D4',
         'at_node:slope',
         'at_node:drainage_area',
         'at_node:curvature',

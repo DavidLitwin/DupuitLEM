@@ -18,6 +18,7 @@ from landlab.components import (
     HeightAboveDrainageCalculator,
     DrainageDensity,
     )
+from landlab.grid.mappers import map_max_of_node_links_to_node
 from DupuitLEM.auxiliary_models import HydrologySteadyStreamPower
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
@@ -136,9 +137,12 @@ channel_mask = mg.at_node['channel__mask']
 df_output['drainage_density'] = dd.calculate_drainage_density()
 
 ######## Topogrpahic index
-TI = mg.add_zeros('node', 'topographic__index')
-S = mg.calc_slope_at_node(elev)
-TI[:] = mg.at_node['drainage_area']/(S*mg.dx)
+TI8 = mg.add_zeros('node', 'topographic__index_D8')
+TI8[:] = mg.at_node['drainage_area']/(S*mg.dx)
+
+TI4 = mg.add_zeros('node', 'topographic__index_D4')
+S4 = map_max_of_node_links_to_node(mg, abs(dzdx_D4))
+TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),6))
@@ -173,7 +177,8 @@ output_fields = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
-        'at_node:topographic__index',
+        'at_node:topographic__index_D8',
+        'at_node:topographic__index_D4',
         'at_node:channel_mask',
         'at_node:hand',
         'at_node:slope',
