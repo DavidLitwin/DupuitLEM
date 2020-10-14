@@ -166,3 +166,83 @@ def test_stream_power_save_output_hex(tmpdir):
     assert isinstance(mg1, HexModelGrid)
     assert set(mg1.at_node.keys()) == set(keys)
     assert_equal(mg1.status_at_node, mg.status_at_node)
+
+
+def test_stream_power_run_step_subdivide():
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    z = mg.add_ones("node", "topographic__elevation")
+    z[1] = 0.0
+    zb = mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, recharge_rate=1e-4)
+    hm = HydrologySteadyStreamPower(mg, groundwater_model=gdp)
+    sp = FastscapeEroder(
+        mg,
+        K_sp=1e-10,
+        m_sp=1,
+        n_sp=1,
+        discharge_field="surface_water_area_norm__discharge",
+    )
+    ld = LinearDiffuser(mg, linear_diffusivity=1e-10)
+    rm = RegolithConstantThickness(mg, uplift_rate=0.0)
+
+    mdl = StreamPowerModel(
+        mg, hydrology_model=hm, diffusion_model=ld, erosion_model=sp, regolith_model=rm,
+    )
+
+    mdl.run_step(1e5, dt_m_max=2e4)
+
+    assert z[4] < 1.0
+    assert_equal(z[4] - zb[4], 1.0)
+    assert_equal(mdl.num_substeps, 5)
+
+
+def test_stream_power_run_model_subdivide():
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    z = mg.add_ones("node", "topographic__elevation")
+    z[1] = 0.0
+    zb = mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, recharge_rate=1e-4)
+    hm = HydrologySteadyStreamPower(mg, groundwater_model=gdp)
+    sp = FastscapeEroder(
+        mg,
+        K_sp=1e-10,
+        m_sp=1,
+        n_sp=1,
+        discharge_field="surface_water_area_norm__discharge",
+    )
+    ld = LinearDiffuser(mg, linear_diffusivity=1e-10)
+    rm = RegolithConstantThickness(mg, uplift_rate=0.0)
+
+    mdl = StreamPowerModel(
+        mg,
+        hydrology_model=hm,
+        diffusion_model=ld,
+        erosion_model=sp,
+        regolith_model=rm,
+        total_morphological_time=1e8,
+        maximum_morphological_dt=2e7,
+    )
+
+    mdl.run_step(1e5, dt_m_max=2e4)
+
+    assert z[4] < 1.0
+    assert_equal(z[4] - zb[4], 1.0)
+    assert_equal(mdl.num_substeps, 5)
