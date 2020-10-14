@@ -25,6 +25,7 @@ class StreamPowerModel:
         regolith_model=None,
         morphologic_scaling_factor=500,
         total_morphological_time=1e6 * 365 * 24 * 3600,
+        maximum_morphological_dt=None,
         output_dict=None,
         steady_state_condition=None,
         verbose=False,
@@ -49,6 +50,8 @@ class StreamPowerModel:
             default: 500
         total_morphological_time: float. Total model duration.
             default: 1e6*365*24*3600 (1Myr)
+        maximum_morphological_dt: float. The maximum allowable morphologic timestep.
+            default: None
         output_dict: dict containing fields to specify output behavior.
             default: None
             dict contains the following fields:
@@ -93,6 +96,7 @@ class StreamPowerModel:
 
         self.MSF = morphologic_scaling_factor  # morphologic scaling factor [-]
         self.T_m = total_morphological_time  # total model time [s]
+        self.dt_m_max = maximum_morphological_dt  # max morphologic timestep [s]
         if self.T_m and self.MSF:
             self.dt_m = self.hm.T_h * self.MSF
             self.N = int(self.T_m // self.dt_m)
@@ -107,6 +111,11 @@ class StreamPowerModel:
             self.save_output = False
 
         if steady_state_condition:
+            if not output_dict:
+                raise ValueError(
+                    "output_dict must be provided to run with steady_state_condition."
+                )
+
             self.stop_cond = True
             self.stop_rate = steady_state_condition["stop_at_rate"]
 
@@ -122,7 +131,7 @@ class StreamPowerModel:
                 ) / (N * dtm)
 
             else:
-                print(
+                raise ValueError(
                     "stopping condition method %s is not supported"
                     % steady_state_condition["how"]
                 )
@@ -131,24 +140,50 @@ class StreamPowerModel:
 
         self.verboseprint("Model initialized")
 
-    def run_step(self, dt_m):
+    def run_step(self, dt_m, dt_m_max=None):
         """
         Run geomorphic step:
         - update discharge field based on stochastic precipitation
         - diffusion and erosion based on discharge field
         - uplift and regolith change
         - check for boundary issues
+
+        Parameters:
+        --------
+        dt_m: morphoplogic timestep. float.
+        dt_m_max: maximum morphoplogic timestep. float. If provided,
+            geomorphic timestep dt_m is subdivided so that
+            no substep exceeds dt_m_max.
+            default: None
         """
 
         # run gw model, calculate discharge fields
         self.hm.run_step()
 
-        # run linear diffusion, erosion
-        self.dm.run_one_step(dt_m)
-        self.sp.run_one_step(dt_m)
+        if dt_m_max is not None:
 
-        # uplift and regolith production
-        self.rm.run_step(dt_m)
+            remaining_time = dt_m
+            self.num_substeps = 0
+
+            while remaining_time > 0.0:
+                substep_dt = min(remaining_time, dt_m_max)
+                # run linear diffusion, erosion
+                self.dm.run_one_step(substep_dt)
+                self.sp.run_one_step(substep_dt)
+
+                # uplift and regolith production
+                self.rm.run_step(substep_dt)
+
+                remaining_time -= substep_dt
+                self.num_substeps += 1
+
+        else:
+            # run linear diffusion, erosion
+            self.dm.run_one_step(dt_m)
+            self.sp.run_one_step(dt_m)
+
+            # uplift and regolith production
+            self.rm.run_step(dt_m)
 
         # check for places where erosion below baselevel occurs, or water table falls below base or above elev
         if (self._elev < self._base).any():
@@ -178,22 +213,28 @@ class StreamPowerModel:
         ]
 
     def run_model(self):
+        """
+        Run StreamPowerModel for full duration specified by total_morphological_time.
+        Record elevation change quantiles [0, 10, 50, 90, 100] and mean.
+        If output dictionary was provided, record output.
+        If output dictionary and steady state condition were provided, record output and stop when steady state condition is met.
+        """
 
         N = self.N
-        z_change = np.zeros((N, 5))
+        self.z_change = np.zeros((N, 5))
 
         # Run model forward
         for i in range(N):
             elev0 = self._elev.copy()
-            self.run_step(self.dt_m)
+            self.run_step(self.dt_m, dt_m_max=self.dt_m_max)
             self.verboseprint("Completed model loop %d" % i)
 
             elev_diff = abs(self._elev - elev0)
-            z_change[i, 0] = np.max(elev_diff)
-            z_change[i, 1] = np.percentile(elev_diff, 90)
-            z_change[i, 2] = np.percentile(elev_diff, 50)
-            z_change[i, 3] = np.mean(elev_diff)
-            z_change[i, 4] = np.mean(self._elev - elev0)
+            self.z_change[i, 0] = np.max(elev_diff)
+            self.z_change[i, 1] = np.percentile(elev_diff, 90)
+            self.z_change[i, 2] = np.percentile(elev_diff, 50)
+            self.z_change[i, 3] = np.mean(elev_diff)
+            self.z_change[i, 4] = np.mean(self._elev - elev0)
 
             if self.save_output:
 
@@ -211,7 +252,7 @@ class StreamPowerModel:
 
                     # save elevation change information
                     df_ouput = pd.DataFrame(
-                        data=z_change,
+                        data=self.z_change,
                         columns=["max_abs", "90_abs", "50_abs", "mean_abs", "mean"],
                     )
                     filename = self.base_path + "%d_elev_change.csv" % self.id
