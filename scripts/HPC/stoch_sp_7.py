@@ -80,8 +80,9 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 p1 = 0.75/(365*24*3600) # average rainfall rate [m/s]
 n1 = 0.1 # drainable porosity [-]
 
-Tg_nd = 300 # total duration in units of tg [-]
-dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
+Tg_nd = 1000 # total duration in units of tg [-]
+dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
+MSF = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
 params = np.zeros((len(beta1),14))
@@ -94,11 +95,13 @@ df_params['alpha'] = df_params['beta']/df_params['gam'] # dimensionless number a
 df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
 df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
 df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
-df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
-df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
 df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
 df_params['ibar'] = df_params['p']/df_params['rho'] # mean storm rainfall intensity [m/s]
-df_params['MSF'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
+df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
+df_params['MSF'] = MSF
+df_params['dtg'] = df_params['MSF']*df_params['Th'] # geomorphic timestep [s]
+df_params['dtg_max'] = dtg_max_nd*df_params['tg']
+
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -122,7 +125,7 @@ Tg = df_params['Tg'][ID]
 MSF = df_params['MSF'][ID]
 
 output = {}
-output["output_interval"] = 1000
+output["output_interval"] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID] #save output every 10 tg
 output["output_fields"] = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
