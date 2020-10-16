@@ -141,7 +141,7 @@ postrun_ss_cond['percentile_value'] = 90
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((125, 125), xy_spacing=2.1*lg)
+grid = RasterModelGrid((125, 125), xy_spacing=0.7*lg)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
