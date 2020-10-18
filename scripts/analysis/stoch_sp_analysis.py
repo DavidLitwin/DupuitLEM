@@ -20,7 +20,7 @@ from landlab.components import (
     HeightAboveDrainageCalculator,
     DrainageDensity,
     )
-from landlab.grid.mappers import map_max_of_node_links_to_node
+from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
 
 def weighted_percentile(data, percents, weights=None, interpolation="nearest"):
@@ -75,6 +75,7 @@ pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'
 Ks = df_params['ksat'][ID] #hydraulic conductivity [m/s]
 n = df_params['n'][ID] #drainable porosity [-]
 b = df_params['b'][ID] #characteristic depth  [m]
+p = df_params['p'][ID] #average precipitation rate [m/s]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
@@ -150,6 +151,10 @@ df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',
 # remove the first row (test row written by init of gdp)
 df.drop(0, inplace=True)
 df.reset_index(drop=True, inplace=True)
+# make dimensionless timeseries
+Atot = np.sum(mg.cell_area_at_node[mg.core_nodes])
+df['qs_star'] = df['qs']/(p*Atot)
+df['S_star'] = df['S']/(b*n*Atot)
 
 ##### recession
 def power_law(x, a, b, c):
@@ -159,16 +164,16 @@ def linear_law(x,a,c):
     return a*x + c
 
 # find recession periods
-rec_inds = np.where(np.diff(df['qs'], prepend=0.0) < 0.0)[0]
-Q = df['qs'][rec_inds]
-S = df['S'][rec_inds] - min(df['S'][rec_inds])
+rec_inds = np.where(np.diff(df['qs_star'], prepend=0.0) < 0.0)[0]
+Qrec = df['qs_star'][rec_inds]
+Srec = df['S_star'][rec_inds]
 
 # try to fit linear and power fits to Q-S relationship directly
 try:
-    pars, cov = curve_fit(f=power_law, xdata=S, ydata=Q, p0=[0, 1, 0], bounds=(-100, 100))
+    pars, cov = curve_fit(f=power_law, xdata=Srec, ydata=Qrec, p0=[0, 1, 0], bounds=(-100, 100))
     stdevs = np.sqrt(np.diag(cov))
 
-    pars_lin, cov_lin = curve_fit(f=linear_law, xdata=S, ydata=Q, p0=[0, 0], bounds=(-100, 100))
+    pars_lin, cov_lin = curve_fit(f=linear_law, xdata=Srec, ydata=Qrec, p0=[0, 0], bounds=(-100, 100))
     stdevs_lin = np.sqrt(np.diag(cov_lin))
 
     df_output['rec_a'] = pars[0]
@@ -182,23 +187,28 @@ try:
 
 except:
     print("error fitting recession")
-    df_output['rec_a_linear'] = 0.0
 
-##### steepness and curvature
-S = mg.add_zeros('node', 'slope')
-A = mg.at_node['drainage_area']
+##### steepness, curvature, and topographic index
+S8 = mg.add_zeros('node', 'slope_D8')
+S4 = mg.add_zeros('node', 'slope_D4')
 curvature = mg.add_zeros('node', 'curvature')
 steepness = mg.add_zeros('node', 'steepness')
+TI8 = mg.add_zeros('node', 'topographic__index_D8')
+TI4 = mg.add_zeros('node', 'topographic__index_D4')
 
-#slope is the absolute value of D8 gradient associated with flow direction. Same as FastscapeEroder.
-#curvature is divergence of gradient. Same as LinearDiffuser.
+#slope for steepness is the absolute value of D8 gradient associated with
+#flow direction. Same as FastscapeEroder. curvature is divergence of gradient.
+#Same as LinearDiffuser. TI is done both ways.
 dzdx_D8 = mg.calc_grad_at_d8(elev)
 dzdx_D4 = mg.calc_grad_at_link(elev)
 dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
-S[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
+S8[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
+S4[:] = map_downwind_node_link_max_to_node(mg, dzdx_D4)
 
 curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
-steepness[:] = np.sqrt(A)*S
+steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
+TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
+TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
 ######## Runoff generation
 # find times with rain. Note in df qs and S are at the end of the timestep.
@@ -221,11 +231,11 @@ df['qb'] = qb
 qe = df['qs'] - df['qb']
 
 # integrate to find total values. trapezoidal for the properties that
-# change dynamically, and simple rectangular bc we know rain varies in this way.
-qe_tot = np.trapz(qe,df['t'])
-qb_tot = np.trapz(qb,df['t'])
-qs_tot = np.trapz(df['qs'],df['t'])
-p_tot = np.sum(df['dt']*df['i'])
+# change dynamically, and simple rectangular for i bc we know rain varies in this way.
+qe_tot = np.trapz(qe, df['t'])
+qb_tot = np.trapz(qb, df['t'])
+qs_tot = np.trapz(df['qs'], df['t'])
+p_tot = np.sum(df['dt'] * df['i'])
 
 df_output['BFI'] = qb_tot/qs_tot #baseflow index
 df_output['RR'] = qe_tot/p_tot #runoff ratio
@@ -320,14 +330,6 @@ try:
 except:
     print('failed to calculate drainage density')
 
-####### calculate topographic index
-TI8 = mg.add_zeros('node', 'topographic__index_D8')
-TI8[:] = mg.at_node['drainage_area']/(S*mg.dx)
-
-TI4 = mg.add_zeros('node', 'topographic__index_D4')
-S4 = map_max_of_node_links_to_node(mg, abs(dzdx_D4))
-TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
-
 ####### calculate elevation change
 z_change = np.zeros((len(files),6))
 try:
@@ -368,7 +370,8 @@ output_fields = [
         'at_node:hand_med',
         'at_node:topographic__index_D8',
         'at_node:topographic__index_D4',
-        'at_node:slope',
+        'at_node:slope_D8',
+        'at_node:slope_D4',
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',

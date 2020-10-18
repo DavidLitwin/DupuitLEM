@@ -18,7 +18,7 @@ from landlab.components import (
     HeightAboveDrainageCalculator,
     DrainageDensity,
     )
-from landlab.grid.mappers import map_max_of_node_links_to_node
+from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologySteadyStreamPower
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
@@ -107,21 +107,27 @@ Q_nodes = Q > 1e-10
 network = mg.add_zeros('node', 'channel_mask')
 network[:] = Q_nodes.copy()
 
-##### steepness and curvature
-S = mg.add_zeros('node', 'slope')
-A = mg.at_node['drainage_area']
+##### steepness, curvature, and topographic index
+S8 = mg.add_zeros('node', 'slope_D8')
+S4 = mg.add_zeros('node', 'slope_D4')
 curvature = mg.add_zeros('node', 'curvature')
 steepness = mg.add_zeros('node', 'steepness')
+TI8 = mg.add_zeros('node', 'topographic__index_D8')
+TI4 = mg.add_zeros('node', 'topographic__index_D4')
 
-#slope is the absolute value of D8 gradient associated with flow direction. Same as FastscapeEroder.
-#curvature is divergence of gradient. Same as LinearDiffuser.
-dzdx_D8 = mg.calc_grad_at_d8(z)
-dzdx_D4 = mg.calc_grad_at_link(z)
+#slope for steepness is the absolute value of D8 gradient associated with
+#flow direction. Same as FastscapeEroder. curvature is divergence of gradient.
+#Same as LinearDiffuser. TI is done both ways.
+dzdx_D8 = mg.calc_grad_at_d8(elev)
+dzdx_D4 = mg.calc_grad_at_link(elev)
 dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
-S[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
+S8[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
+S4[:] = map_downwind_node_link_max_to_node(mg, dzdx_D4)
 
 curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
-steepness[:] = np.sqrt(A)*S
+steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
+TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
+TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
 ######## Calculate HAND
 hand = mg.add_zeros('node', 'hand')
@@ -135,14 +141,6 @@ df_output['mean_hand'] = np.mean(hand[mg.core_nodes])
 dd = DrainageDensity(mg, channel__mask=np.uint8(network))
 channel_mask = mg.at_node['channel__mask']
 df_output['drainage_density'] = dd.calculate_drainage_density()
-
-######## Topogrpahic index
-TI8 = mg.add_zeros('node', 'topographic__index_D8')
-TI8[:] = mg.at_node['drainage_area']/(S*mg.dx)
-
-TI4 = mg.add_zeros('node', 'topographic__index_D4')
-S4 = map_max_of_node_links_to_node(mg, abs(dzdx_D4))
-TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
 ####### calculate elevation change
 z_change = np.zeros((len(files),6))
@@ -181,7 +179,8 @@ output_fields = [
         'at_node:topographic__index_D4',
         'at_node:channel_mask',
         'at_node:hand',
-        'at_node:slope',
+        'at_node:slope_D8',
+        'at_node:slope_D4',
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',
