@@ -262,16 +262,10 @@ base_all = np.ones(wt_all.shape)*mg.at_node['aquifer_base__elevation']
 elev_all = np.ones(wt_all.shape)*mg.at_node['topographic__elevation']
 wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
-wtrel_mean = mg.add_zeros('node', 'wtrel_mean')
-wtrel_std = mg.add_zeros('node', 'wtrel_std')
-
-for i in range(len(wtrel_mean)):
-    ws = DescrStatsW(wtrel_all[:,i], weights=dt, ddof=0)
-    wtrel_mean[i] = ws.mean
-    wtrel_std[i] = ws.std
 
 # water table and saturation at end of storm and interstorm
-sat_all = (Q_all > 1e-10)
+thresh = 1e-10 #np.mean(mg.cell_area_at_node[grid.core_nodes])*df_params['p'][ID]
+sat_all = (Q_all > thresh)
 wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
 sat_end_interstorm = mg.add_zeros('node', 'sat_mean_end_interstorm')
@@ -362,12 +356,10 @@ df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 pe
 output_fields = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
-        'at_node:channel_mask_min',
-        'at_node:channel_mask_max',
-        'at_node:channel_mask_med',
-        'at_node:hand_min',
-        'at_node:hand_max',
-        'at_node:hand_med',
+        'at_node:channel_mask_storm',
+        'at_node:channel_mask_interstorm',
+        'at_node:hand_storm',
+        'at_node:hand_interstorm',
         'at_node:topographic__index_D8',
         'at_node:topographic__index_D4',
         'at_node:slope_D8',
@@ -375,8 +367,14 @@ output_fields = [
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',
-        'at_node:sat_mean',
-        'at_node:sat_std',
+        'at_node:qstar_mean_no_interevent',
+        'at_node:wtrel_mean_end_storm',
+        'at_node:wtrel_mean_end_interstorm',
+        'at_node:sat_mean_end_storm',
+        'at_node:sat_mean_end_interstorm',
+        'at_node:Q_mean_end_storm',
+        'at_node:Q_mean_end_interstorm',
+
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
