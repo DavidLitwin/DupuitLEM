@@ -37,7 +37,7 @@ try:
 except KeyError:
     grid = read_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
-relief_change[0,0] = np.sum(elev*grid.cell_area_at_node)
+relief_change[0,0] = np.sum(elev0*grid.cell_area_at_node)
 for i in range(1,len(files)):
 
     try:
