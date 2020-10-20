@@ -100,7 +100,7 @@ df_params['ibar'] = df_params['p']/df_params['rho'] # mean storm rainfall intens
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['MSF'] = MSF
 df_params['dtg'] = df_params['MSF']*df_params['Th'] # geomorphic timestep [s]
-df_params['dtg_max'] = dtg_max_nd*df_params['tg']
+df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 
 
 pickle.dump(df_params, open('parameters.p','wb'))

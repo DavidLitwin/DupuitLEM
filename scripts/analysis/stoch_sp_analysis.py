@@ -9,8 +9,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-from scipy.interpolate import interp1d
-from statsmodels.stats.weightstats import DescrStatsW
 
 from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
 from landlab.io.netcdf import to_netcdf, from_netcdf, read_netcdf
@@ -22,23 +20,6 @@ from landlab.components import (
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventStreamPower
-
-def weighted_percentile(data, percents, weights=None, interpolation="nearest"):
-    ''' percents in units of 1%
-        weights specifies the frequency (count) of data.
-
-        This is a generalization of the solution provided by
-        Kambrian and Max Ghenis here:
-        https://stackoverflow.com/a/31539746
-    '''
-    if weights is None:
-        return np.percentile(data, percents)
-    ind=np.argsort(data)
-    d=data[ind]
-    w=weights[ind]
-    p=1.*w.cumsum()/w.sum()*100
-    f=interp1d(p, d, kind=interpolation)
-    return f(percents)
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
