@@ -65,9 +65,9 @@ def generate_parameters(D, U, K, p, n, beta, gam, lam, rho):
     return K, D, U, ksat, p, b, ds, tr, tb, n, beta, gam, lam, rho
 
 #parameters
-beta_all = np.array([0.5, 1.0, 2.0, 4.0])
+beta_all = np.array([0.01, 0.1, 1.0, 2.0])
 gam_all = np.array([0.5, 1.0, 2.0, 4.0])
-rho_all = np.array([0.01, 0.3, 0.7])
+rho_all = np.array([0.01, 0.1, 0.5])
 beta1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,0]
 gam1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,1]
 rho1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,2]
@@ -80,10 +80,11 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 p1 = 0.75/(365*24*3600) # average rainfall rate [m/s]
 n1 = 0.1 # drainable porosity [-]
 
-Tg_nd = 1000 # total duration in units of tg [-]
+Tg_nd = 3000 # total duration in units of tg [-]
 dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 MSF = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
+dx_nd = 1.2 # dimensionless grid spacing [-]
 
 params = np.zeros((len(beta1),14))
 for i in range(len(beta1)):
@@ -101,7 +102,7 @@ df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['MSF'] = MSF
 df_params['dtg'] = df_params['MSF']*df_params['Th'] # geomorphic timestep [s]
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
-
+df_params['dx_nd'] = dx_nd
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -123,6 +124,7 @@ lg = df_params['lg'][ID]
 Th = df_params['Th'][ID]
 Tg = df_params['Tg'][ID]
 MSF = df_params['MSF'][ID]
+dtg_max = df_params['dtg_max'][ID]
 
 output = {}
 output["output_interval"] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID] #save output every 10 tg
@@ -134,14 +136,14 @@ output["output_fields"] = [
 output["base_output_path"] = './data/stoch_sp_7_'
 output["run_id"] = ID #make this task_id if multiple runs
 
-postrun_ss_cond = {}
-postrun_ss_cond['stop_at_rate'] = 1e-3*U
-postrun_ss_cond['how'] = 'percentile'
-postrun_ss_cond['percentile_value'] = 90
+# postrun_ss_cond = {}
+# postrun_ss_cond['stop_at_rate'] = 1e-3*U
+# postrun_ss_cond['how'] = 'percentile'
+# postrun_ss_cond['percentile_value'] = 90
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((125, 125), xy_spacing=0.7*lg)
+grid = RasterModelGrid((125, 125), xy_spacing=dx_nd*lg)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
@@ -177,10 +179,11 @@ mdl = StreamPowerModel(grid,
         erosion_model=sp,
         regolith_model=rm,
         morphologic_scaling_factor=MSF,
+        maximum_morphological_dt=dtg_max,
         total_morphological_time=Tg,
         verbose=True,
         output_dict=output,
-        steady_state_condition=postrun_ss_cond,
+        # steady_state_condition=postrun_ss_cond,
 )
 
 mdl.run_model()
