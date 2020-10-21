@@ -30,7 +30,7 @@ output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID
 dt = output_interval*df_params['dtg'][ID]
 
 ####### calculate elevation change
-z_change = np.zeros((len(files),7))
+z_change = np.zeros((len(files),6))
 relief_change = np.zeros((len(files), 2))
 try:
     grid = from_netcdf(files[0])
