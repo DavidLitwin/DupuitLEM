@@ -225,23 +225,15 @@ class StreamPowerModel:
 
         # Run model forward
         for i in range(N):
-            elev0 = self._elev.copy()
+
             self.run_step(self.dt_m, dt_m_max=self.dt_m_max)
             self.verboseprint("Completed model loop %d" % i)
-
-            elev_diff = abs(self._elev - elev0)
-            self.z_change[i, 0] = np.max(elev_diff)
-            self.z_change[i, 1] = np.percentile(elev_diff, 90)
-            self.z_change[i, 2] = np.percentile(elev_diff, 50)
-            self.z_change[i, 3] = np.mean(elev_diff)
-            self.z_change[i, 4] = np.mean(self._elev - elev0)
 
             if self.save_output:
 
                 if i % self.output_interval == 0 or i == max(range(N)):
 
                     # save the specified grid fields
-                    self._gw_flux[:] = self.hm.gdp.calc_gw_flux_at_node()
                     filename = self.base_path + "%d_grid_%d.nc" % (self.id, i)
                     to_netcdf(
                         self._grid,
@@ -249,14 +241,6 @@ class StreamPowerModel:
                         include=self.output_fields,
                         format="NETCDF4",
                     )
-
-                    # save elevation change information
-                    df_ouput = pd.DataFrame(
-                        data=self.z_change,
-                        columns=["max_abs", "90_abs", "50_abs", "mean_abs", "mean"],
-                    )
-                    filename = self.base_path + "%d_elev_change.csv" % self.id
-                    df_ouput.to_csv(filename, index=False, float_format="%.3e")
 
                 if self.stop_cond and i % self.output_interval == 0 and i > 0:
 
