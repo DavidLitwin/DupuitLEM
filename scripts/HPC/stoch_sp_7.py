@@ -71,8 +71,7 @@ rho_all = np.array([0.01, 0.1, 0.5])
 beta1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,0]
 gam1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,1]
 rho1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,2]
-lam1 = 5.0
-
+lam1 = 0.5
 lg = 15 # geomorphic length scale
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
