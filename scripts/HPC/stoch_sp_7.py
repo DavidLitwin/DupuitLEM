@@ -81,7 +81,7 @@ n1 = 0.1 # drainable porosity [-]
 
 Tg_nd = 3000 # total duration in units of tg [-]
 dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
-MSF = 5000 # morphologic scaling factor
+MSF = 25000 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 dx_nd = 1.2 # dimensionless grid spacing [-]
 
