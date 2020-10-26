@@ -71,7 +71,7 @@ rho_all = np.array([0.01, 0.1, 0.5])
 beta1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,0]
 gam1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,1]
 rho1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,2]
-lam1 = 5.0
+lam1 = 0.5
 lg = 15 # geomorphic length scale
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
@@ -79,9 +79,9 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 p1 = 0.75/(365*24*3600) # average rainfall rate [m/s]
 n1 = 0.1 # drainable porosity [-]
 
-Tg_nd = 1000 # total duration in units of tg [-]
+Tg_nd = 3000 # total duration in units of tg [-]
 dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
-MSF = 2500 # morphologic scaling factor
+MSF = 5000 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 dx_nd = 1.2 # dimensionless grid spacing [-]
 
@@ -99,8 +99,6 @@ df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulatio
 df_params['ibar'] = df_params['p']/df_params['rho'] # mean storm rainfall intensity [m/s]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['MSF'] = MSF
-# df_params['MSF'].loc[df_params['beta']==0.01] = 5*MSF
-df_params.loc[(df_params.beta == 0.01),'MSF']=5*MSF
 df_params['dtg'] = df_params['MSF']*df_params['Th'] # geomorphic timestep [s]
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['dx_nd'] = dx_nd
