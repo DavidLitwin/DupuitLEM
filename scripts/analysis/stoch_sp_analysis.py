@@ -47,11 +47,10 @@ plt.close()
 
 
 ########## Run hydrological model
+# load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
 df_params = pickle.load(open('./parameters.p','rb'))
-df_params['hg'] = df_params['U']/df_params['K']
-df_params['lg'] = np.sqrt(df_params['D']/df_params['K'])
-df_params['tg'] = 1/df_params['K']
-pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
+params = df_params.iloc[ID]
+pickle.dump(params, open('../post_proc/%s/params_ID_%d.p'%(base_output_path,ID),'wb'))
 
 Ks = df_params['ksat'][ID] #hydraulic conductivity [m/s]
 n = df_params['n'][ID] #drainable porosity [-]
