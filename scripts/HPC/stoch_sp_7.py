@@ -65,8 +65,8 @@ def generate_parameters(D, U, K, p, n, beta, gam, lam, rho):
     return K, D, U, ksat, p, b, ds, tr, tb, n, beta, gam, lam, rho
 
 #parameters
-beta_all = np.array([0.01, 0.1, 1.0, 2.0])
-gam_all = np.array([0.5, 1.0, 2.0, 4.0])
+beta_all = np.array([0.01, 0.05, 0.1, 1.0])
+gam_all = np.array([1.0, 1.5, 2.0, 4.0, 8.0])
 rho_all = np.array([0.01, 0.1, 0.5])
 beta1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,0]
 gam1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,1]
@@ -81,7 +81,7 @@ n1 = 0.1 # drainable porosity [-]
 
 Tg_nd = 3000 # total duration in units of tg [-]
 dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
-MSF = 25000 # morphologic scaling factor
+MSF_base = 400 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 dx_nd = 1.2 # dimensionless grid spacing [-]
 
@@ -98,7 +98,7 @@ df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
 df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
 df_params['ibar'] = df_params['p']/df_params['rho'] # mean storm rainfall intensity [m/s]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
-df_params['MSF'] = MSF
+df_params['MSF'] = MSF_base/df_params['beta']
 df_params['dtg'] = df_params['MSF']*df_params['Th'] # geomorphic timestep [s]
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['dx_nd'] = dx_nd
