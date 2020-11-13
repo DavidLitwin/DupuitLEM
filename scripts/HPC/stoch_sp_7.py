@@ -65,8 +65,8 @@ def generate_parameters(D, U, K, p, n, beta, gam, lam, rho):
     return K, D, U, ksat, p, b, ds, tr, tb, n, beta, gam, lam, rho
 
 #parameters
-beta_all = np.array([0.01, 0.05, 0.1, 1.0])
-gam_all = np.array([1.0, 1.5, 2.0, 4.0, 8.0])
+beta_all = np.array([0.01, 0.1, 0.5, 1.0])
+gam_all = np.array([1.0, 2.5, 5.0, 10.0])
 rho_all = np.array([0.01, 0.1, 0.5])
 beta1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,0]
 gam1 = np.array(list(product(beta_all, gam_all, rho_all)))[:,1]
