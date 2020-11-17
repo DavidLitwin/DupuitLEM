@@ -305,12 +305,17 @@ except:
     print('failed to calculate drainage density')
 
 ####### calculate elevation change
+output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID]
+dt = output_interval*df_params['dtg'][ID]
+
 z_change = np.zeros((len(files),6))
+relief_change = np.zeros((len(files), 2))
 try:
     grid = from_netcdf(files[0])
 except KeyError:
     grid = read_netcdf(files[0])
 elev0 = grid.at_node['topographic__elevation']
+relief_change[0,0] = np.sum(elev0*grid.cell_area_at_node)
 for i in range(1,len(files)):
 
     try:
@@ -327,9 +332,17 @@ for i in range(1,len(files)):
     z_change[i,4] = np.min(elev_diff)
     z_change[i,5] = np.mean(elev_diff)
 
+    relief_change[i,0] = np.sum(elev*grid.cell_area_at_node)
+    relief_change[i,1] = (relief_change[i,0]- relief_change[i-1,0])/dt
+
     elev0 = elev.copy()
 
 df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
+r_change = pd.DataFrame()
+r_change['r_nd'] = relief_change[:,0]/(df_params['hg'][ID]*df_params['lg'][ID]**2)
+r_change['drdt_nd'] = relief_change[:,1]/(df_params['hg'][ID]*df_params['lg'][ID]**2)*df_params['tg'][ID]
+r_change['t_nd'] = np.arange(len(files))*(dt/df_params['tg'][ID])
+
 
 ####### save things
 
@@ -360,6 +373,7 @@ output_fields = [
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
-pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
 pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
+df_z_change.to_csv('../post_proc/%s/z_change_%d.csv'%(base_output_path, ID))
+r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
