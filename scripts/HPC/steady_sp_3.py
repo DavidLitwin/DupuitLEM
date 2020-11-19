@@ -48,7 +48,7 @@ def generate_parameters(D, U, K, p, n, gam, lam):
     return K, D, U, ksat, p, b, n, gam, lam
 
 #parameters
-lam_all = np.geomspace(0.5, 5, 5)
+lam_all = np.geomspace(0.05, 5, 5)
 gam_all = np.geomspace(0.5, 5, 5)
 lg = 15
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
@@ -57,7 +57,7 @@ K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 1500 # total duration in units of tg [-]
+Tg_nd = 1000 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
@@ -108,10 +108,10 @@ output["output_fields"] = [
 output["base_output_path"] = './data/steady_sp_3_'
 output["run_id"] = ID #make this task_id if multiple runs
 
-postrun_ss_cond = {}
-postrun_ss_cond['stop_at_rate'] = 1e-3*U
-postrun_ss_cond['how'] = 'percentile'
-postrun_ss_cond['percentile_value'] = 90
+# postrun_ss_cond = {}
+# postrun_ss_cond['stop_at_rate'] = 1e-3*U
+# postrun_ss_cond['how'] = 'percentile'
+# postrun_ss_cond['percentile_value'] = 90
 
 #initialize grid
 np.random.seed(12345)
@@ -163,8 +163,8 @@ mdl = StreamPowerModel(grid,
         morphologic_scaling_factor=MSF,
         total_morphological_time=Tg,
         verbose=True,
-        output_dict=output,
-        steady_state_condition=postrun_ss_cond,
+        # output_dict=output,
+        # steady_state_condition=postrun_ss_cond,
 )
 
 mdl.run_model()
