@@ -163,7 +163,7 @@ mdl = StreamPowerModel(grid,
         morphologic_scaling_factor=MSF,
         total_morphological_time=Tg,
         verbose=True,
-        # output_dict=output,
+        output_dict=output,
         # steady_state_condition=postrun_ss_cond,
 )
 
