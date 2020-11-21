@@ -39,7 +39,7 @@ w0 = lg
 A0 = lg**2
 
 D = 0.01 #m2/yr
-K = (D/lg**2)*(dx/w0)
+K = (D/lg**2) #*(dx/w0)
 U = 1e-4 #m/yr
 m = 0.5
 n = 1
@@ -79,4 +79,3 @@ for i in range(N):
         print('finished iteration %d'%i)
         filename = base_path + '%d_grid_%d.nc'%(ID,i)
         to_netcdf(grid, filename, include="at_node:topographic__elevation")
-
