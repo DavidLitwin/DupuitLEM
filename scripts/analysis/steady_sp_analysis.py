@@ -93,19 +93,10 @@ hm.run_step()
 #dataframe for output
 df_output = {}
 
-##### channel network
-
 # Qstar
 Q = mg.at_node['surface_water__discharge']
 Qstar = mg.add_zeros('node', 'qstar')
 Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
-
-#find number of saturated cells
-Q_nodes = Q > 1e-10
-
-#set fields
-network = mg.add_zeros('node', 'channel_mask')
-network[:] = Q_nodes.copy()
 
 ##### steepness, curvature, and topographic index
 S8 = mg.add_zeros('node', 'slope_D8')
@@ -129,6 +120,9 @@ steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
 TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
 TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
+network = mg.add_zeros('node', 'channel_mask')
+network[:] = curvature > 0
+
 ######## Calculate HAND
 hand = mg.add_zeros('node', 'hand')
 hd = HeightAboveDrainageCalculator(mg, channel_mask=network)
@@ -136,38 +130,29 @@ hd = HeightAboveDrainageCalculator(mg, channel_mask=network)
 hd.run_one_step()
 hand[:] = mg.at_node["height_above_drainage__elevation"].copy()
 df_output['mean_hand'] = np.mean(hand[mg.core_nodes])
+df_output['hand_mean_ridges'] = np.mean(hand[mg.at_node["drainage_area"]==mg.dx**2])
 
 ######## Calculate drainage density
 dd = DrainageDensity(mg, channel__mask=np.uint8(network))
 channel_mask = mg.at_node['channel__mask']
 df_output['drainage_density'] = dd.calculate_drainage_density()
 
-####### calculate elevation change
-z_change = np.zeros((len(files),6))
-try:
-    grid = from_netcdf(files[0])
-except KeyError:
-    grid = read_netcdf(files[0])
-elev0 = grid.at_node['topographic__elevation']
+####### calculate relief change
+output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID]
+dt_nd = output_interval*df_params['dtg'][ID]/df_params['tg'][ID]
+relief_change = np.zeros(len(files))
 for i in range(1,len(files)):
-
     try:
         grid = from_netcdf(files[i])
     except KeyError:
         grid = read_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
+    relief_change[i] = np.mean(elev[grid.core_nodes])
 
-    elev_diff = abs(elev-elev0)
-    z_change[i,0] = np.max(elev_diff)
-    z_change[i,1] = np.percentile(elev_diff,90)
-    z_change[i,2] = np.percentile(elev_diff,50)
-    z_change[i,3] = np.percentile(elev_diff,10)
-    z_change[i,4] = np.min(elev_diff)
-    z_change[i,5] = np.mean(elev_diff)
-
-    elev0 = elev.copy()
-
-df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
+r_change = pd.DataFrame()
+r_change['r_nd'] = relief_change[:]/df_params['hg'][ID]
+r_change['drdt_nd'] = np.diff(r_change['r_nd'], prepend=0.0)/dt_nd
+r_change['t_nd'] = np.arange(len(files))*dt_nd
 
 ####### save things
 
@@ -191,4 +176,4 @@ filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
-pickle.dump(df_z_change, open('../post_proc/%s/z_change_%d.p'%(base_output_path, ID), 'wb'))
+r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
