@@ -116,12 +116,20 @@ output["run_id"] = ID #make this task_id if multiple runs
 #initialize grid
 np.random.seed(12345)
 grid = RasterModelGrid((125, 125), xy_spacing=0.7*lg)
+# grid.set_status_at_node_on_edges(
+#         right=grid.BC_NODE_IS_CLOSED,
+#         top=grid.BC_NODE_IS_CLOSED,
+#         left=grid.BC_NODE_IS_FIXED_VALUE,
+#         bottom=grid.BC_NODE_IS_CLOSED,
+# )
+# set single boundary node open
 grid.set_status_at_node_on_edges(
         right=grid.BC_NODE_IS_CLOSED,
         top=grid.BC_NODE_IS_CLOSED,
-        left=grid.BC_NODE_IS_FIXED_VALUE,
+        left=grid.BC_NODE_IS_CLOSED,
         bottom=grid.BC_NODE_IS_CLOSED,
 )
+grid.status_at_node[1] = grid.BC_NODE_IS_FIXED_VALUE
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = b + 0.1*hg*np.random.rand(len(elev))
 base = grid.add_zeros('node', 'aquifer_base__elevation')
@@ -163,7 +171,7 @@ mdl = StreamPowerModel(grid,
         morphologic_scaling_factor=MSF,
         total_morphological_time=Tg,
         verbose=True,
-        output_dict=output,
+        # output_dict=output,
         # steady_state_condition=postrun_ss_cond,
 )
 
