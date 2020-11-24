@@ -49,7 +49,7 @@ def generate_parameters(D, U, K, p, n, gam, lam):
 
 #parameters
 lam_all = np.geomspace(0.05, 5, 5)
-gam_all = np.geomspace(0.5, 5, 5)
+gam_all = np.geomspace(1.0, 10.0, 5)
 lg = 15
 D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
 U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
@@ -115,7 +115,7 @@ output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((125, 125), xy_spacing=0.7*lg)
+grid = RasterModelGrid((125, 125), xy_spacing=1.2*lg)
 # grid.set_status_at_node_on_edges(
 #         right=grid.BC_NODE_IS_CLOSED,
 #         top=grid.BC_NODE_IS_CLOSED,
