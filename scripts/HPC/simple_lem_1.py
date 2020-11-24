@@ -48,11 +48,6 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
                                 left=grid.BC_NODE_IS_FIXED_VALUE,
                                 bottom=grid.BC_NODE_IS_CLOSED,
 )
-
-np.random.seed(12345)
-grid = RasterModelGrid((Nx, Nx), xy_spacing=dx)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
-                              left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.1*hg*np.random.rand(len(z))
 
@@ -69,7 +64,7 @@ for i in range(N):
     fa.run_one_step()
     sp.run_one_step(dt)
 
-    print('completed loop %d'%i)
+    # print('completed loop %d'%i)
 
     if i%output_interval==0:
         print('finished iteration %d'%i)
