@@ -36,7 +36,7 @@ dx = dx_all[ID]
 Nx = int(Nx_all[ID])
 
 w0 = lg
-A0 = lg**2
+a0 = lg
 
 D = 0.01 #m2/yr
 K = (D/lg**2) #*(dx/w0)
@@ -70,7 +70,7 @@ for i in range(N):
 
     ld.run_one_step(dt)
     fa.run_one_step()
-    accum[:] = grid.at_node['drainage_area']*(A0/dx**2)
+    accum[:] = grid.at_node['drainage_area']*(a0/dx)
     sp.run_one_step(dt)
 
     print('completed loop %d'%i)
