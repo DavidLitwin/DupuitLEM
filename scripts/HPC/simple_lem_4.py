@@ -29,26 +29,25 @@ base_path = './data/simple_lem_4_'
 
 lg = 15
 Lx_nd = 87.5
-dx_all = lg*np.array([2, 1.5, 1.25, 1, 0.75, 0.5])
+dx_all = lg*np.array([1.5, 1.3, 1.1, 1, 0.9, 0.7, 0.5])
 Nx_all = (Lx_nd*lg+1e-10)//dx_all
 
 dx = dx_all[ID]
 Nx = int(Nx_all[ID])
-
-w0 = lg
-A0 = lg**2
+a0 = lg
 
 D = 0.01 #m2/yr
-K = (D/lg**2) #*(dx/w0)
+K = (D/lg**2) #
 U = 1e-4 #m/yr
 m = 0.5
 n = 1
 
+Ksp = K*(a0/dx)**m # corrected for valley width
 hg = U/K
 T = 800*(1/K)
 dt = 1e-3*(1/K)
 N = int(T//dt)
-output_interval = 1000
+output_interval = 5000
 
 np.random.seed(12345)
 grid = RasterModelGrid((Nx, Nx), xy_spacing=dx)
@@ -60,9 +59,7 @@ z[:] = 0.1*hg*np.random.rand(len(z))
 
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes')
 ld = LinearDiffuser(grid, D)
-
-accum = grid.add_zeros('node', 'width_norm_area')
-sp = FastscapeEroder(grid, K_sp=K, m_sp=m, n_sp=n, discharge_field='width_norm_area')
+sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=m, n_sp=n, discharge_field='drainage_area')
 
 for i in range(N):
 
@@ -70,10 +67,7 @@ for i in range(N):
 
     ld.run_one_step(dt)
     fa.run_one_step()
-    accum[:] = grid.at_node['drainage_area']*(A0/dx**2)
     sp.run_one_step(dt)
-
-    print('completed loop %d'%i)
 
     if i%output_interval==0:
         print('finished iteration %d'%i)
