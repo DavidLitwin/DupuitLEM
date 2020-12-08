@@ -5,8 +5,8 @@ This script uses dimensionless parameters based on Theodoratos method of
 nondimensionalizing the governing landscape evolution equation. Vary lambda
 and gamma.
 
-\[lambda] == (ks U^2)/(p K D),
-\[Gamma] == (ks b U)/(p D),
+\[lambda] == (ks (hg/lg)^2)/p,
+\[Gamma] == (ks b hg/lg)/(p lg),
 
 Date: 1 Sept 2020
 """
@@ -33,27 +33,39 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def b_fun(U, K, gam, lam):
-    return (U*gam)/(K*lam)
+def K_fun(a0, lg, tg):
+    return np.sqrt(lg)/(np.sqrt(a0)*tg)
 
-def ksat_fun(D, U, p, K, lam):
-    return (D*p*K*lam)/(U**2)
+def D_fun(lg, tg):
+    return lg**2/tg
+
+def U_fun(hg, tg):
+    return hg/tg
+
+def b_fun(hg, gam, lam):
+    return (hg*gam)/lam
+
+def ksat_fun(p, hg, lg, lam):
+    return (lg**2*p*lam)/hg**2
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, p, n, gam, lam):
+def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 
-    b = b_fun(U, K, gam, lam)
-    ksat = ksat_fun(D, U, p, K, lam)
+    K = K_fun(a0, lg, tg)
+    D = D_fun(lg, tg)
+    U = U_fun(hg, tg)
+    b = b_fun(hg, gam, lam)
+    ksat = ksat_fun(p, hg, lg, lam)
 
-    return K, D, U, ksat, p, b, n, gam, lam
+    return K, D, U, ksat, p, b, n, a0, hg, lg, tg, gam, lam
 
 #parameters
 lam_all = np.geomspace(0.05, 5, 5)
 gam_all = np.geomspace(1.0, 10.0, 5)
-lg = 15
-D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
-U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
-K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
+lg = 15 #m
+hg = 2.25 #m
+tg = 22500*(365*24*3600) #s
+a0 = 10 #m
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
@@ -64,17 +76,14 @@ Th_nd = 5 # hydrologic time in units of t_vn [-]
 lam1 = np.array(list(product(lam_all, gam_all)))[:,0]
 gam1 = np.array(list(product(lam_all, gam_all)))[:,1]
 
-params = np.zeros((len(lam1),9))
+params = np.zeros((len(lam1),13))
 for i in range(len(lam1)):
 
-    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, gam1[i], lam1[i])
+    params[i,:] = generate_parameters(p1, n1, a0, hg, lg, tg, gam1[i], lam1[i])
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'gam', 'lam'])
-df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
-df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
-df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'a0', 'hg', 'lg', 'tg', 'gam', 'lam'])
 df_params['tfill'] = (df_params['n']*df_params['b'])/df_params['p']
-df_params['tdrain'] = (df_params['D']*df_params['n'])/(df_params['ksat']*df_params['U'])
+df_params['tdrain'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg'])
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
 df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time in units of von neumann stability time [s]
