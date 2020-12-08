@@ -65,7 +65,7 @@ gam_all = np.geomspace(1.0, 10.0, 5)
 lg = 15 #m
 hg = 2.25 #m
 tg = 22500*(365*24*3600) #s
-a0 = 10 #m
+a0 = 15 #m
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
