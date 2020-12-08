@@ -1,9 +1,9 @@
 """
 Steady recharge + constant thickness + StreamPowerModel
 
-This script uses dimensionless parameters based on Theodoratos method of
-nondimensionalizing the governing landscape evolution equation. Vary lambda
-and gamma.
+This script uses dimensionless parameters based on modified Theodoratos/Bonetti
+method of nondimensionalizing the governing landscape evolution equation.
+Vary lambda and gamma.
 
 \[lambda] == (ks (hg/lg)^2)/p,
 \[Gamma] == (ks b hg/lg)/(p lg),
