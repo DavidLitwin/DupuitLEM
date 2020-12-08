@@ -62,10 +62,11 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 #parameters
 lam_all = np.geomspace(0.05, 5, 5)
 gam_all = np.geomspace(1.0, 10.0, 5)
-lg = 15 #m
-hg = 2.25 #m
-tg = 22500*(365*24*3600) #s
-a0 = 15 #m
+lg = 15 # geomorphic length scale [m]
+hg = 2.25 # geomorphic height scale [m]
+tg = 22500*(365*24*3600) # geomorphic timescale [s]
+v0 = 1.2*lg #min contour width (grid spacing) [m]
+a0 = v0 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
@@ -97,7 +98,7 @@ b = df_params['b'][ID]
 n = df_params['n'][ID]
 
 K = df_params['K'][ID]
-Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
+Ksp = K*np.sqrt(a0/v0)/p #see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
 hg = df_params['hg'][ID]
@@ -124,7 +125,7 @@ output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 np.random.seed(12345)
-grid = RasterModelGrid((125, 125), xy_spacing=1.2*lg)
+grid = RasterModelGrid((125, 125), xy_spacing=v0)
 grid.set_status_at_node_on_edges(
         right=grid.BC_NODE_IS_CLOSED,
         top=grid.BC_NODE_IS_CLOSED,

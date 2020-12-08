@@ -62,10 +62,10 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 #parameters
 lam1 = 5.0
 gam1 = 2.5
-lg_all = np.array([15, 30, 60])
-hg = 2.25 #m
-tg = 22500*(365*24*3600) #s
-a0 = 15 #m
+lg_all = np.array([15, 30, 60]) # geomorphic length scale [m]
+hg = 2.25 # geomorphic height scale [m]
+tg = 22500*(365*24*3600) # geomorphic timescale [s]
+a0 = 0.7*15 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
@@ -95,8 +95,8 @@ n = df_params['n'][ID]
 
 K = df_params['K'][ID]
 a0 = df_params['a0'][ID]
-v0 = 0.7*df_params['lg'][ID]
-Ksp = K*np.sqrt(a0/v0)/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
+v0 = 0.7*df_params['lg'][ID] #min contour width (grid spacing) [m]
+Ksp = K*np.sqrt(a0/v0)/p # see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
 hg = df_params['hg'][ID]
