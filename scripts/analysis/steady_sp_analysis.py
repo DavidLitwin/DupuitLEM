@@ -47,10 +47,6 @@ plt.close()
 
 ########## Run hydrological model
 df_params = pickle.load(open('./parameters.p','rb'))
-df_params['hg'] = df_params['U']/df_params['K']
-df_params['lg'] = np.sqrt(df_params['D']/df_params['K'])
-df_params['tg'] = 1/df_params['K']
-pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
 
 Ks = df_params['ksat'][ID] # hydraulic conductivity [m/s]
 p = df_params['p'][ID] # recharge rate [m/s]

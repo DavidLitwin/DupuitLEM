@@ -69,7 +69,7 @@ a0 = 0.7*15 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 1000 # total duration in units of tg [-]
+Tg_nd = 3000 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
