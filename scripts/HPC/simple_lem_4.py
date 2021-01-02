@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-
 A simple streampower diffusion model, to test the grid scale dependence of
 the solution with lg, the geomorphic length scale defined by Theodoratos.
 
 Implement a correction factor for grid scale dependence
 
-@author: dgbli
-20 Nov 2020
-
+Date: 20 Nov 2020
 """
 
 import os

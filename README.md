@@ -1,10 +1,10 @@
 # DupuitLEM
 
-DupuitLEM is a research code built off of landlab to explore the effects
-of groundwater on landscape evolution and the hydrological properties of
-the resulting landscapes. All models account for hillslope diffusion and fluvial
-incision that results from groundwater return flow and precipitation on
-saturated areas.
+DupuitLEM is a set of interchangeable models built with landlab components to
+explore the effects of groundwater on landscape evolution and the hydrological
+properties of the resulting landscapes. All models account for hillslope
+diffusion  and fluvial incision that results from groundwater return flow and
+precipitation on saturated areas.
 
 There are two types of core models:
 1. `StreamPowerModel`: Use the landlab component `FastscapeEroder` to determine the
@@ -15,7 +15,7 @@ method that is explicit in time, making it unstable and not advisable to use at
 this time.
 
 Core models take instantiated components to update landscape properties. For
-hillslope diffusion and streampower erosion, this is simply a landlab component. 
+hillslope diffusion and streampower erosion, this is simply a landlab component.
 For uplift and regolith production, a `RegolithModel` is used. A `HydrologicalModel`
 is used to update discharge or shear stress fields.  
 

@@ -1,3 +1,12 @@
+"""
+Misc. functions that are useful or necessary for model operations.
+
+Author: David Litwin
+
+Date: 16 March 2020
+"""
+
+
 import numpy as np
 from landlab.grid.mappers import (
     map_mean_of_link_nodes_to_link,

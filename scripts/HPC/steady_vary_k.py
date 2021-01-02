@@ -3,7 +3,7 @@
 Use StochasticRechargeShearStress model to test different values of
 hydraulic conductivity. Save output.
 
-19 May 2020
+Date: 19 May 2020
 """
 import os
 import numpy as np

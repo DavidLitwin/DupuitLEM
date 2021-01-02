@@ -1,7 +1,5 @@
 """
-Analysis of elevation change
-
-Was written for steady state scheme, now changed to just look at regular runs.
+Analysis of elevation and relief change from periodically saved output_fields
 """
 
 import os

@@ -1,9 +1,8 @@
-
 """
 Use StochasticRechargeStreamPower model to test different values of
 hydraulic conductivity. Save output.
 
-28 May 2020
+Date: 28 May 2020
 """
 
 import numpy as np

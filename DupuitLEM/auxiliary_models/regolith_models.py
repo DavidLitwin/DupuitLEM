@@ -2,7 +2,9 @@
 Models to update regolith state: topographic__elevation and aquifer_base__elevation
 given uplift and regolith production.
 
-19 May 2020
+Author: David Litwin
+
+Date: 19 May 2020
 """
 
 import numpy as np

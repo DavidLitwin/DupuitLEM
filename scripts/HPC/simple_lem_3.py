@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jul 27 12:11:59 2020
-
 A simple streampower diffusion model, to test the length scales in the
 nondimensionalization introduced by Nikos Theodoratos. Using a hexagonal grid.
 
-@author: dgbli
+Date: 27 Jul 2020
 """
 
 import os

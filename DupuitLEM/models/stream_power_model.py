@@ -1,4 +1,6 @@
 """
+ShearStressModel class of DupuitLEM. Core model for use.
+
 Author: David Litwin
 
 26 May 2020

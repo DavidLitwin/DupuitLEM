@@ -1,5 +1,8 @@
 """
 Analysis of results on HPC for stochastic stream power model runs.
+Run model output with parameters from other model runs in order to
+understand the effects of the coevolved geomorphology on emergent
+properties.
 """
 
 import os

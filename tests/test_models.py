@@ -1,3 +1,10 @@
+"""
+Tests of DupuitLEM streampower models. Shear stress models are not tested
+and are currently not recommended for use.
+
+Date: 8 Oct 2020
+"""
+
 import numpy as np
 
 from numpy.testing import assert_equal

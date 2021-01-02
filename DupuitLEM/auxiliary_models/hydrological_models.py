@@ -19,7 +19,9 @@ Models based on streampower forumulation:
     to calculate erosion rates.
 
 
-19 May 2020
+Author: David Litwin
+
+Date: 19 May 2020
 """
 
 import numpy as np

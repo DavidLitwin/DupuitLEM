@@ -1,3 +1,10 @@
+"""
+Tests of the DupuitLEM steady and stochastic models, showing functionality
+on raster and hexagonal grids, and ability to save output.
+
+Date: 8 Oct 2020
+"""
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 

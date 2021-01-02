@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Make gif plots of elevation evolution for a given run
-
-Created on Wed Jul  1 15:19:58 2020
-
-@author: dgbli
 """
 import numpy as np
 import os

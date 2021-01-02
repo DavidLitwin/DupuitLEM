@@ -1,4 +1,7 @@
 """
+StreamPowerModel class of DupuitLEM. Recommended not to use this class
+due to stability issues.
+
 Author: David Litwin
 
 19 May 2020
