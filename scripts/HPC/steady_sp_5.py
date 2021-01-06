@@ -63,20 +63,20 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 lam1 = 5.0
 gam1 = 2.5
 lg_all = np.array([15, 30, 60]) # geomorphic length scale [m]
-hg = 2.25 # geomorphic height scale [m]
+hg_all = 2.25*lg_all/15 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 a0 = 0.7*15 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 3000 # total duration in units of tg [-]
+Tg_nd = 800 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
 params = np.zeros((len(lg_all),13))
 for i in range(len(lg_all)):
 
-    params[i,:] = generate_parameters(p1, n1, a0, hg, lg_all[i], tg, gam1, lam1)
+    params[i,:] = generate_parameters(p1, n1, a0, hg_all[i], lg_all[i], tg, gam1, lam1)
 
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'a0', 'hg', 'lg', 'tg', 'gam', 'lam'])
 df_params['tfill'] = (df_params['n']*df_params['b'])/df_params['p']
