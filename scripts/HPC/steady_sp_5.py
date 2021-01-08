@@ -45,28 +45,27 @@ def U_fun(hg, tg):
 def b_fun(hg, gam, lam):
     return (hg*gam)/lam
 
-def ksat_fun(p, hg, lg, v0, lam):
-    return (lg*v0*p*lam)/hg**2
+def ksat_fun(p, hg, lg, lam):
+    return (lg**2*p*lam)/hg**2
 
 #generate dimensioned parameters
-def generate_parameters(p, n, a0, v0, hg, lg, tg, gam, lam):
+def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 
     K = K_fun(a0, lg, tg)
     D = D_fun(lg, tg)
     U = U_fun(hg, tg)
     b = b_fun(hg, gam, lam)
-    ksat = ksat_fun(p, hg, lg, v0, lam)
+    ksat = ksat_fun(p, hg, lg, lam)
 
-    return K, D, U, ksat, p, b, n, a0, v0, hg, lg, tg, gam, lam
+    return K, D, U, ksat, p, b, n, a0, hg, lg, tg, gam, lam
 
 #parameters
 lam1 = 5.0
 gam1 = 2.5
 lg_all = np.array([15, 30, 60]) # geomorphic length scale [m]
-hg = 2.25 # geomorphic height scale [m]
+hg_all = 2.25*lg_all/15 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 a0 = 0.7*15 #valley width factor [m]
-v0 = 0.7*15 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
@@ -74,12 +73,12 @@ Tg_nd = 800 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
-params = np.zeros((len(lg_all),14))
+params = np.zeros((len(lg_all),13))
 for i in range(len(lg_all)):
 
-    params[i,:] = generate_parameters(p1, n1, a0, v0, hg, lg_all[i], tg, gam1, lam1)
+    params[i,:] = generate_parameters(p1, n1, a0, hg_all[i], lg_all[i], tg, gam1, lam1)
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'a0', v0, 'hg', 'lg', 'tg', 'gam', 'lam'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'a0', 'hg', 'lg', 'tg', 'gam', 'lam'])
 df_params['tfill'] = (df_params['n']*df_params['b'])/df_params['p']
 df_params['tdrain'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg'])
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
@@ -96,6 +95,7 @@ n = df_params['n'][ID]
 
 K = df_params['K'][ID]
 a0 = df_params['a0'][ID]
+v0 = 0.7*df_params['lg'][ID] #min contour width (grid spacing) [m]
 Ksp = K*np.sqrt(a0/v0)/p # see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
