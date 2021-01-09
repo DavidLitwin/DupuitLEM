@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 A simple streampower diffusion model, to test the grid scale dependence of
-the solution with lg, the geomorphic length scale defined by Theodoratos.
+the solution with nondimensionalization based on Theodoratos/Bonetti.
 
-Implement a correction factor for grid scale dependence
-
-Date: 20 Nov 2020
+Date: 9 Jan 2021
 """
 
 import os
@@ -19,35 +17,44 @@ from landlab.components import (
     )
 from landlab.io.netcdf import to_netcdf
 
+def K_fun(a0, lg, tg):
+    return np.sqrt(lg)/(np.sqrt(a0)*tg)
+
+def D_fun(lg, tg):
+    return lg**2/tg
+
+def U_fun(hg, tg):
+    return hg/tg
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_4_'
 
 lg = 15
-Lx_nd = 87.5
-dx_all = lg*np.array([1.5, 1.3, 1.1, 1, 0.9, 0.7, 0.5])
-Nx_all = (Lx_nd*lg+1e-10)//dx_all
-
-dx = dx_all[ID]
-Nx = int(Nx_all[ID])
-a0 = lg
-
-D = 0.01 #m2/yr
-K = (D/lg**2) #
-U = 1e-4 #m/yr
+hg = 2.25 # geomorphic height scale [m]
+tg = 22500 # geomorphic timescale [yr]
+a0 = 15 #valley width factor [m]
 m = 0.5
 n = 1
 
-Ksp = K*(a0/dx)**m # corrected for valley width
-hg = U/K
-T = 800*(1/K)
-dt = 1e-3*(1/K)
+Lx_nd = 87.5
+v0_all = lg*np.array([1.5, 1.3, 1.1, 1, 0.9, 0.7, 0.5])
+Nx_all = (Lx_nd*lg+1e-10)//v0_all
+v0 = v0_all[ID]
+Nx = int(Nx_all[ID])
+
+D = D_fun(lg, tg)
+K = K_fun(a0, lg, tg)
+Ksp = K*(a0/v0)**m # corrected for valley width
+U = U_fun(hg, tg)
+
+T = 2000*tg
+dt = 2e-3*tg
 N = int(T//dt)
-output_interval = 5000
+output_interval = 2000
 
 np.random.seed(12345)
-grid = RasterModelGrid((Nx, Nx), xy_spacing=dx)
+grid = RasterModelGrid((Nx, Nx), xy_spacing=v0)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 z = grid.add_zeros('node', 'topographic__elevation')
