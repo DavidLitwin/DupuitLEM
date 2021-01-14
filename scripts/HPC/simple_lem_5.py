@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-A simple streampower diffusion model, to test the length scales in the
-new nondimensionalization.
+NoHyd model Q*=1 for all (x,y).
+Vary lg and hg to confirm the independence of these length scales
+in this model case.
 
 Date: 2 Jan 2020
 """
@@ -33,8 +34,9 @@ ID = int(task_id)
 base_path = './data/simple_lem_5_'
 
 lg_all = np.array([15, 30, 60])
-lg = lg_all[ID]
-hg = 2.25 # geomorphic height scale [m]
+hg_all = np.array([2.5, 10, 5])
+lg = lg_all[ID] # geomorphic length scale
+hg = hg_all[ID] # geomorphic height scale [m]
 tg = 22500 # geomorphic timescale [yr]
 a0 = 0.7*15 #valley width factor [m]
 v0 = 0.7*lg #grid cell width [m]
