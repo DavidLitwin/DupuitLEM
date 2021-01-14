@@ -60,7 +60,7 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
     return K, D, U, ksat, p, b, n, a0, hg, lg, tg, gam, lam
 
 #parameters
-lam1 = 2.0
+lam1 = 0.05
 gam1 = 2.0
 lg_all = np.array([15, 30, 60]) # geomorphic length scale [m]
 hg_all = np.array([2.5, 10, 5]) #2.25*lg_all/15 # geomorphic height scale [m]
