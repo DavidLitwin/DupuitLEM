@@ -33,9 +33,9 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_5_'
 
-lg_all = np.array([15, 30, 60])
-hg_all = np.array([2.5, 10, 5])
-lg = lg_all[ID] # geomorphic length scale
+lg_all = np.array([15, 15, 15]) # geomorphic length scale [m]
+hg_all = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
+lg = lg_all[ID] # geomorphic length scale [m]
 hg = hg_all[ID] # geomorphic height scale [m]
 tg = 22500 # geomorphic timescale [yr]
 a0 = 0.7*15 #valley width factor [m]
