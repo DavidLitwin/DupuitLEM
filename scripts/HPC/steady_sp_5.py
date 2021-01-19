@@ -95,7 +95,7 @@ n = df_params['n'][ID]
 
 K = df_params['K'][ID]
 a0 = df_params['a0'][ID]
-v0 = 0.7*df_params['lg'][ID] #min contour width (grid spacing) [m]
+v0 = 1.2*df_params['lg'][ID] #min contour width (grid spacing) [m]
 Ksp = K*np.sqrt(a0/v0)/p # see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
