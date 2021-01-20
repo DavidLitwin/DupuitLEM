@@ -15,6 +15,7 @@ import os
 import numpy as np
 import pandas
 import pickle
+from itertools import product
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -60,10 +61,10 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
     return K, D, U, ksat, p, b, n, a0, hg, lg, tg, gam, lam
 
 #parameters
-lam1 = 5.0
+lam1 = 0.01
 gam1 = 2.5
 lg_1 = np.array([15, 30, 60]) # geomorphic length scale [m]
-hg_1 = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
+hg_1 = np.array([0.5, 1.0, 2.0]) # geomorphic height scale [m]
 lg_all = np.array(list(product(lg_1, hg_1)))[:,0]
 hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
@@ -87,6 +88,7 @@ df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
 df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time in units of von neumann stability time [s]
 df_params['MSF'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
+df_params['v0'] = 1.2*df_params['lg'][ID] #min contour width (grid spacing) [m]
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -97,7 +99,7 @@ n = df_params['n'][ID]
 
 K = df_params['K'][ID]
 a0 = df_params['a0'][ID]
-v0 = 0.7*df_params['lg'][ID] #min contour width (grid spacing) [m]
+v0 = df_params['v0'][ID]
 Ksp = K*np.sqrt(a0/v0)/p # see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
