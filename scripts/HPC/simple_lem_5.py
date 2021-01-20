@@ -10,6 +10,7 @@ Date: 2 Jan 2020
 import os
 import time
 import numpy as np
+from itertools import product
 
 from landlab import RasterModelGrid
 from landlab.components import (
@@ -33,8 +34,10 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_5_'
 
-lg_all = np.array([15, 15, 15]) # geomorphic length scale [m]
-hg_all = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
+lg_1 = np.array([15, 30, 60]) # geomorphic length scale [m]
+hg_1 = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
+lg_all = np.array(list(product(lg_1, hg_1)))[:,0]
+hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
 lg = lg_all[ID] # geomorphic length scale [m]
 hg = hg_all[ID] # geomorphic height scale [m]
 tg = 22500 # geomorphic timescale [yr]
@@ -48,7 +51,7 @@ U = U_fun(hg, tg)
 m = 0.5
 n = 1
 
-T = 2000*tg
+T = 500*tg
 dt = 2e-3*tg
 N = int(T//dt)
 output_interval = 2000

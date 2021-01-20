@@ -138,7 +138,7 @@ channel_mask = mg.at_node['channel__mask']
 df_output['drainage_density'] = dd.calculate_drainage_density()
 
 ####### calculate relief change
-output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID]
+output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
 dt_nd = output_interval*df_params['dtg'][ID]/df_params['tg'][ID]
 relief_change = np.zeros(len(files))
 for i in range(1,len(files)):

@@ -77,12 +77,13 @@ filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, format="NETCDF4")
 
 # relief change
-relief_change = np.zeros(len(files))
+relief_change = np.zeros(len(files),2)
 for i in range(1,len(files)):
     try:
         grid = from_netcdf(files[i])
     except KeyError:
         grid = read_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
-    relief_change[i] = np.mean(elev[grid.core_nodes])
+    relief_change[i,1] = np.mean(elev[grid.core_nodes])
+    relief_change[i,0] = int(files[i].split('_')[-1][:-3])
 np.savetxt('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID), relief_change, delimiter=',', fmt='%.4e')

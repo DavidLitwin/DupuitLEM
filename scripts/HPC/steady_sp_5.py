@@ -60,16 +60,18 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
     return K, D, U, ksat, p, b, n, a0, hg, lg, tg, gam, lam
 
 #parameters
-lam1 = 0.01
+lam1 = 5.0
 gam1 = 2.5
-lg_all = np.array([15, 30, 60]) # geomorphic length scale [m]
-hg_all = np.array([0.5, 0.5, 0.5]) #2.25*lg_all/15 # geomorphic height scale [m]
+lg_1 = np.array([15, 30, 60]) # geomorphic length scale [m]
+hg_1 = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
+lg_all = np.array(list(product(lg_1, hg_1)))[:,0]
+hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 a0 = 0.7*15 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 800 # total duration in units of tg [-]
+Tg_nd = 2000 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
@@ -95,7 +97,7 @@ n = df_params['n'][ID]
 
 K = df_params['K'][ID]
 a0 = df_params['a0'][ID]
-v0 = 1.2*df_params['lg'][ID] #min contour width (grid spacing) [m]
+v0 = 0.7*df_params['lg'][ID] #min contour width (grid spacing) [m]
 Ksp = K*np.sqrt(a0/v0)/p # see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
