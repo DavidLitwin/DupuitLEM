@@ -21,6 +21,53 @@ from landlab.components import (
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologySteadyStreamPower
 
+def calc_max_gw_flux(grid, k, b):
+    """
+    Calculate the maximum groundwater flux into and out of nodes.
+    """
+    base = grid.at_node['aquifer_base__elevation']
+
+    # Calculate gradients
+    base_grad = grid.calc_grad_at_link(base)
+    cosa = np.cos(np.arctan(base_grad))
+    hydr_grad = base_grad * cosa
+
+    # calc max gw flux at links
+    # Calculate groundwater velocity
+    vel = -k * hydr_grad
+    vel[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
+
+    # Calculate specific discharge
+    q = grid.add_zeros('link', 'q_max_link')
+    q[:] = b * cosa * vel
+
+    q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
+    q_all_links_at_node_dir_out = q_all_links_at_node < 0
+    widths = grid.dx*np.ones(q_all_links_at_node.shape)
+    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths, axis=1)
+
+    q_all_links_at_node_dir_in = q_all_links_at_node > 0
+    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths, axis=1)
+
+    return Qgw_in, Qgw_out
+
+def calc_gw_flux(grid):
+    """
+    Calculate the groundwater flux into and out of nodes.
+    """
+    # Calculate specific discharge
+    q = grid.at_link['groundwater__specific_discharge']
+
+    q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
+    q_all_links_at_node_dir_out = q_all_links_at_node < 0
+    widths = grid.dx*np.ones(q_all_links_at_node.shape)
+    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths, axis=1)
+
+    q_all_links_at_node_dir_in = q_all_links_at_node > 0
+    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths, axis=1)
+
+    return Qgw_in, Qgw_out
+
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
@@ -75,14 +122,15 @@ gdp = GroundwaterDupuitPercolator(mg,
           hydraulic_conductivity=Ks,
           regularization_f=0.01,
           recharge_rate=p,
-          courant_coefficient=0.01*Ks/1e-5,
-          vn_coefficient = 0.01*Ks/1e-5,
+          courant_coefficient=0.01, #*Ks/1e-5,
+          vn_coefficient = 0.01, #*Ks/1e-5,
 )
 
 hm = HydrologySteadyStreamPower(
         mg,
         groundwater_model=gdp,
         hydrological_timestep=Th,
+        routing_method='Steepest',
 )
 
 #run model
@@ -97,6 +145,14 @@ df_output = {}
 Q = mg.at_node['surface_water__discharge']
 Qstar = mg.add_zeros('node', 'qstar')
 Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
+
+# groundwater flux
+q_out_max = mg.add_zeros('node', 'gw_flux_out_max')
+q_in_max = mg.add_zeros('node', 'gw_flux_in_max')
+q_out = mg.add_zeros('node', 'gw_flux_out')
+q_in = mg.add_zeros('node', 'gw_flux_in')
+q_in[:], q_out[:] = calc_gw_flux(grid)
+q_in_max[:], q_out_max[:] = calc_max_gw_flux(grid, Ks, b)
 
 ##### steepness, curvature, and topographic index
 S8 = mg.add_zeros('node', 'slope_D8')
@@ -170,6 +226,11 @@ output_fields = [
         'at_node:curvature',
         'at_node:steepness',
         'at_node:qstar',
+        'at_node:gw_flux_out',
+        'at_node:gw_flux_in',
+        'at_node:gw_flux_out_max',
+        'at_node:gw_flux_in_max',
+        'at_link:groundwater__specific_discharge',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
