@@ -231,6 +231,7 @@ output_fields = [
         'at_node:gw_flux_out_max',
         'at_node:gw_flux_in_max',
         'at_link:groundwater__specific_discharge',
+        'at_node:average_surface_water__specific_discharge',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
