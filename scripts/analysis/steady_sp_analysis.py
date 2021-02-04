@@ -130,7 +130,7 @@ hm = HydrologySteadyStreamPower(
         mg,
         groundwater_model=gdp,
         hydrological_timestep=Th,
-        routing_method='Steepest',
+        # routing_method='Steepest',
 )
 
 #run model
