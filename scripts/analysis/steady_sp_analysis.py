@@ -151,8 +151,8 @@ q_out_max = mg.add_zeros('node', 'gw_flux_out_max')
 q_in_max = mg.add_zeros('node', 'gw_flux_in_max')
 q_out = mg.add_zeros('node', 'gw_flux_out')
 q_in = mg.add_zeros('node', 'gw_flux_in')
-q_in[:], q_out[:] = calc_gw_flux(grid)
-q_in_max[:], q_out_max[:] = calc_max_gw_flux(grid, Ks, b)
+q_in[:], q_out[:] = calc_gw_flux(mg)
+q_in_max[:], q_out_max[:] = calc_max_gw_flux(mg, Ks, b)
 
 ##### steepness, curvature, and topographic index
 S8 = mg.add_zeros('node', 'slope_D8')
