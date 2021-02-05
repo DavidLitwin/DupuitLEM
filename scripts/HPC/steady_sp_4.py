@@ -35,48 +35,58 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def b_fun(U, K, gam, lam):
-    return (U*gam*lam)/K
+def K_fun(a0, lg, tg):
+    return np.sqrt(lg)/(np.sqrt(a0)*tg)
 
-def ksat_fun(D, U, p, K, lam):
-    return (D*p*K)/(U**2*lam)
+def D_fun(lg, tg):
+    return lg**2/tg
+
+def U_fun(hg, tg):
+    return hg/tg
+
+def b_fun(hg, gam, lam):
+    return (hg*gam)/lam
+
+def ksat_fun(p, hg, lg, lam):
+    return (lg**2*p*lam)/hg**2
 
 #generate dimensioned parameters
-def generate_parameters(D, U, K, p, n, gam, lam):
+def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 
-    b = b_fun(U, K, gam, lam)
-    ksat = ksat_fun(D, U, p, K, lam)
+    K = K_fun(a0, lg, tg)
+    D = D_fun(lg, tg)
+    U = U_fun(hg, tg)
+    b = b_fun(hg, gam, lam)
+    ksat = ksat_fun(p, hg, lg, lam)
 
-    return K, D, U, ksat, p, b, n, gam, lam
+    return K, D, U, ksat, p, b, n, a0, hg, lg, tg, gam, lam
 
 #parameters
-lam_all = np.geomspace(0.2,2,5)
-gam_all = np.geomspace(0.5,5,5)
-lg = 15
-D1 = 0.01/(365*24*3600) # hillslope linear diffusivity [m2/s]
-U1 = 1e-4/(365*24*3600) # Uplift rate [m/s]
-K1 = (D1/lg**2) # Streampower incision coefficient [1/s]
+lam_all = np.geomspace(0.05, 5, 5)
+gam_all = np.geomspace(0.5, 5.0, 5)
+lg = 15 # geomorphic length scale [m]
+hg = 2.25 # geomorphic height scale [m]
+tg = 22500*(365*24*3600) # geomorphic timescale [s]
+v0 = 0.7*lg #min contour width (grid spacing) [m]
+a0 = v0 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
-Tg_nd = 1500 # total duration in units of tg [-]
-dtg_nd = 5e-3 # geomorphic timestep in units of tg [-]
+Tg_nd = 1000 # total duration in units of tg [-]
+dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
 lam1 = np.array(list(product(lam_all, gam_all)))[:,0]
 gam1 = np.array(list(product(lam_all, gam_all)))[:,1]
 
-params = np.zeros((len(lam1),9))
+params = np.zeros((len(lam1),13))
 for i in range(len(lam1)):
 
-    params[i,:] = generate_parameters(D1, U1, K1, p1, n1, gam1[i], lam1[i])
+    params[i,:] = generate_parameters(p1, n1, a0, hg, lg, tg, gam1[i], lam1[i])
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'gam', 'lam'])
-df_params['hg'] = df_params['U']/df_params['K'] # characteristic geomorphic vertical length scale [m]
-df_params['lg'] = np.sqrt(df_params['D']/df_params['K']) # characteristic geomorphic horizontal length scale [m]
-df_params['tg'] = 1/df_params['K'] # characteristic geomorphic timescale [s]
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'a0', 'hg', 'lg', 'tg', 'gam', 'lam'])
 df_params['tfill'] = (df_params['n']*df_params['b'])/df_params['p']
-df_params['tdrain'] = (df_params['D']*df_params['n'])/(df_params['ksat']*df_params['U'])
+df_params['tdrain'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg'])
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
 df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time in units of von neumann stability time [s]
@@ -90,7 +100,7 @@ b = df_params['b'][ID]
 n = df_params['n'][ID]
 
 K = df_params['K'][ID]
-Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
+Ksp = K*np.sqrt(a0/v0)/p #see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
 hg = df_params['hg'][ID]
@@ -99,7 +109,7 @@ lg = df_params['lg'][ID]
 Th = df_params['Th'][ID]
 Tg = df_params['Tg'][ID]
 MSF = df_params['MSF'][ID]
-Nx = 100
+Nx = 125
 
 output = {}
 output["output_interval"] = 1000
@@ -114,11 +124,12 @@ output["run_id"] = ID #make this task_id if multiple runs
 #initialize grid
 np.random.seed(12345)
 grid = HexModelGrid((Nx, Nx), node_layout="rect", spacing=0.7*lg)
-indices = np.arange(Nx**2).reshape((Nx,Nx))
-indices_flat = np.arange(Nx**2)
-grid.status_at_node[indices_flat%Nx==0] = 4
-grid.status_at_node[(indices_flat-Nx-1)%Nx==0] = 4
-grid.status_at_node[indices_flat>=Nx*(Nx-1)] = 4
+st_node = np.zeros(grid.shape)
+st_node[0,:] = 4
+st_node[-1,:] = 4
+st_node[:,-1] = 4
+st_node[:,0] = 1
+grid.status_at_node = st_node.reshape((Nx**2,))
 
 elev = grid.add_zeros('node', 'topographic__elevation')
 elev[:] = b + 0.1*hg*np.random.rand(len(elev))
