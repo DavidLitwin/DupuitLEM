@@ -12,7 +12,7 @@ import pandas as pd
 from landlab import imshow_grid
 from landlab.io.netcdf import read_netcdf, from_netcdf, to_netcdf
 
-from landlab import RasterModelGrid, LinkStatus
+from landlab import RasterModelGrid, HexModelGrid, LinkStatus
 from landlab.components import (
     GroundwaterDupuitPercolator,
     HeightAboveDrainageCalculator,
@@ -81,16 +81,16 @@ files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 iteration = int(files[-1].split('_')[-1][:-3])
 
 try:
-    grid = from_netcdf(files[-1])
+    mg = from_netcdf(files[-1])
 except KeyError:
-    grid = read_netcdf(files[-1])
-elev = grid.at_node['topographic__elevation']
-base = grid.at_node['aquifer_base__elevation']
-wt = grid.at_node['water_table__elevation']
+    mg = read_netcdf(files[-1])
+elev = mg.at_node['topographic__elevation']
+base = mg.at_node['aquifer_base__elevation']
+wt = mg.at_node['water_table__elevation']
 
 # elevation
 plt.figure(figsize=(8,6))
-imshow_grid(grid, elev, cmap='gist_earth', colorbar_label='Elevation [m]', grid_units=('m','m'))
+imshow_grid(mg, elev, cmap='gist_earth', colorbar_label='Elevation [m]', grid_units=('m','m'))
 plt.title('ID %d, Iteration %d'%(ID,iteration))
 plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
 plt.close()
@@ -104,18 +104,6 @@ p = df_params['p'][ID] # recharge rate [m/s]
 n = df_params['n'][ID] # drainable porosity [-]
 b = df_params['b'][ID] # characteristic depth  [m]
 Th = df_params['Th'][ID] # hydrological timestep
-
-#initialize grid
-dx = grid.dx
-mg = RasterModelGrid(grid.shape, xy_spacing=dx)
-mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
-                              left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
-z = mg.add_zeros('node', 'topographic__elevation')
-z[:] = elev
-zb = mg.add_zeros('node', 'aquifer_base__elevation')
-zb[:] = base
-zwt = mg.add_zeros('node', 'water_table__elevation')
-zwt[:] = wt
 
 gdp = GroundwaterDupuitPercolator(mg,
           porosity=n,
