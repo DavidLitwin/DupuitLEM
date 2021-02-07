@@ -43,11 +43,12 @@ def calc_max_gw_flux(grid, k, b):
 
     q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
     q_all_links_at_node_dir_out = q_all_links_at_node < 0
-    widths = grid.length_of_face[grid.face_at_link]
-    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths, axis=1)
+    widths_link = grid.length_of_face[grid.face_at_link]
+    widths_link_at_node = widths_link[grid.links_at_node]
+    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths_link_at_node, axis=1)
 
     q_all_links_at_node_dir_in = q_all_links_at_node > 0
-    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths, axis=1)
+    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths_link_at_node, axis=1)
 
     return Qgw_in, Qgw_out
 
@@ -60,11 +61,12 @@ def calc_gw_flux(grid):
 
     q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
     q_all_links_at_node_dir_out = q_all_links_at_node < 0
-    widths = grid.length_of_face[grid.face_at_link]
-    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths, axis=1)
+    widths_link = grid.length_of_face[grid.face_at_link]
+    widths_link_at_node = widths_link[grid.links_at_node]
+    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths_link_at_node, axis=1)
 
     q_all_links_at_node_dir_in = q_all_links_at_node > 0
-    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths, axis=1)
+    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths_link_at_node, axis=1)
 
     return Qgw_in, Qgw_out
 
@@ -140,27 +142,41 @@ q_in[:], q_out[:] = calc_gw_flux(mg)
 q_in_max[:], q_out_max[:] = calc_max_gw_flux(mg, Ks, b)
 
 ##### steepness, curvature, and topographic index
-S8 = mg.add_zeros('node', 'slope_D8')
-S4 = mg.add_zeros('node', 'slope_D4')
 curvature = mg.add_zeros('node', 'curvature')
 steepness = mg.add_zeros('node', 'steepness')
-TI8 = mg.add_zeros('node', 'topographic__index_D8')
-TI4 = mg.add_zeros('node', 'topographic__index_D4')
 
-#slope for steepness is the absolute value of D8 gradient associated with
-#flow direction. Same as FastscapeEroder. curvature is divergence of gradient.
-#Same as LinearDiffuser. TI is done both ways.
-dzdx_D8 = mg.calc_grad_at_d8(elev)
-dzdx_D4 = mg.calc_grad_at_link(elev)
-dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
-S8[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
-S4[:] = map_downwind_node_link_max_to_node(mg, dzdx_D4)
+if isinstance(mg, RasterModelGrid):
+    S8 = mg.add_zeros('node', 'slope_D8')
+    S4 = mg.add_zeros('node', 'slope_D4')
+    TI8 = mg.add_zeros('node', 'topographic__index_D8')
+    TI4 = mg.add_zeros('node', 'topographic__index_D4')
 
-curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
-steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
-dx = max(mg.length_of_face)
-TI8[:] = mg.at_node['drainage_area']/(S8*dx)
-TI4[:] = mg.at_node['drainage_area']/(S4*dx)
+    #slope for steepness is the absolute value of D8 gradient associated with
+    #flow direction. Same as FastscapeEroder. curvature is divergence of gradient.
+    #Same as LinearDiffuser. TI is done both ways.
+    dzdx_D8 = mg.calc_grad_at_d8(elev)
+    dzdx_D4 = mg.calc_grad_at_link(elev)
+    dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
+    S8[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
+    S4[:] = map_downwind_node_link_max_to_node(mg, dzdx_D4)
+
+    curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
+    steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
+    dx = max(mg.length_of_face)
+    TI8[:] = mg.at_node['drainage_area']/(S8*dx)
+    TI4[:] = mg.at_node['drainage_area']/(S4*dx)
+else:
+    S6 = mg.add_zeros('node', 'slope_D6')
+    TI6 = mg.add_zeros('node', 'topographic__index_D6')
+
+    dzdx_D6 = mg.calc_grad_at_link(elev)
+    dzdx_D6[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
+    S6[:] = abs(dzdx_D6[mg.at_node['flow__link_to_receiver_node']])
+
+    curvature[:] = mg.calc_flux_div_at_node(dzdx_D6)
+    steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S6
+    dx = max(mg.length_of_face)
+    TI6[:] = mg.at_node['drainage_area']/(S6*dx)
 
 network = mg.add_zeros('node', 'channel_mask')
 network[:] = curvature > 0
@@ -195,17 +211,23 @@ r_change['drdt_nd'] = np.diff(r_change['r_nd'], prepend=0.0)/dt_nd
 r_change['t_nd'] = np.arange(len(files))*dt_nd
 
 ####### save things
+raster_out = [
+        'at_node:topographic__index_D8',
+        'at_node:topographic__index_D4',
+        'at_node:slope_D8',
+        'at_node:slope_D4',
+        ]
+hex_out = [
+        'at_node:topographic__index_D6',
+        'at_node:slope_D6',
+        ]
 
-output_fields = [
+shared_out = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
-        'at_node:topographic__index_D8',
-        'at_node:topographic__index_D4',
         'at_node:channel_mask',
         'at_node:hand',
-        'at_node:slope_D8',
-        'at_node:slope_D4',
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',
@@ -218,6 +240,7 @@ output_fields = [
         'at_node:average_surface_water__specific_discharge',
         ]
 
+output_fields = shared_out+raster_out if isinstance(mg, RasterModelGrid) else shared_out + hex_out
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
