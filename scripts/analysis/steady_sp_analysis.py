@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from landlab import imshow_grid
-from landlab.io.netcdf import read_netcdf, from_netcdf, to_netcdf
+from landlab.io.netcdf import from_netcdf, to_netcdf
 
 from landlab import RasterModelGrid, HexModelGrid, LinkStatus
 from landlab.components import (
@@ -80,10 +80,7 @@ grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 iteration = int(files[-1].split('_')[-1][:-3])
 
-try:
-    mg = from_netcdf(files[-1])
-except KeyError:
-    mg = read_netcdf(files[-1])
+mg = from_netcdf(files[-1])
 elev = mg.at_node['topographic__elevation']
 base = mg.at_node['aquifer_base__elevation']
 wt = mg.at_node['water_table__elevation']
@@ -118,7 +115,7 @@ hm = HydrologySteadyStreamPower(
         mg,
         groundwater_model=gdp,
         hydrological_timestep=Th,
-        # routing_method='Steepest',
+        routing_method='D8' if isinstance(mg, RasterModelGrid) else 'Steepest',
 )
 
 #run model
@@ -188,10 +185,7 @@ output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1
 dt_nd = output_interval*df_params['dtg'][ID]/df_params['tg'][ID]
 relief_change = np.zeros(len(files))
 for i in range(1,len(files)):
-    try:
-        grid = from_netcdf(files[i])
-    except KeyError:
-        grid = read_netcdf(files[i])
+    grid = from_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
     relief_change[i] = np.mean(elev[grid.core_nodes])
 
