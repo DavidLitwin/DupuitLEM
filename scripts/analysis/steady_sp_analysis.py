@@ -43,7 +43,7 @@ def calc_max_gw_flux(grid, k, b):
 
     q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
     q_all_links_at_node_dir_out = q_all_links_at_node < 0
-    widths = grid.dx*np.ones(q_all_links_at_node.shape)
+    widths = grid.length_of_face[grid.face_at_link]
     Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths, axis=1)
 
     q_all_links_at_node_dir_in = q_all_links_at_node > 0
@@ -60,7 +60,7 @@ def calc_gw_flux(grid):
 
     q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
     q_all_links_at_node_dir_out = q_all_links_at_node < 0
-    widths = grid.dx*np.ones(q_all_links_at_node.shape)
+    widths = grid.length_of_face[grid.face_at_link]
     Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths, axis=1)
 
     q_all_links_at_node_dir_in = q_all_links_at_node > 0
