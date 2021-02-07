@@ -192,9 +192,10 @@ cell_area = max(mg.cell_area_at_node)
 df_output['hand_mean_ridges'] = np.mean(hand[mg.at_node["drainage_area"]==cell_area])
 
 ######## Calculate drainage density
-dd = DrainageDensity(mg, channel__mask=np.uint8(network))
-channel_mask = mg.at_node['channel__mask']
-df_output['drainage_density'] = dd.calculate_drainage_density()
+if isinstance(mg, RasterModelGrid):
+    dd = DrainageDensity(mg, channel__mask=np.uint8(network))
+    channel_mask = mg.at_node['channel__mask']
+    df_output['drainage_density'] = dd.calculate_drainage_density()
 
 ####### calculate relief change
 output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
