@@ -62,8 +62,8 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 #parameters
 lam_all = np.geomspace(0.05, 5, 5)
 gam_all = np.geomspace(0.5, 5.0, 5)
-lg = 30 # geomorphic length scale [m]
-hg = 2.25 # geomorphic height scale [m]
+lg = 15 # geomorphic length scale [m]
+hg = 4.5 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 v0 = 0.7*lg #min contour width (grid spacing) [m]
 a0 = v0 #valley width factor [m]
