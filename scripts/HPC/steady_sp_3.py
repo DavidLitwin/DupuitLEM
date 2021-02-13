@@ -61,11 +61,11 @@ def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
 
 #parameters
 lam_all = np.geomspace(0.05, 5, 5)
-gam_all = np.geomspace(0.5, 5.0, 5)
-lg = 15 # geomorphic length scale [m]
-hg = 4.5 # geomorphic height scale [m]
+gam_all = np.geomspace(1, 10.0, 5)
+lg = 30 # geomorphic length scale [m]
+hg = 2.25 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
-v0 = 0.7*lg #min contour width (grid spacing) [m]
+v0 = 1.2*lg #min contour width (grid spacing) [m]
 a0 = v0 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
