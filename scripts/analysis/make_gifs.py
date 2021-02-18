@@ -62,6 +62,6 @@ def plot_hillshade(file, index):
     plt.close()
     return image
 
-imageio.mimsave('../post_proc/%s/elev_ID_%d.gif'%(base_output_path, ID), [plot_elev(files[i],indices[i]) for i in range(len(files))], fps=4)
+imageio.mimsave('../post_proc/%s/elev_ID_%d.gif'%(base_output_path, ID), [plot_elev(files[i],indices[i]) for i in range(len(files))], fps=12)
 
-imageio.mimsave('../post_proc/%s/hillshade_ID_%d.gif'%(base_output_path, ID), [plot_hillshade(files[i],indices[i]) for i in range(len(files))], fps=4)
+imageio.mimsave('../post_proc/%s/hillshade_ID_%d.gif'%(base_output_path, ID), [plot_hillshade(files[i],indices[i]) for i in range(len(files))], fps=12)
