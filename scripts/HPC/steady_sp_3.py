@@ -33,8 +33,8 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 #dim equations
-def K_fun(a0, lg, tg):
-    return np.sqrt(lg)/(np.sqrt(a0)*tg)
+def K_fun(v0, lg, tg):
+    return np.sqrt(lg)/(np.sqrt(v0)*tg)
 
 def D_fun(lg, tg):
     return lg**2/tg
@@ -49,15 +49,15 @@ def ksat_fun(p, hg, lg, lam):
     return (lg**2*p*lam)/hg**2
 
 #generate dimensioned parameters
-def generate_parameters(p, n, a0, hg, lg, tg, gam, lam):
+def generate_parameters(p, n, v0, hg, lg, tg, gam, lam):
 
-    K = K_fun(a0, lg, tg)
+    K = K_fun(v0, lg, tg)
     D = D_fun(lg, tg)
     U = U_fun(hg, tg)
     b = b_fun(hg, gam, lam)
     ksat = ksat_fun(p, hg, lg, lam)
 
-    return K, D, U, ksat, p, b, n, a0, hg, lg, tg, gam, lam
+    return K, D, U, ksat, p, b, n, v0, hg, lg, tg, gam, lam
 
 #parameters
 lam_all = np.geomspace(0.05, 5, 5)
@@ -66,7 +66,6 @@ lg = 15 # geomorphic length scale [m]
 hg = 4.5 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 v0 = 1.2*lg #min contour width (grid spacing) [m]
-a0 = v0 #valley width factor [m]
 n1 = 0.1 # drainable porosity [-]
 p1 = 0.75/(365*24*3600) # steady precipitation rate
 
@@ -80,14 +79,15 @@ gam1 = np.array(list(product(lam_all, gam_all)))[:,1]
 params = np.zeros((len(lam1),13))
 for i in range(len(lam1)):
 
-    params[i,:] = generate_parameters(p1, n1, a0, hg, lg, tg, gam1[i], lam1[i])
+    params[i,:] = generate_parameters(p1, n1, v0, hg, lg, tg, gam1[i], lam1[i])
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'a0', 'hg', 'lg', 'tg', 'gam', 'lam'])
-df_params['tfill'] = (df_params['n']*df_params['b'])/df_params['p']
-df_params['tdrain'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'gam', 'lam'])
+df_params['alpha'] = df_params['hg']/df_params['lg']
+df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
+df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
-df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time in units of von neumann stability time [s]
+df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time [s]
 df_params['MSF'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 
 pickle.dump(df_params, open('parameters.p','wb'))
@@ -98,7 +98,7 @@ b = df_params['b'][ID]
 n = df_params['n'][ID]
 
 K = df_params['K'][ID]
-Ksp = K*np.sqrt(a0/v0)/p #see implementation section of paper
+Ksp = K/p #see implementation section of paper
 D = df_params['D'][ID]
 U = df_params['U'][ID]
 hg = df_params['hg'][ID]

@@ -21,14 +21,20 @@ from landlab.components import (
 from landlab.io.netcdf import to_netcdf
 
 #dim equations
-def K_fun(a0, lg, tg):
-    return np.sqrt(lg)/(np.sqrt(a0)*tg)
+def K_fun(v0, lg, tg):
+    return np.sqrt(lg)/(np.sqrt(v0)*tg)
 
 def D_fun(lg, tg):
     return lg**2/tg
 
 def U_fun(hg, tg):
     return hg/tg
+
+def generate_parameters(hg, lg, tg, v0):
+    K = K_fun(v0, lg, tg)
+    D = D_fun(lg, tg)
+    U = U_fun(hg, tg)
+    return K, D, U, v0, hg, lg, tg
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -38,21 +44,29 @@ lg_1 = np.array([15, 30, 60]) # geomorphic length scale [m]
 hg_1 = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
 lg_all = np.array(list(product(lg_1, hg_1)))[:,0]
 hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
-lg = lg_all[ID] # geomorphic length scale [m]
-hg = hg_all[ID] # geomorphic height scale [m]
+v0_all = 0.7*lg_all # contour width [m]
 tg = 22500 # geomorphic timescale [yr]
-a0 = 0.7*15 #valley width factor [m]
-v0 = 0.7*lg #grid cell width [m]
 
-D = D_fun(lg, tg)
-K = K_fun(a0, lg, tg)
-Ksp = K*np.sqrt(a0/v0)
-U = U_fun(hg, tg)
-m = 0.5
-n = 1
+params = np.zeros((len(lg_all),13))
+for i in range(len(lg_all)):
+    params[i,:] = generate_parameters(hg_all[i], lg_all[i], tg, v0_all[i])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'v0', 'hg', 'lg', 'tg'])
+df_params['dt'] = 2e-3*tg
+dt_params['T'] = 500*tg
+dt_params['alpha'] = df_params['hg']/df_params['lg']
 
-T = 500*tg
-dt = 2e-3*tg
+pickle.dump(df_params, open('parameters.p','wb'))
+
+Ksp = df_params['K'][ID]
+v0 = df_params['v0'][ID]
+D = df_params['D'][ID]
+U = df_params['U'][ID]
+hg = df_params['hg'][ID]
+lg = df_params['lg'][ID]
+tg = df_params['tg'][ID]
+dt = df_params['dt'][ID]
+T = df_params['T'][ID]
+
 N = int(T//dt)
 output_interval = 2000
 
@@ -66,10 +80,9 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.1*hg*np.random.rand(len(z))
 
-
 fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes')
 ld = LinearDiffuser(grid, D)
-sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=m, n_sp=n)
+sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=0.5, n_sp=1.0)
 
 for i in range(N):
 
