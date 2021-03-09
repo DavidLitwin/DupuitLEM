@@ -187,15 +187,17 @@ hd = HeightAboveDrainageCalculator(mg, channel_mask=network)
 
 hd.run_one_step()
 hand[:] = mg.at_node["height_above_drainage__elevation"].copy()
-df_output['mean_hand'] = np.mean(hand[mg.core_nodes])
+df_output['mean hand'] = np.mean(hand[mg.core_nodes])
 cell_area = max(mg.cell_area_at_node)
-df_output['hand_mean_ridges'] = np.mean(hand[mg.at_node["drainage_area"]==cell_area])
+df_output['hand mean ridges'] = np.mean(hand[mg.at_node["drainage_area"]==cell_area])
 
 ######## Calculate drainage density
 if isinstance(mg, RasterModelGrid):
     dd = DrainageDensity(mg, channel__mask=np.uint8(network))
     channel_mask = mg.at_node['channel__mask']
-    df_output['drainage_density'] = dd.calculate_drainage_density()
+    df_output['drainage density'] = dd.calculate_drainage_density()
+    df_output['mean hillslope len'] = 1/(2*df_output['drainage density'])
+    df_output['mean hillslope len ridges'] = np.mean(mg.at_node["surface_to_channel__minimum_distance"][mg.at_node["drainage_area"]==cell_area])
 
 ####### calculate relief change
 output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
