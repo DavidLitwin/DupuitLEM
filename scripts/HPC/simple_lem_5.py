@@ -8,8 +8,9 @@ Date: 2 Jan 2020
 """
 
 import os
-import time
 import numpy as np
+import pandas
+import pickle
 from itertools import product
 
 from landlab import RasterModelGrid
@@ -47,13 +48,13 @@ hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
 v0_all = 0.7*lg_all # contour width [m]
 tg = 22500 # geomorphic timescale [yr]
 
-params = np.zeros((len(lg_all),13))
+params = np.zeros((len(lg_all),7))
 for i in range(len(lg_all)):
     params[i,:] = generate_parameters(hg_all[i], lg_all[i], tg, v0_all[i])
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'v0', 'hg', 'lg', 'tg'])
 df_params['dt'] = 2e-3*tg
-dt_params['T'] = 500*tg
-dt_params['alpha'] = df_params['hg']/df_params['lg']
+df_params['T'] = 500*tg
+df_params['alpha'] = df_params['hg']/df_params['lg']
 
 pickle.dump(df_params, open('parameters.p','wb'))
 
