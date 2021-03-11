@@ -19,8 +19,11 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 
-# copy original run file
+# copy original run file and params
 os.system('cp %s.py ../post_proc/%s/%s-%d.py'%(base_output_path[:-2], base_output_path, base_output_path, ID))
+try:
+    df_params = pickle.load(open('./parameters.p','rb'))
+    pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
 
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
