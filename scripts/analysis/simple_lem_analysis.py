@@ -6,6 +6,7 @@ import os
 import glob
 import numpy as np
 import pickle
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from landlab import imshow_grid
@@ -82,13 +83,16 @@ filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, format="NETCDF4")
 
 # relief change
-relief_change = np.zeros(len(files),2)
+output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
+dt_nd = output_interval*df_params['dtg'][ID]/df_params['tg'][ID]
+relief_change = np.zeros(len(files))
 for i in range(1,len(files)):
-    try:
-        grid = from_netcdf(files[i])
-    except KeyError:
-        grid = read_netcdf(files[i])
+    grid = from_netcdf(files[i])
     elev = grid.at_node['topographic__elevation']
-    relief_change[i,1] = np.mean(elev[grid.core_nodes])
-    relief_change[i,0] = int(files[i].split('_')[-1][:-3])
-np.savetxt('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID), relief_change, delimiter=',', fmt='%.4e')
+    relief_change[i] = np.mean(elev[grid.core_nodes])
+
+r_change = pd.DataFrame()
+r_change['r_nd'] = relief_change[:]/df_params['hg'][ID]
+r_change['drdt_nd'] = np.diff(r_change['r_nd'], prepend=0.0)/dt_nd
+r_change['t_nd'] = np.arange(len(files))*dt_nd
+r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
