@@ -24,6 +24,8 @@ os.system('cp %s.py ../post_proc/%s/%s-%d.py'%(base_output_path[:-2], base_outpu
 try:
     df_params = pickle.load(open('./parameters.p','rb'))
     pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
+except:
+    print('no parameters file present')
 
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
