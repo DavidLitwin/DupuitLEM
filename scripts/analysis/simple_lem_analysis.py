@@ -84,7 +84,7 @@ to_netcdf(mg, filename, format="NETCDF4")
 
 # relief change
 output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
-dt_nd = output_interval*df_params['dtg'][ID]/df_params['tg'][ID]
+dt_nd = output_interval*df_params['dt'][ID]/df_params['tg'][ID]
 relief_change = np.zeros(len(files))
 for i in range(1,len(files)):
     grid = from_netcdf(files[i])
