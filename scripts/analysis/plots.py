@@ -11,7 +11,7 @@ of parameters for all model runs is included in a separate file.
 
 
 List of model runs used in manuscript:
-	- simple_lem_5_5(0-8): NoHyd figures
+	- simple_lem_5_5(0-8): NoHyd vary hg-lg figures
 	- steady_sp_5_13(0-8): low lambda vary hg-lg figure
 	- steady_sp_5_14(0-8): high lambda vary hg-lg figure
 	- steady_sp_3_15(0-39): gamma-lambda for hillslope length figure (med alpha)
