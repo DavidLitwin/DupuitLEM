@@ -1408,12 +1408,14 @@ n = len(gam_all)
 m = 40
 linestyles = [':', '--', '-' ]
 
+# plot shaded scaling lines
 fig, ax = plt.subplots(figsize=(5,4))
 y = np.geomspace(1,10,5)
 for j in range(len(y)-1):
     ax.plot(np.linspace(0.9,12,50), y[j]*np.linspace(0.9,12,50)**(2/3), 'k-', alpha=0.3, linewidth=1.0)
 ax.plot(np.linspace(0.9,12,50), y[-1]*np.linspace(0.9,12,50)**(2/3), 'k-', alpha=0.3, linewidth=1.0, label=r'$c*\gamma^{2/3}$')
 
+# plot data
 for k in range(len(alpha_all)):
     for i in range(len(lam_all)):
         if k == 2:
@@ -1426,7 +1428,18 @@ ax.set_xscale('log')
 ax.set_yscale('log')
 ax.set_ylim((1, 50))
 ax.set_xlim((0.9, 12))
-ax.legend(frameon=False)
+legend0 = ax.legend(facecolor='white', framealpha=1.0)
+frame = legend0.get_frame()
+frame.set_linewidth(0)
+
+# dummy lines to make a legend of different linestyles, independent of lambda legend
+dummy_lines = []
+for style in linestyles:
+    dummy_lines.append(ax.plot([],[], c="black", ls = style)[0])
+legend1 = plt.legend([dummy_lines[i] for i in [1,2,0]], [r'$\alpha=%.3f$'%alpha_all[1], r'$\alpha=%.3f$'%alpha_all[2], r'$\alpha=%.3f$'%alpha_all[0]], loc=(0.65,0.02), frameon=False) 
+ax.add_artist(legend0)
+
+
 plt.tight_layout()
 plt.savefig('%s/length_scales_%s.png'%(save_directory, base_output_path), dpi=300)
 
