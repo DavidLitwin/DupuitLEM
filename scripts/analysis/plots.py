@@ -8,7 +8,8 @@ order of their appearance. Model run codes are listed below. A complete table
 of parameters for all model runs is included in a separate file.
 
 Note Hi was called lambda (lam) previously, so this appears in the model run
-output. All figures report lambda as Hi.
+output. All figures report lambda as Hi. Scripts have been modified to
+write output as Hi now. If running with the new scripts, replace 'lam' -> 'hi'.
 
 List of model runs used in manuscript:
 	- simple_lem_5_5(0-8): NoHyd vary hg-lg figures
