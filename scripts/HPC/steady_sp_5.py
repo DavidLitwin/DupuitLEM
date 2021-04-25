@@ -1,13 +1,10 @@
 """
 Steady recharge + constant thickness + StreamPowerModel
 
-This script uses dimensionless parameters based on modified Theodoratos/Bonetti
-method of nondimensionalizing the governing landscape evolution equation.
-Here we test rescaling the domain with lg and hg, observing the dependence of
-the solution on these length scales under different conditions.
-
-\[lambda] == (ks (hg/lg)^2)/p,
-\[Gamma] == (ks b hg/lg)/(p lg),
+This script uses characteristic scales and dimensionless parameters presented
+in Litwin et al. 2021. Here we test rescaling the domain with lg and hg,
+observing the dependence of the solution on these length scales under different
+conditions.
 
 Date: 1 Sept 2020
 """
@@ -43,25 +40,25 @@ def D_fun(lg, tg):
 def U_fun(hg, tg):
     return hg/tg
 
-def b_fun(hg, gam, lam):
-    return (hg*gam)/lam
+def b_fun(hg, gam, hi):
+    return (hg*gam)/hi
 
-def ksat_fun(p, hg, lg, lam):
-    return (lg**2*p*lam)/hg**2
+def ksat_fun(p, hg, lg, hi):
+    return (lg**2*p*hi)/hg**2
 
 #generate dimensioned parameters
-def generate_parameters(p, n, v0, hg, lg, tg, gam, lam):
+def generate_parameters(p, n, v0, hg, lg, tg, gam, hi):
 
     K = K_fun(v0, lg, tg)
     D = D_fun(lg, tg)
     U = U_fun(hg, tg)
-    b = b_fun(hg, gam, lam)
-    ksat = ksat_fun(p, hg, lg, lam)
+    b = b_fun(hg, gam, hi)
+    ksat = ksat_fun(p, hg, lg, hi)
 
-    return K, D, U, ksat, p, b, n, v0, hg, lg, tg, gam, lam
+    return K, D, U, ksat, p, b, n, v0, hg, lg, tg, gam, hi
 
 #parameters
-lam1 = 5.0
+hi1 = 5.0
 gam1 = 2.5
 lg_1 = np.array([15, 30, 60]) # geomorphic length scale [m]
 hg_1 = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
@@ -69,27 +66,28 @@ lg_all = np.array(list(product(lg_1, hg_1)))[:,0]
 hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 n1 = 0.1 # drainable porosity [-]
-p1 = 0.75/(365*24*3600) # steady precipitation rate
-v0_all = 0.7*lg_all #min contour width (grid spacing) [m]
+p1 = 0.75/(365*24*3600) # steady recharge rate
+v0_all = 0.7*lg_all # contour width (also grid spacing) [m]
 
 Tg_nd = 1000 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
 Th_nd = 5 # hydrologic time in units of t_vn [-]
 
+# assemble parameters dataframe
 params = np.zeros((len(lg_all),13))
 for i in range(len(lg_all)):
-    params[i,:] = generate_parameters(p1, n1, v0_all[i], hg_all[i], lg_all[i], tg, gam1, lam1)
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'gam', 'lam'])
+    params[i,:] = generate_parameters(p1, n1, v0_all[i], hg_all[i], lg_all[i], tg, gam1, hi1)
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'gam', 'hi'])
 df_params['alpha'] = df_params['hg']/df_params['lg']
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
 df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time [s]
-df_params['MSF'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
-
+df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 pickle.dump(df_params, open('parameters.p','wb'))
 
+# pull values for this run
 ksat = df_params['ksat'][ID]
 p = df_params['p'][ID]
 b = df_params['b'][ID]
@@ -97,7 +95,7 @@ n = df_params['n'][ID]
 
 K = df_params['K'][ID]
 v0 = df_params['v0'][ID]
-Ksp = K/p # see implementation section of paper
+Ksp = K/p # recharge rate from Q* goes in K
 D = df_params['D'][ID]
 U = df_params['U'][ID]
 hg = df_params['hg'][ID]
@@ -105,7 +103,7 @@ lg = df_params['lg'][ID]
 
 Th = df_params['Th'][ID]
 Tg = df_params['Tg'][ID]
-MSF = df_params['MSF'][ID]
+ksf = df_params['ksf'][ID]
 
 output = {}
 output["output_interval"] = 1000
@@ -132,7 +130,7 @@ base = grid.add_zeros('node', 'aquifer_base__elevation')
 wt = grid.add_zeros('node', 'water_table__elevation')
 wt[:] = elev.copy()
 
-#initialize landlab components
+#initialize components
 gdp = GroundwaterDupuitPercolator(grid,
         porosity=n,
         hydraulic_conductivity=ksat,
@@ -143,14 +141,13 @@ gdp = GroundwaterDupuitPercolator(grid,
 )
 ld = LinearDiffuser(grid, linear_diffusivity=D)
 
-#initialize other models
 hm = HydrologySteadyStreamPower(
         grid,
         groundwater_model=gdp,
         hydrological_timestep=Th,
 )
 
-#use surface_water_area_norm__discharge (Q/sqrt(A)) for Theodoratos definitions
+# surface_water_area_norm__discharge (Q/sqrt(A)) = Q* p v0 sqrt(a)
 sp = FastscapeEroder(grid,
         K_sp=Ksp,
         m_sp=1,
@@ -164,11 +161,10 @@ mdl = StreamPowerModel(grid,
         diffusion_model=ld,
         erosion_model=sp,
         regolith_model=rm,
-        morphologic_scaling_factor=MSF,
+        morphologic_scaling_factor=ksf,
         total_morphological_time=Tg,
         verbose=True,
         output_dict=output,
-        # steady_state_condition=postrun_ss_cond,
 )
 
 mdl.run_model()

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 NoHyd model Q*=1 for all (x,y).
-Vary lg and hg to confirm the independence of these length scales
-in this model case.
+
+This script uses characteristic scales and dimensionless parameters presented
+in Litwin et al. 2021. Vary lg and hg to confirm the independence of these
+length scales.
 
 Date: 2 Jan 2020
 """
@@ -45,7 +47,7 @@ lg_1 = np.array([15, 30, 60]) # geomorphic length scale [m]
 hg_1 = np.array([2.25, 4.5, 9]) # geomorphic height scale [m]
 lg_all = np.array(list(product(lg_1, hg_1)))[:,0]
 hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
-v0_all = 0.7*lg_all # contour width [m]
+v0_all = 0.7*lg_all # contour width (also grid spacing) [m]
 tg = 22500 # geomorphic timescale [yr]
 
 params = np.zeros((len(lg_all),7))
