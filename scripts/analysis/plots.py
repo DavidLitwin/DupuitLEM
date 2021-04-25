@@ -7,20 +7,19 @@ Each section below contains the template for a figure in the manuscript, in
 order of their appearance. Model run codes are listed below. A complete table
 of parameters for all model runs is included in a separate file.
 
-Note Hi was previously called lambda, so they are used interchangeably in this
-script.
-
+Note Hi was called lambda (lam) previously, so this appears in the model run
+output. All figures report lambda as Hi.
 
 List of model runs used in manuscript:
 	- simple_lem_5_5(0-8): NoHyd vary hg-lg figures
-	- steady_sp_5_13(0-8): low Hi vary hg-lg figure
-	- steady_sp_5_14(0-8): high Hi vary hg-lg figure
-	- steady_sp_3_15(0-39): gamma-Hi for hillslope length figure (med alpha)
-	- steady_sp_3_16(0-39): gamma-Hi for hillslope length figure (low alpha)
-	- steady_sp_3_17(0-39): gamma-Hi for hillslope length figure (high alpha)
-	- steady_sp_3_18(0-29): gamma-Hi main figures
-	- steady_sp_3_19(0-29): gamma-Hi supplemental (high alpha)
-	- steady_sp_3_20(0-29): gamma-Hi supplemental (low alpha)
+	- steady_sp_5_13(0-8): low lam vary hg-lg figure
+	- steady_sp_5_14(0-8): high lam vary hg-lg figure
+	- steady_sp_3_15(0-39): gamma-lam for hillslope length figure (med alpha)
+	- steady_sp_3_16(0-39): gamma-lam for hillslope length figure (low alpha)
+	- steady_sp_3_17(0-39): gamma-lam for hillslope length figure (high alpha)
+	- steady_sp_3_18(0-29): gamma-lam main figures
+	- steady_sp_3_19(0-29): gamma-lam supplemental (high alpha)
+	- steady_sp_3_20(0-29): gamma-lam supplemental (low alpha)
 
 Date: 25 April 2021
 """
