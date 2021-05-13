@@ -53,11 +53,6 @@ class SchenkVadoseModel:
         self.recharge_at_depth = np.zeros_like(self.depths)
         self.bin_capacity = (self.b/self.Nz)*self.n*(self.Sfc-self.Swp)
 
-        self.cum_recharge = np.zeros_like(self.depths)
-        self.bool_recharge = np.zeros_like(self.depths)
-        self.cum_storm_dt = 0
-        self.cum_interstorm_dt = 0
-
     def generate_all_storms(self):
 
         self.d_all = np.array([np.random.exponential(self.d) for i in range(self.Nt)])
@@ -101,6 +96,11 @@ class SchenkVadoseModel:
 
     def run_model(self):
 
+        self.cum_recharge = np.zeros_like(self.depths)
+        self.bool_recharge = np.zeros_like(self.depths)
+        self.cum_storm_dt = 0
+        self.cum_interstorm_dt = 0
+
         for i in range(self.Nt):
 
             self.run_one_step()
@@ -110,5 +110,7 @@ class SchenkVadoseModel:
             self.cum_storm_dt += self.Tr
             self.cum_interstorm_dt += self.Tb
 
-        self.mean_recharge_depth = self.cum_recharge/self.Nt
+        # define mean recharge depth as depth of events > 0 at that profile depth
+        self.mean_recharge_depth = self.cum_recharge/self.bool_recharge
+        # define requency as number of times recharge occurs over total time
         self.recharge_frequency = self.bool_recharge/(self.cum_storm_dt + self.cum_interstorm_dt)
