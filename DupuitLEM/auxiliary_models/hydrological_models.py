@@ -617,9 +617,6 @@ class HydrologyEventStreamPower(HydrologicalModel):
         surface_water_effective__discharge and surface_water_area_norm__discharge.
         """
 
-        # generate new precip time series
-        self.generate_exp_precip()
-
         # find and route flow if there are pits
         self.dfr._find_pits()
         if self.dfr._number_of_pits > 0:
@@ -632,12 +629,15 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.max_substeps_interstorm = 0
         q_total_vol = np.zeros_like(self.q_eff)
         q2 = np.zeros_like(self.q_eff)
-        for i in range(len(self.storm_dts)):
+        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+
+            intensity = float(self._grid.at_grid["rainfall__flux"])
+
             q0 = q2.copy()  # save prev end of interstorm flow rate
 
             # run event, accumulate flow
-            self.gdp.recharge = self.intensities[i]
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            self.gdp.recharge = intensity
+            self.gdp.run_with_adaptive_time_step_solver(storm_dt)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q1 = q.copy()
             self.max_substeps_storm = max(
@@ -647,7 +647,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             # run interevent, accumulate flow
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(
-                max(self.interstorm_dts[i], 1e-15)
+                max(interstorm_dt, 1e-15)
             )
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
@@ -656,7 +656,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
+            q_total_vol += 0.5 * (q0 + q1) * storm_dt
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = self.q_eff / np.sqrt(self.area)
@@ -778,9 +778,6 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         surface_water_effective__discharge and surface_water_area_norm__discharge.
         """
 
-        # generate new precip time series
-        self.generate_exp_precip()
-
         # find and route flow if there are pits
         self.dfr._find_pits()
         if self.dfr._number_of_pits > 0:
@@ -793,19 +790,21 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.max_substeps_interstorm = 0
         q_total_vol = np.zeros_like(self.q_eff)
         q2 = np.zeros_like(self.q_eff)
-        for i in range(len(self.storm_dts)):
+        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+
+            intensity = float(self._grid.at_grid["rainfall__flux"])
             q0 = q2.copy()  # save prev end of interstorm flow rate
 
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
-            self.svm.run_event(self.intensities[i]*self.storm_dts[i])
+            self.svm.run_event(intensity*storm_dt)
             wt_from_surface = self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
             wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
-            self.r[self._grid.core_nodes] = self.svm.recharge_at_depth[wt_digitized]/self.storm_dts[i]
+            self.r[self._grid.core_nodes] = self.svm.recharge_at_depth[wt_digitized]/storm_dt
 
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            self.gdp.run_with_adaptive_time_step_solver(storm_dt)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q1 = q.copy()
             self.max_substeps_storm = max(
@@ -814,10 +813,10 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
             # run interevent:
             ## run vadose model, set recharge, run groundwater model, accumulate flow
-            self.svm.run_interevent(self.interstorm_dts[i])
+            self.svm.run_interevent(interstorm_dt)
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(
-                max(self.interstorm_dts[i], 1e-15)
+                max(interstorm_dt, 1e-15)
             )
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
@@ -826,13 +825,13 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
+            q_total_vol += 0.5 * (q0 + q1) * storm_dt
 
         # set effective runoff rates
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = self.q_eff / np.sqrt(self.area)
 
-    def run_step_record_state(self): ## TODO: add vadose zone support
+    def run_step_record_state(self):
         """"
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
@@ -870,6 +869,11 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
         # all surface water specific discharge
         self.qs_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        # all recharge
+        self.r_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+
+        self.cum_recharge = np.zeros_like(self.depths)
+        self.bool_recharge = np.zeros_like(self.depths)
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -879,8 +883,15 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         for i in range(len(self.storm_dts)):
             q0 = q2.copy()  # save prev end of interstorm flow rate
 
-            # run event, accumulate flow
-            self.gdp.recharge = self.intensities[i]
+            # run event:
+            ## run vadose model, calculate recharge based on depth to wt
+            self.svm.run_event(self.intensities[i]*self.storm_dts[i])
+            wt_from_surface = self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
+            wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
+            self.r[self._grid.core_nodes] = self.svm.recharge_at_depth[wt_digitized]/self.storm_dts[i]
+
+            ## set recharge, run groundwater model, accumulate flow
+            self.gdp.recharge = self.r
             self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q1 = q.copy()
@@ -896,8 +907,11 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.qs_all[i * 2 + 1, :] = self._grid.at_node[
                 "average_surface_water__specific_discharge"
             ]
+            self.r_all[i * 2 + 1, :] = self._grid.at_node["recharge_rate"]
 
-            # run interevent, accumulate flow
+            # run interevent:
+            ## run vadose model, set recharge, run groundwater model, accumulate flow
+            self.svm.run_interevent(self.interstorm_dts[i])
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(
                 max(self.interstorm_dts[i], 1e-15)
@@ -916,8 +930,15 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
                 "average_surface_water__specific_discharge"
             ]
 
+            # record vadose characteristics
+            self.cum_recharge += self.recharge_at_depth
+            self.bool_recharge += self.recharge_at_depth > 0.0
+
             # volume of runoff contributed during timestep
             q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = self.q_eff / np.sqrt(self.area)
+
+        self.mean_recharge_depth = self.cum_recharge/self.bool_recharge
+        self.recharge_frequency = self.bool_recharge/self.T_h
