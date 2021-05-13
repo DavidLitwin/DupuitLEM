@@ -646,9 +646,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
             # run interevent, accumulate flow
             self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(
-                max(interstorm_dt, 1e-15)
-            )
+            self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
             self.max_substeps_interstorm = max(
@@ -753,7 +751,6 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
 
 class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
-
     def __init__(
         self,
         grid,
@@ -765,9 +762,9 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         super().__init__(grid, routing_method, precip_generator, groundwater_model)
 
         self.svm = vadose_model
-        self.r = self._grid.add_zeros('node', 'recharge_rate')
-        self.elev = self._grid.at_node['topographic__elevation']
-        self.wt = self._grid.at_node['water_table__elevation']
+        self.r = self._grid.add_zeros("node", "recharge_rate")
+        self.elev = self._grid.at_node["topographic__elevation"]
+        self.wt = self._grid.at_node["water_table__elevation"]
 
     def run_step(self):
         """"
@@ -797,10 +794,14 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
-            self.svm.run_event(intensity*storm_dt)
-            wt_from_surface = self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
+            self.svm.run_event(intensity * storm_dt)
+            wt_from_surface = (
+                self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
+            )
             wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
-            self.r[self._grid.core_nodes] = self.svm.recharge_at_depth[wt_digitized]/storm_dt
+            self.r[self._grid.core_nodes] = (
+                self.svm.recharge_at_depth[wt_digitized] / storm_dt
+            )
 
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
@@ -815,9 +816,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             ## run vadose model, set recharge, run groundwater model, accumulate flow
             self.svm.run_interevent(interstorm_dt)
             self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(
-                max(interstorm_dt, 1e-15)
-            )
+            self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
             self.max_substeps_interstorm = max(
@@ -885,10 +884,14 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
-            self.svm.run_event(self.intensities[i]*self.storm_dts[i])
-            wt_from_surface = self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
+            self.svm.run_event(self.intensities[i] * self.storm_dts[i])
+            wt_from_surface = (
+                self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
+            )
             wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
-            self.r[self._grid.core_nodes] = self.svm.recharge_at_depth[wt_digitized]/self.storm_dts[i]
+            self.r[self._grid.core_nodes] = (
+                self.svm.recharge_at_depth[wt_digitized] / self.storm_dts[i]
+            )
 
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
@@ -940,5 +943,5 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = self.q_eff / np.sqrt(self.area)
 
-        self.mean_recharge_depth = self.cum_recharge/self.bool_recharge
-        self.recharge_frequency = self.bool_recharge/self.T_h
+        self.mean_recharge_depth = self.cum_recharge / self.bool_recharge
+        self.recharge_frequency = self.bool_recharge / self.T_h
