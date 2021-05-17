@@ -871,8 +871,8 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         # all recharge
         self.r_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
 
-        self.cum_recharge = np.zeros_like(self.depths)
-        self.bool_recharge = np.zeros_like(self.depths)
+        self.cum_recharge = np.zeros_like(self.svm.depths)
+        self.bool_recharge = np.zeros_like(self.svm.depths)
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -905,12 +905,12 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             # record event
             self.time[i * 2 + 1] = self.time[i * 2] + self.storm_dts[i]
             self.intensity[i * 2] = self.intensities[i]
+            self.r_all[i * 2, :] = self._grid.at_node["recharge_rate"]
             self.Q_all[i * 2 + 1, :] = self._grid.at_node["surface_water__discharge"]
             self.wt_all[i * 2 + 1, :] = self._grid.at_node["water_table__elevation"]
             self.qs_all[i * 2 + 1, :] = self._grid.at_node[
                 "average_surface_water__specific_discharge"
             ]
-            self.r_all[i * 2 + 1, :] = self._grid.at_node["recharge_rate"]
 
             # run interevent:
             ## run vadose model, set recharge, run groundwater model, accumulate flow
@@ -934,8 +934,8 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             ]
 
             # record vadose characteristics
-            self.cum_recharge += self.recharge_at_depth
-            self.bool_recharge += self.recharge_at_depth > 0.0
+            self.cum_recharge += self.svm.recharge_at_depth
+            self.bool_recharge += self.svm.recharge_at_depth > 0.0
 
             # volume of runoff contributed during timestep
             q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
