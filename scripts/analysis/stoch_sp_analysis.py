@@ -1,5 +1,7 @@
 """
 Analysis of results on HPC for stochastic stream power model runs.
+
+update for new stochastic models
 """
 
 import os
