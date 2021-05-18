@@ -68,7 +68,7 @@ beta1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,0]
 Ai1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,1]
 initial_wt1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,2]
 
-Nt = 100; Nx = 50; Ny = 3; Nz = 500
+Nt = 1000; Nx = 50; Ny = 3; Nz = 500
 xmax = 10*lg
 
 # assemble parameters dataframe
@@ -239,3 +239,21 @@ df_output['p_tot'] = p_tot # this is tanek from the hm, since gdp only sees rech
 
 df_output['BFI'] = df_output['qb_tot']/df_output['qs_tot'] #baseflow index
 df_output['RR'] = df_output['qe_tot']/df_output['p_tot'] #runoff ratio
+
+
+output_fields = [
+        "at_node:topographic__elevation",
+        "at_node:aquifer_base__elevation",
+        "at_node:mean_recharge_storm"
+        "at_node:qstar_mean_no_interevent",
+        "at_node:wtrel_mean_end_storm",
+        "at_node:wtrel_mean_end_interstorm",
+        "at_node:sat_mean_end_storm",
+        "at_node:sat_mean_end_interstorm",
+        "at_node:Q_mean_end_storm",
+        "at_node:Q_mean_end_interstorm",
+        ]
+to_netcdf(mg, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
+
+pickle.dump(df_output, open('utput_ID_%d.p'%ID, 'wb'))
+pickle.dump(df, open('gdp_flux_state_%d.p'%ID, 'wb'))
