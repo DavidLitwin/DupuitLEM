@@ -239,6 +239,8 @@ df_output['p_tot'] = p_tot # this is tanek from the hm, since gdp only sees rech
 df_output['BFI'] = df_output['qb_tot']/df_output['qs_tot'] #baseflow index
 df_output['RR'] = df_output['qe_tot']/df_output['p_tot'] #runoff ratio
 
+df_output['mean recharge depth profile'] = hm.svm.mean_recharge_depth
+df_output['recharge frequency depth profile'] = hm.svm.recharge_frequency
 
 output_fields = [
         "at_node:topographic__elevation",
@@ -254,5 +256,5 @@ output_fields = [
         ]
 to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
 
-pickle.dump(df_output, open('utput_ID_%d.p'%ID, 'wb'))
+pickle.dump(df_output, open('output_%d.p'%ID, 'wb'))
 pickle.dump(df, open('gdp_flux_state_%d.p'%ID, 'wb'))
