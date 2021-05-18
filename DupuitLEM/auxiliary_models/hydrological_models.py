@@ -799,6 +799,9 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
                 self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
             )
             wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
+            wt_digitized[wt_digitized == len(self.svm.depths)] = (
+                len(self.svm.depths) - 1
+            )
             self.r[self._grid.core_nodes] = (
                 self.svm.recharge_at_depth[wt_digitized] / storm_dt
             )
@@ -889,6 +892,9 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
                 self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
             )
             wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
+            wt_digitized[wt_digitized == len(self.svm.depths)] = (
+                len(self.svm.depths) - 1
+            )
             self.r[self._grid.core_nodes] = (
                 self.svm.recharge_at_depth[wt_digitized] / self.storm_dts[i]
             )
