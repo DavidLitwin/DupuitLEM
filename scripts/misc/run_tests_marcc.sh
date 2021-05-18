@@ -11,13 +11,13 @@
 #### load and unload modules you may need
 script=$1
 output_folder=$2
-mkdir ~/work/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+mkdir ~/work/dlitwin3/DupuitLEMResults/$output_folder
 cd ~/work/dlitwin3/DupuitLEM
-git rev-parse HEAD > ~/work/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/script_id.txt
+git rev-parse HEAD > ~/work/dlitwin3/DupuitLEMResults/$output_folder/script_id.txt
 cd ~/work/dlitwin3/landlab
-git rev-parse HEAD > ~/work/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/work/dlitwin3/DupuitLEM/scripts/HPC/$script ~/work/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
-cd ~/work/dlitwin3/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+git rev-parse HEAD > ~/work/dlitwin3/DupuitLEMResults/$output_folder/gdp_id.txt
+cp ~/work/dlitwin3/DupuitLEM/scripts/HPC/$script ~/work/dlitwin3/DupuitLEMResults/$output_folder
+cd ~/work/dlitwin3/DupuitLEMResults/$output_folder
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > slurm.txt
 # python -u $script > pythonlog.out
 python $script
