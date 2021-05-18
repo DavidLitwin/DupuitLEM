@@ -19,7 +19,6 @@ from DupuitLEM.auxiliary_models import (
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
-base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 
 
 def b_fun(hg, gam, hi):
