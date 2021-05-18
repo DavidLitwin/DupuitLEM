@@ -67,7 +67,7 @@ beta1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,0]
 Ai1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,1]
 initial_wt1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,2]
 
-Nt = 1000; Nx = 50; Ny = 3; Nz = 500
+Nt = 5000; Nx = 50; Ny = 3; Nz = 500
 xmax = 10*lg
 
 # assemble parameters dataframe
@@ -239,8 +239,8 @@ df_output['p_tot'] = p_tot # this is tanek from the hm, since gdp only sees rech
 df_output['BFI'] = df_output['qb_tot']/df_output['qs_tot'] #baseflow index
 df_output['RR'] = df_output['qe_tot']/df_output['p_tot'] #runoff ratio
 
-df_output['mean recharge depth profile'] = hm.svm.mean_recharge_depth
-df_output['recharge frequency depth profile'] = hm.svm.recharge_frequency
+df_output['mean recharge depth profile'] = hm.mean_recharge_depth
+df_output['recharge frequency depth profile'] = hm.recharge_frequency
 
 output_fields = [
         "at_node:topographic__elevation",

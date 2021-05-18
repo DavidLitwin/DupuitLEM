@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=hydrotest
-#SBATCH --time=2:0:0
+#SBATCH --time=1:0:0
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
