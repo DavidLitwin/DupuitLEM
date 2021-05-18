@@ -10,9 +10,9 @@ from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
     )
+from landlab.io.netcdf import to_netcdf
 
 from DupuitLEM.auxiliary_models import (
-    HydrologyEventStreamPower,
     HydrologyEventVadoseStreamPower,
     SchenkVadoseModel,
     )
@@ -252,7 +252,7 @@ output_fields = [
         "at_node:Q_mean_end_storm",
         "at_node:Q_mean_end_interstorm",
         ]
-to_netcdf(mg, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
+to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('utput_ID_%d.p'%ID, 'wb'))
 pickle.dump(df, open('gdp_flux_state_%d.p'%ID, 'wb'))
