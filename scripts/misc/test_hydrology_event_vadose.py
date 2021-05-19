@@ -67,7 +67,7 @@ beta1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,0]
 Ai1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,1]
 initial_wt1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,2]
 
-Nt = 5000; Nx = 50; Ny = 3; Nz = 500
+Nt = 2000; Ny = 3; Nx = 50; Nz = 500
 xmax = 10*lg
 
 # assemble parameters dataframe
@@ -75,7 +75,7 @@ params = np.zeros((len(beta1),15))
 for i in range(len(Ai1)):
     params[i,:] = generate_parameters(alpha, gamma, Hi, beta1[i], rho, Ai1[i], p, lg, n)
 df_params = pd.DataFrame(params,columns=['alpha', 'gam', 'hi', 'beta', 'rho', 'ai', 'p', 'pet', 'ks', 'hg', 'lg', 'b', 'd','tr', 'tb'])
-df_params['Lx'] = xmax
+df_params['Ly'] = xmax
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nz'] = Nz; df_params['Nt'] = Nt
 df_params['Smin'] = Smin; df_params['Smax'] = Smax
 df_params['initial_wtrel'] = initial_wt1
@@ -90,13 +90,13 @@ tb = df_params['tb'][ID]
 wtrel0 = df_params['initial_wtrel'][ID]
 
 
-grid = RasterModelGrid((Nx, Ny), xy_spacing=xmax/Nx)
+grid = RasterModelGrid((Ny, Nx), xy_spacing=xmax/Nx)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 x = grid.x_of_node
-ymax = alpha*xmax
-a1 = -ymax/xmax**2; a2 = 2*ymax/xmax; a3 = b
+zmax = alpha*xmax
+a1 = -zmax/xmax**2; a2 = 2*zmax/xmax; a3 = b
 elev[:] = a1*x**2 + a2*x + a3
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 base[:] = elev - b
