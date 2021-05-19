@@ -52,11 +52,11 @@ def generate_parameters(alpha, gam, hi, beta, rho, ai, p, lg, n):
 
 lg = 15 # horizontal length scale
 alpha = 0.1 # characteristic gradient
-Hi = 10.0 # hillslope number
-gamma = 1.0 # drainage capacity
+Hi = 5.0 # hillslope number
+gamma = 5.0 # drainage capacity
 beta_all = [0.01, 0.5, 1.0, 2.0] # storage variability
 rho = 0.01 # rainfall steadiness
-Ai_all = [0.1, 1.0, 4.0] # aridity
+Ai_all = [0.01, 0.5, 1.0, 2.0] # aridity
 p = 1.0/(3600*24*365) # mean rainfall rate (m/s)
 n = 0.1 # porosity
 Smin = 0.0
