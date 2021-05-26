@@ -62,19 +62,46 @@ class SchenkVadoseModel:
         self.recharge_at_depth = np.zeros_like(self.depths)
         self.bin_capacity = (self.b / self.Nz) * self.n * (self.Sfc - self.Swp)
 
+    def generate_state_from_analytical(self):
+        """Set the saturation profile by generating random values from
+        the analytical solution for saturation state."""
+
+        a = (self.depths * (self.Sfc - self.Swp) * self.n) / self.d
+        b = (self.depths * (self.Sfc - self.Swp) * self.n) / (
+            self.pet / (1 / (self.tr + self.tb))
+        )
+
+        self.analytical_sat_prob = np.zeros_like(self.depths)
+        c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (
+            2 * a * (1 + b) ** 2
+        )
+        c2 = 1 + (
+            (a ** 2 * (1 + b) - 2 * (1 + b) ** 2 - a * (-2 + b ** 2)) * np.exp(a - b)
+        ) / (2 * (1 + b) ** 2)
+        self.analytical_sat_prob[a > b] = c1[a > b]
+        self.analytical_sat_prob[a <= b] = c2[a <= b]
+
+        r = np.random.rand(len(self.depths))
+        self.sat_profile = 1 * (r < self.analytical_sat_prob)
+
     def generate_all_storms(self):
+        """Generate Nt storm depths, durations, and insterstorm durations from
+        exponential distributions."""
 
         self.d_all = np.array([np.random.exponential(self.d) for i in range(self.Nt)])
         self.tr_all = np.array([np.random.exponential(self.tr) for i in range(self.Nt)])
         self.tb_all = np.array([np.random.exponential(self.tb) for i in range(self.Nt)])
 
     def generate_storm(self):
+        """Generate one storm depth, duration, and insterstorm duration from
+        exponential distributions."""
 
         self.Dr = np.random.exponential(self.d)
         self.Tr = np.random.exponential(self.tr)
         self.Tb = np.random.exponential(self.tb)
 
     def run_event(self, storm_depth):
+        """Run storm event, updating saturation profile and recharge at depth."""
 
         # number of bins the storm will fill
         n_to_fill = round(storm_depth / self.bin_capacity)
@@ -91,6 +118,7 @@ class SchenkVadoseModel:
         self.sat_diff[:] = 0
 
     def run_interevent(self, interstorm_dt):
+        """Run storm interevent, updating saturation profile."""
 
         # number of bins ET will drain
         n_to_drain = round(self.pet * interstorm_dt / self.bin_capacity)
@@ -100,12 +128,16 @@ class SchenkVadoseModel:
         self.sat_profile[inds_to_drain] = 0
 
     def run_one_step(self):
+        """Run step: generate exponential storm depth duration, interstorm
+        duration, run event, and run interevent."""
 
         self.generate_storm()
         self.run_event(self.Dr)
         self.run_interevent(self.Tb)
 
     def run_model(self):
+        """Run model: run step Nt times, calculate average recharge depth and
+        recharge frequency at each depth in the profile."""
 
         self.cum_recharge = np.zeros_like(self.depths)
         self.bool_recharge = np.zeros_like(self.depths)
@@ -123,7 +155,7 @@ class SchenkVadoseModel:
 
         # define mean recharge depth as depth of events > 0 at that profile depth
         self.mean_recharge_depth = self.cum_recharge / self.bool_recharge
-        # define requency as number of times recharge occurs over total time
+        # define frequency as number of times recharge occurs over total time
         self.recharge_frequency = self.bool_recharge / (
             self.cum_storm_dt + self.cum_interstorm_dt
         )
