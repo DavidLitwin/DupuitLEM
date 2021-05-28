@@ -84,14 +84,6 @@ class SchenkVadoseModel:
         r = np.random.rand(len(self.depths))
         self.sat_profile = 1 * (r < self.analytical_sat_prob)
 
-    def generate_all_storms(self):
-        """Generate Nt storm depths, durations, and insterstorm durations from
-        exponential distributions."""
-
-        self.d_all = np.array([np.random.exponential(self.d) for i in range(self.Nt)])
-        self.tr_all = np.array([np.random.exponential(self.tr) for i in range(self.Nt)])
-        self.tb_all = np.array([np.random.exponential(self.tb) for i in range(self.Nt)])
-
     def generate_storm(self):
         """Generate one storm depth, duration, and insterstorm duration from
         exponential distributions."""
