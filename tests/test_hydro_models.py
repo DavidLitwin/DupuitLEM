@@ -99,10 +99,6 @@ def test_stoch_sp_raster():
 
     hm.run_step()
 
-    assert_equal(hm.storm_dts, [1.442910641095092])
-    assert_equal(hm.interstorm_dts, [98.5570893589049])
-    assert_equal(hm.intensities, [0.0002441477395321941])
-
     assert_almost_equal(hm.q_eff[4], 0.00017614)
     assert_almost_equal(hm.q_an[4], 0.00017614 / 10.0)
 
@@ -139,10 +135,6 @@ def test_stoch_sp_hex():
     )
 
     hm.run_step()
-
-    assert_equal(hm.storm_dts, [1.442910641095092])
-    assert_equal(hm.interstorm_dts, [98.5570893589049])
-    assert_equal(hm.intensities, [0.0002441477395321941])
 
     assert_almost_equal(hm.q_eff[4], 0.00017614 * np.sqrt(3) / 2)
     assert_almost_equal(
