@@ -36,6 +36,7 @@ class SchenkVadoseModel:
         mean_storm_depth=0.02,
         mean_storm_duration=1e3,
         mean_interstorm_duration=1e5,
+        random_seed=None,
     ):
 
         self.d = mean_storm_depth  # mm
@@ -48,6 +49,8 @@ class SchenkVadoseModel:
         self.n = porosity
         self.Nt = num_timesteps
         self.Nz = num_bins
+        if random_seed:
+            np.random.seed(random_seed)
 
         self.depths = np.linspace(
             self.b / self.Nz, self.b, self.Nz
