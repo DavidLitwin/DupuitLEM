@@ -60,6 +60,7 @@ class SchenkVadoseModel:
         )  # saturation state (binary) in each bin
         self.sat_diff = np.zeros_like(self.depths)
         self.recharge_at_depth = np.zeros_like(self.depths)
+        self.extraction_at_depth = np.zeros_like(self.depths)
         self.bin_capacity = (self.b / self.Nz) * self.n * (self.Sfc - self.Swp)
 
     def generate_state_from_analytical(self):
@@ -95,6 +96,9 @@ class SchenkVadoseModel:
     def run_event(self, storm_depth):
         """Run storm event, updating saturation profile and recharge at depth."""
 
+        # clear sat diff
+        self.sat_diff[:] = 0
+
         # number of bins the storm will fill
         n_to_fill = round(storm_depth / self.bin_capacity)
 
@@ -107,10 +111,12 @@ class SchenkVadoseModel:
         self.recharge_at_depth[:] = (
             n_to_fill - np.cumsum(self.sat_diff)
         ) * self.bin_capacity
-        self.sat_diff[:] = 0
 
     def run_interevent(self, interstorm_dt):
         """Run storm interevent, updating saturation profile."""
+
+        # clear extraction profile
+        self.extraction_at_depth[:] = 0
 
         # number of bins ET will drain
         n_to_drain = round(self.pet * interstorm_dt / self.bin_capacity)
@@ -118,6 +124,7 @@ class SchenkVadoseModel:
         # change bin status
         inds_to_drain = np.where(self.sat_profile == 1)[0][0:n_to_drain]
         self.sat_profile[inds_to_drain] = 0
+        self.extraction_at_depth[inds_to_drain] = self.bin_capacity
 
     def run_one_step(self):
         """Run step: generate exponential storm depth duration, interstorm
@@ -132,7 +139,9 @@ class SchenkVadoseModel:
         recharge frequency at each depth in the profile."""
 
         self.cum_recharge = np.zeros_like(self.depths)
+        self.cum_extraction = np.zeros_like(self.depths)
         self.bool_recharge = np.zeros_like(self.depths)
+        self.bool_extraction = np.zeros_like(self.depths)
         self.cum_storm_dt = 0
         self.cum_interstorm_dt = 0
 
@@ -141,7 +150,9 @@ class SchenkVadoseModel:
             self.run_one_step()
 
             self.cum_recharge += self.recharge_at_depth
+            self.cum_extraction += self.extraction_at_depth
             self.bool_recharge += self.recharge_at_depth > 0.0
+            self.bool_extraction += self.extraction_at_depth > 0.0
             self.cum_storm_dt += self.Tr
             self.cum_interstorm_dt += self.Tb
 
