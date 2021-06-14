@@ -555,7 +555,9 @@ class HydrologySteadyStreamPower(HydrologicalModel):
         self.q[self.q > qmax] = qmax[self.q > qmax]
 
         # discharge field with form for Q*
-        self.q_an[:] = self.q / np.sqrt(self.area)
+        self.q_an[:] = np.divide(
+            self.q, np.sqrt(self.area), where=self.area > 0, out=np.zeros_like(self.q)
+        )
 
 
 class HydrologyEventStreamPower(HydrologicalModel):
@@ -657,7 +659,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q_total_vol += 0.5 * (q0 + q1) * storm_dt
 
         self.q_eff[:] = q_total_vol / self.T_h
-        self.q_an[:] = self.q_eff / np.sqrt(self.area)
+        self.q_an[:] = np.divide(
+            self.q_eff,
+            np.sqrt(self.area),
+            where=self.area > 0,
+            out=np.zeros_like(self.q_eff),
+        )
 
     def run_step_record_state(self):
         """"
@@ -747,7 +754,12 @@ class HydrologyEventStreamPower(HydrologicalModel):
             q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol / self.T_h
-        self.q_an[:] = self.q_eff / np.sqrt(self.area)
+        self.q_an[:] = np.divide(
+            self.q_eff,
+            np.sqrt(self.area),
+            where=self.area > 0,
+            out=np.zeros_like(self.q_eff),
+        )
 
 
 class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
@@ -831,7 +843,12 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
         # set effective runoff rates
         self.q_eff[:] = q_total_vol / self.T_h
-        self.q_an[:] = self.q_eff / np.sqrt(self.area)
+        self.q_an[:] = np.divide(
+            self.q_eff,
+            np.sqrt(self.area),
+            where=self.area > 0,
+            out=np.zeros_like(self.q_eff),
+        )
 
     def run_step_record_state(self):
         """"
@@ -947,7 +964,12 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
 
         self.q_eff[:] = q_total_vol / self.T_h
-        self.q_an[:] = self.q_eff / np.sqrt(self.area)
+        self.q_an[:] = np.divide(
+            self.q_eff,
+            np.sqrt(self.area),
+            where=self.area > 0,
+            out=np.zeros_like(self.q_eff),
+        )
 
         self.mean_recharge_depth = self.cum_recharge / self.bool_recharge
         self.recharge_frequency = self.bool_recharge / self.T_h
