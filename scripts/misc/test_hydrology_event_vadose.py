@@ -236,8 +236,6 @@ df_output['runtime'] = t2 - t1
 output_fields = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
-        "at_node:mean_recharge_storm"
-        "at_node:qstar_mean_no_interevent",
         "at_node:wtrel_mean_end_storm",
         "at_node:wtrel_mean_end_interstorm",
         "at_node:wtrel_max",
@@ -246,6 +244,8 @@ output_fields = [
         "at_node:sat_mean_end_interstorm",
         "at_node:Q_mean_end_storm",
         "at_node:Q_mean_end_interstorm",
+        "at_node:mean_recharge_storm",
+        "at_node:qstar_mean_no_interevent",
         ]
 to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
 
