@@ -33,7 +33,7 @@ def test_stream_power_run_step():
         bottom=mg.BC_NODE_IS_FIXED_VALUE,
     )
     z = mg.add_ones("node", "topographic__elevation")
-    z[1] = 0.0
+    z[1] = 1e-15
     zb = mg.add_zeros("node", "aquifer_base__elevation")
     mg.add_ones("node", "water_table__elevation")
 
@@ -185,7 +185,7 @@ def test_stream_power_run_step_subdivide():
         bottom=mg.BC_NODE_IS_FIXED_VALUE,
     )
     z = mg.add_ones("node", "topographic__elevation")
-    z[1] = 0.0
+    z[1] = 1e-15
     zb = mg.add_zeros("node", "aquifer_base__elevation")
     mg.add_ones("node", "water_table__elevation")
 
@@ -222,7 +222,7 @@ def test_stream_power_run_model_subdivide():
         bottom=mg.BC_NODE_IS_FIXED_VALUE,
     )
     z = mg.add_ones("node", "topographic__elevation")
-    z[1] = 0.0
+    z[1] = 1e-15
     zb = mg.add_zeros("node", "aquifer_base__elevation")
     mg.add_ones("node", "water_table__elevation")
 
