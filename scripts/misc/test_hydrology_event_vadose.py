@@ -15,6 +15,7 @@ aquifer thickness while keeping other factors constant.
 
 
 import os
+import time
 import numpy as np
 import pickle
 from itertools import product
@@ -151,8 +152,10 @@ hm = HydrologyEventVadoseStreamPower(
                                     vadose_model=svm,
                                     )
 
-# run once to warm up
+# run once to spin up model
+t1 = time.time()
 hm.run_step()
+t2 = time.time()
 
 # open file and make function for saving gdp subtimestep data
 f = open('./gdp_flux_state_%d.csv'%ID, 'w')
@@ -227,6 +230,7 @@ p_tot = np.sum(np.array(hm.intensities)*np.array(hm.storm_dts))
 df_output = {}
 df_output['mean recharge depth profile'] = hm.mean_recharge_depth
 df_output['recharge frequency depth profile'] = hm.recharge_frequency
+df_output['runtime'] = t2 - t1
 
 # save output
 output_fields = [
