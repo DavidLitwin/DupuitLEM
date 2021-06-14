@@ -1,3 +1,18 @@
+"""
+This script runs the DupuitLEM hydrological model `HydrologyEventVadoseStreamPower`,
+which couples the SchenkVadoseModel with the GroundwaterDupuitPercolator and
+FlowAccumulator to generate stochastic recharge and resulting runoff that
+can be fed to the StreamPowerModel.
+
+Here we consider only the hydrological model, run on a 1D parabolic hillslope
+with length approx equal to the emergent hillslope length from the steady state LEM.
+New correction also sets relief such that the curvature matches the emergent
+curvature found of hillslopes in the LEM.
+
+Vary aridity index Ai, storage variability index beta, and the initial
+aquifer thickness while keeping other factors constant.
+"""
+
 
 import os
 import numpy as np
@@ -59,16 +74,16 @@ rho = 0.01 # rainfall steadiness
 Ai_all = [0.01, 0.5, 1.0, 2.0] # aridity
 p = 1.0/(3600*24*365) # mean rainfall rate (m/s)
 n = 0.1 # porosity
-Smin = 0.0
-Smax = 1.0
-initial_wt_all = [0.1, 0.5, 1.0]
+Smin = 0.0 # minimum relative saturation
+Smax = 1.0 # maximum relative saturation
+initial_wt_all = [0.1, 0.5, 1.0] # initial relative aquifer thickness
 
 beta1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,0]
 Ai1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,1]
 initial_wt1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,2]
 
-Nt = 2000; Ny = 3; Nx = 50; Nz = 500
-xmax = 10*lg
+Nt = 2000; Ny = 3; Nx = 50; Nz = 500 # num timesteps, num y nodex, num x nodes, num unsat bins
+xmax = 10*lg # hillslope length set approx from steady state lem Lh
 
 # assemble parameters dataframe
 params = np.zeros((len(beta1),15))
@@ -87,16 +102,19 @@ b = df_params['b'][ID]
 d = df_params['d'][ID]
 tr = df_params['tr'][ID]
 tb = df_params['tb'][ID]
+lg = df_params['lg'][ID]
+hg = df_params['hg'][ID]
 wtrel0 = df_params['initial_wtrel'][ID]
 
-
+# initialize grid
 grid = RasterModelGrid((Ny, Nx), xy_spacing=xmax/Nx)
 grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_IS_CLOSED, \
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 x = grid.x_of_node
-zmax = alpha*xmax
-a1 = -zmax/xmax**2; a2 = 2*zmax/xmax; a3 = b
+# zmax = alpha*xmax
+# a1 = -zmax/xmax**2; a2 = 2*zmax/xmax; a3 = b
+a1 = -hg/(2*lg**2); a2 = (hg*xmax)/lg**2; a3 = b # curvature hg/lg**2 with peak at x=xmax and fixed value boundary at x=0
 elev[:] = a1*x**2 + a2*x + a3
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 base[:] = elev - b
@@ -104,7 +122,7 @@ wt = grid.add_zeros('node', 'water_table__elevation')
 wt[grid.core_nodes] = base[grid.core_nodes] + wtrel0*b
 wt[grid.open_boundary_nodes] = elev[grid.open_boundary_nodes]
 
-# initialize landlab components
+# initialize landlab and DupuitLEM components
 gdp = GroundwaterDupuitPercolator(grid,
                                   porosity=n,
                                   hydraulic_conductivity=ks,
@@ -157,6 +175,8 @@ gdp.callback_fun = write_SQ
 hm.run_step_record_state()
 f.close()
 
+############ Analysis ############
+
 # effective Qstar
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
@@ -208,6 +228,7 @@ df_output = {}
 df_output['mean recharge depth profile'] = hm.mean_recharge_depth
 df_output['recharge frequency depth profile'] = hm.recharge_frequency
 
+# save output
 output_fields = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
