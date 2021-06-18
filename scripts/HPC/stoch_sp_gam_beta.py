@@ -77,7 +77,7 @@ beta1 = np.array(list(product(beta_all, gam_all)))[:,0]
 gam1 = np.array(list(product(beta_all, gam_all)))[:,1]
 rho = 0.01
 hi = 5.0
-lg = 30 # geomorphic length scale [m]
+lg = 15 # geomorphic length scale [m]
 hg = 2.25 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 v0 = 1.2*lg # contour width (also grid spacing) [m]
@@ -92,7 +92,7 @@ Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 params = np.zeros((len(beta1),18))
 for i in range(len(beta1)):
     params[i,:] = generate_parameters(p, n, v0, hg, lg, tg, gam1[i], hi, beta1[i], rho)
-    
+
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'gam', 'hi', 'beta', 'rho'])
 df_params['alpha'] = df_params['hg']/df_params['lg']
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
