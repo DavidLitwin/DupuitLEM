@@ -7,6 +7,7 @@ Author: David Litwin
 """
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from landlab.io.netcdf import to_netcdf, from_netcdf
 
@@ -226,10 +227,9 @@ class StreamPowerModel:
         self.z_change = np.zeros((N, 5))
 
         # Run model forward
-        for i in range(N):
+        for i in tqdm (range (N), desc="Completion"):
 
             self.run_step(self.dt_m, dt_m_max=self.dt_m_max)
-            self.verboseprint("Completed model loop %d" % i)
 
             if self.save_output:
 
