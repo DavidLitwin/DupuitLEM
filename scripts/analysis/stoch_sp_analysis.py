@@ -307,7 +307,12 @@ except:
     print('failed to calculate drainage density')
 
 ####### calculate elevation change
-output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID]
+try:
+    output_interval = df_params['output_interval'][ID]
+except KeyError:
+    print('output_interval not in params table. Using default.')
+    output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID]
+
 dt = output_interval*df_params['dtg'][ID]
 
 z_change = np.zeros((len(files),6))
@@ -334,15 +339,15 @@ for i in range(1,len(files)):
     z_change[i,4] = np.min(elev_diff)
     z_change[i,5] = np.mean(elev_diff)
 
-    relief_change[i,0] = np.sum(elev*grid.cell_area_at_node)
+    relief_change[i,0] = np.mean(elev[grid.core_nodes])
     relief_change[i,1] = (relief_change[i,0]- relief_change[i-1,0])/dt
 
     elev0 = elev.copy()
 
 df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
 r_change = pd.DataFrame()
-r_change['r_nd'] = relief_change[:,0]/(df_params['hg'][ID]*df_params['lg'][ID]**2)
-r_change['drdt_nd'] = relief_change[:,1]/(df_params['hg'][ID]*df_params['lg'][ID]**2)*df_params['tg'][ID]
+r_change['r_nd'] = relief_change[:,0]/df_params['hg'][ID]
+r_change['drdt_nd'] = relief_change[:,1]*(df_params['tg'][ID]/df_params['hg'][ID])
 r_change['t_nd'] = np.arange(len(files))*(dt/df_params['tg'][ID])
 
 

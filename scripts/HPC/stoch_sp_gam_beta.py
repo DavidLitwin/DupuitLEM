@@ -103,6 +103,7 @@ df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulatio
 df_params['dtg'] = df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
+df_params['output_interval'] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
 pickle.dump(df_params, open('parameters.p','wb'))
 
 ksat = df_params['ksat'][ID]
@@ -126,7 +127,7 @@ ksf = df_params['ksf'][ID]
 dtg_max = df_params['dtg_max'][ID]
 
 output = {}
-output["output_interval"] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID] #save output every 10 tg
+output["output_interval"] = df_params['output_interval'][ID] #save output every 10 tg
 output["output_fields"] = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
