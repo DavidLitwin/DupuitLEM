@@ -71,16 +71,17 @@ def generate_parameters(p, n, v0, hg, lg, tg, gam, hi, beta, rho):
 
 
 #parameters
-beta_all = np.array([0.01, 0.1, 0.5, 1.0, 2.0])
-gam_all = np.array([0.5, 0.75, 1.0, 1.25, 2.5, 5.0])
-beta1 = np.array(list(product(beta_all, gam_all)))[:,0]
-gam1 = np.array(list(product(beta_all, gam_all)))[:,1]
+beta_all = np.array([0.01, 0.05, 0.1, 0.25, 0.5])
+gam_all = np.array([2.0, 4.0, 8.0, 16.0])
+hi_all = np.array([0.05, 5.0])
+hi1 = np.array(list(product(hi_all, beta_all, gam_all)))[:,0]
+beta1 = np.array(list(product(hi_all, beta_all, gam_all)))[:,1]
+gam1 = np.array(list(product(hi_all, beta_all, gam_all)))[:,2]
 rho = 0.01
-hi = 5.0
 lg = 15 # geomorphic length scale [m]
 hg = 2.25 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
-v0 = 1.2*lg # contour width (also grid spacing) [m]
+v0 = 2.0*lg # contour width (also grid spacing) [m]
 n = 0.1 # drainable porosity [-]
 p = 0.75/(365*24*3600) # steady recharge rate
 
@@ -91,7 +92,7 @@ Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
 params = np.zeros((len(beta1),18))
 for i in range(len(beta1)):
-    params[i,:] = generate_parameters(p, n, v0, hg, lg, tg, gam1[i], hi, beta1[i], rho)
+    params[i,:] = generate_parameters(p, n, v0, hg, lg, tg, gam1[i], hi1[i], beta1[i], rho)
 
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'gam', 'hi', 'beta', 'rho'])
 df_params['alpha'] = df_params['hg']/df_params['lg']
