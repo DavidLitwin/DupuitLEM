@@ -5,12 +5,13 @@ This script uses characteristic scales and dimensionless parameters presented
 in Litwin et al. 2021, but extends using parameters Beta and Rho that
 describe rainfall steadiness and storage variability respectively.
 
+Test the effect of the morphoplogic scaling factor on the results for a
+single combination of dimensionless parameters.
 
-Date: 18 June 2021
+Date: 2 July 2021
 """
 import os
 import numpy as np
-from itertools import product
 import pandas
 import pickle
 
@@ -71,38 +72,35 @@ def generate_parameters(p, n, v0, hg, lg, tg, gam, hi, beta, rho):
 
 
 #parameters
-beta_all = np.array([0.01, 0.05, 0.1, 0.25, 0.5])
-gam_all = np.array([2.0, 4.0, 8.0, 16.0])
-hi_all = np.array([0.05, 5.0])
-hi1 = np.array(list(product(hi_all, beta_all, gam_all)))[:,0]
-beta1 = np.array(list(product(hi_all, beta_all, gam_all)))[:,1]
-gam1 = np.array(list(product(hi_all, beta_all, gam_all)))[:,2]
+hi = 5.0
+beta = 0.1
+gam = 2.5
 rho = 0.01
 lg = 15 # geomorphic length scale [m]
 hg = 2.25 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
-v0 = 2.0*lg # contour width (also grid spacing) [m]
+v0 = 1.2*lg # contour width (also grid spacing) [m]
 n = 0.1 # drainable porosity [-]
 p = 0.75/(365*24*3600) # steady recharge rate
 
 Tg_nd = 3000 # total duration in units of tg [-]
-dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
-ksf_base = 500 # morphologic scaling factor
+dtg_max_nd = None # maximum geomorphic timestep in units of tg [-]
+ksf_all = np.array([1250, 2500, 5000, 10000, 20000, 40000]) # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
-params = np.zeros((len(beta1),18))
-for i in range(len(beta1)):
-    params[i,:] = generate_parameters(p, n, v0, hg, lg, tg, gam1[i], hi1[i], beta1[i], rho)
+params = np.zeros((len(ksf_all),18))
+for i in range(len(ksf_all)):
+    params[i,:] = generate_parameters(p, n, v0, hg, lg, tg, gam, hi, beta, rho)
 
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'gam', 'hi', 'beta', 'rho'])
 df_params['alpha'] = df_params['hg']/df_params['lg']
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
-df_params['ksf'] = ksf_base/df_params['beta'] # morphologic scaling factor
+df_params['ksf'] = ksf_all  # morphologic scaling factor
 df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
 df_params['dtg'] = df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
-df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
+df_params['dtg_max'] = None # the maximum duration of a geomorphic substep [s]
 df_params['output_interval'] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
 pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -177,7 +175,7 @@ mdl = StreamPowerModel(grid,
         maximum_morphological_dt=dtg_max,
         total_morphological_time=Tg,
         verbose=False,
-        output_dict=output,
+        # output_dict=output,
 )
 
 mdl.run_model()
