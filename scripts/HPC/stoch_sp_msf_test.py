@@ -83,7 +83,7 @@ v0 = 1.2*lg # contour width (also grid spacing) [m]
 n = 0.1 # drainable porosity [-]
 p = 0.75/(365*24*3600) # steady recharge rate
 
-Tg_nd = 3000 # total duration in units of tg [-]
+Tg_nd = 1500 # total duration in units of tg [-]
 dtg_max_nd = None # maximum geomorphic timestep in units of tg [-]
 ksf_all = np.array([1250, 2500, 5000, 10000, 20000, 40000]) # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
