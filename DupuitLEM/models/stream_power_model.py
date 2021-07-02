@@ -189,31 +189,31 @@ class StreamPowerModel:
             self.rm.run_step(dt_m)
 
         # check for places where erosion below baselevel occurs, or water table falls below base or above elev
-        if (self._elev < self._base).any():
-            self.verboseprint("Eroded to bedrock")
-        self._base[self._elev < self._base] = (
-            self._elev[self._elev < self._base] - np.finfo(float).eps
-        )
+        # if (self._elev < self._base).any():
+        #     self.verboseprint("Eroded to bedrock")
+        #     self._base[self._elev < self._base] = (
+        #         self._elev[self._elev < self._base] - np.finfo(float).eps
+        #     )
 
-        if (self._elev < 0.0).any():
-            self.verboseprint("Eroded below baselevel")
+        # if (self._elev < 0.0).any():
+        #     self.verboseprint("Eroded below baselevel")
         # self._elev[self._elev<0.0] = 0.0
 
         if (self._wt < self._base).any():
             self.verboseprint("Water table below base")
-        self._wt[self._wt < self._base] = (
-            self._base[self._wt < self._base] + np.finfo(float).eps
-        )
-        self._grid.at_node["aquifer__thickness"][self._cores] = (self._wt - self._base)[
-            self._cores
-        ]
+            self._wt[self._wt < self._base] = (
+                self._base[self._wt < self._base] + np.finfo(float).eps
+            )
+            self._grid.at_node["aquifer__thickness"][self._cores] = (
+                self._wt - self._base
+            )[self._cores]
 
         if (self._wt > self._elev).any():
             self.verboseprint("Water table above surface")
-        self._wt[self._wt > self._elev] = self._elev[self._wt > self._elev]
-        self._grid.at_node["aquifer__thickness"][self._cores] = (self._wt - self._base)[
-            self._cores
-        ]
+            self._wt[self._wt > self._elev] = self._elev[self._wt > self._elev]
+            self._grid.at_node["aquifer__thickness"][self._cores] = (
+                self._wt - self._base
+            )[self._cores]
 
     def run_model(self):
         """
@@ -223,17 +223,14 @@ class StreamPowerModel:
         If output dictionary and steady state condition were provided, record output and stop when steady state condition is met.
         """
 
-        N = self.N
-        self.z_change = np.zeros((N, 5))
-
         # Run model forward
-        for i in tqdm (range (N), desc="Completion"):
+        for i in tqdm(range(self.N), desc="Completion"):
 
             self.run_step(self.dt_m, dt_m_max=self.dt_m_max)
 
             if self.save_output:
 
-                if i % self.output_interval == 0 or i == max(range(N)):
+                if i % self.output_interval == 0 or i == max(range(self.N)):
 
                     # save the specified grid fields
                     filename = self.base_path + "%d_grid_%d.nc" % (self.id, i)
