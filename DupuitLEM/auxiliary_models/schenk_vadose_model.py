@@ -27,8 +27,7 @@ class SchenkVadoseModel:
     def __init__(
         self,
         potential_evapotranspiration_rate=2e-7,
-        upper_relative_saturation=0.5,
-        lower_relative_saturation=0.1,
+        available_relative_saturation=0.2,
         profile_depth=5,
         porosity=0.1,
         num_bins=500,
@@ -43,8 +42,7 @@ class SchenkVadoseModel:
         self.tr = mean_storm_duration  # day
         self.tb = mean_interstorm_duration  # day
         self.pet = potential_evapotranspiration_rate  # mm/day
-        self.Sfc = upper_relative_saturation
-        self.Swp = lower_relative_saturation
+        self.Sa = available_relative_saturation
         self.b = profile_depth  # mm
         self.n = porosity
         self.Nt = num_timesteps
@@ -61,16 +59,14 @@ class SchenkVadoseModel:
         self.sat_diff = np.zeros_like(self.depths)
         self.recharge_at_depth = np.zeros_like(self.depths)
         self.extraction_at_depth = np.zeros_like(self.depths)
-        self.bin_capacity = (self.b / self.Nz) * self.n * (self.Sfc - self.Swp)
+        self.bin_capacity = (self.b / self.Nz) * self.n * self.Sa
 
     def generate_state_from_analytical(self):
         """Set the saturation profile by generating random values from
         the analytical solution for saturation state."""
 
-        a = (self.depths * (self.Sfc - self.Swp) * self.n) / self.d
-        b = (self.depths * (self.Sfc - self.Swp) * self.n) / (
-            self.pet / (1 / (self.tr + self.tb))
-        )
+        a = (self.depths * self.Sa * self.n) / self.d
+        b = (self.depths * self.Sa * self.n) / (self.pet / (1 / (self.tr + self.tb)))
 
         self.analytical_sat_prob = np.zeros_like(self.depths)
         c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (

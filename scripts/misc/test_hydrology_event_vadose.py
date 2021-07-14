@@ -75,8 +75,7 @@ rho = 0.01 # rainfall steadiness
 Ai_all = [0.01, 0.5, 1.0, 2.0] # aridity
 p = 1.0/(3600*24*365) # mean rainfall rate (m/s)
 n = 0.1 # porosity
-Smin = 0.0 # minimum relative saturation
-Smax = 1.0 # maximum relative saturation
+Srange = 1.0 # plant available relative saturation
 initial_wt_all = [0.1, 0.5, 1.0] # initial relative aquifer thickness
 
 beta1 = np.array(list(product(beta_all, Ai_all, initial_wt_all)))[:,0]
@@ -93,7 +92,7 @@ for i in range(len(Ai1)):
 df_params = pd.DataFrame(params,columns=['alpha', 'gam', 'hi', 'beta', 'rho', 'ai', 'p', 'pet', 'ks', 'hg', 'lg', 'b', 'd','tr', 'tb'])
 df_params['Ly'] = xmax
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nz'] = Nz; df_params['Nt'] = Nt
-df_params['Smin'] = Smin; df_params['Smax'] = Smax
+df_params['Srange'] = Srange
 df_params['initial_wtrel'] = initial_wt1
 pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -139,8 +138,7 @@ pdr = PrecipitationDistribution(grid,
 pdr.seed_generator(seedval=1235)
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
-                 upper_relative_saturation=Smax,
-                 lower_relative_saturation=Smin,
+                 available_relative_saturation=Srange,
                  profile_depth=b,
                  porosity=n,
                  num_bins=Nz,

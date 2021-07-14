@@ -11,13 +11,13 @@ from DupuitLEM.auxiliary_models import SchenkVadoseModel
 
 
 def test_init_depth_profile():
-    """"Check depths and bin capacity. Depths correspond to the bottom 
+    """"Check depths and bin capacity. Depths correspond to the bottom
     of each bin. Bin capacity is porosity * bin depth * difference in relative sat."""
 
     sm = SchenkVadoseModel(num_bins=5)
 
     assert_equal(sm.depths, [1.0, 2.0, 3.0, 4.0, 5.0])
-    assert_almost_equal(sm.bin_capacity, 0.04)
+    assert_almost_equal(sm.bin_capacity, 0.02)
 
 
 # check generated storm (make sure seed is set)
@@ -34,16 +34,11 @@ def test_generate_storm():
 
 
 def test_run_event():
-    """"trivial case of an event. An event with depth 2 fills the top 2 bins 
-    when bins have unit depth and can be filled 100% with water. Recharge is 
+    """"trivial case of an event. An event with depth 2 fills the top 2 bins
+    when bins have unit depth and can be filled 100% with water. Recharge is
     calculated on a 'floor' basis."""
 
-    sm = SchenkVadoseModel(
-        num_bins=5,
-        upper_relative_saturation=1.0,
-        lower_relative_saturation=0.0,
-        porosity=1.0,
-    )
+    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
     sm.run_event(2.0)
 
     assert_equal(sm.sat_profile, [1.0, 1.0, 0.0, 0.0, 0.0])
@@ -53,13 +48,12 @@ def test_run_event():
 # trivial case check bins emptied after one interevent
 def test_run_interevent():
     """ Trivial case of an interevent. With unit PET rate, the top two
-    bins are drained after 2 units of time when bins have unit depth and 
+    bins are drained after 2 units of time when bins have unit depth and
     can be filled 100% with water. Note recharge_at_depth is not reset."""
 
     sm = SchenkVadoseModel(
         num_bins=5,
-        upper_relative_saturation=1.0,
-        lower_relative_saturation=0.0,
+        available_relative_saturation=1.0,
         porosity=1.0,
         potential_evapotranspiration_rate=1.0,
     )
@@ -74,12 +68,7 @@ def test_run_event_2():
     some inital nonuniform saturation. Ensure that the topmost available bins
     are filled."""
 
-    sm = SchenkVadoseModel(
-        num_bins=5,
-        upper_relative_saturation=1.0,
-        lower_relative_saturation=0.0,
-        porosity=1.0,
-    )
+    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
     sm.sat_profile[:] = np.array([0.0, 1.0, 0.0, 0.0, 1.0])
     sm.run_event(2.0)
 
@@ -89,16 +78,11 @@ def test_run_event_2():
 
 def test_run_event_3():
     """Edge case where event depth is added to a profile that is already
-    saturated. In this case, the profile should stay saturated, but the 
-    recharge should reflect the total amount. That is, a water table 
+    saturated. In this case, the profile should stay saturated, but the
+    recharge should reflect the total amount. That is, a water table
     at any depth will recieve recharge."""
 
-    sm = SchenkVadoseModel(
-        num_bins=5,
-        upper_relative_saturation=1.0,
-        lower_relative_saturation=0.0,
-        porosity=1.0,
-    )
+    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
     sm.sat_profile[:] = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
     sm.run_event(2.0)
 
@@ -107,13 +91,12 @@ def test_run_event_3():
 
 
 def test_run_interevent_2():
-    """Edge case where interevent PET exceeds available saturation. In this 
+    """Edge case where interevent PET exceeds available saturation. In this
     case, the remaining saturation is drained."""
 
     sm = SchenkVadoseModel(
         num_bins=5,
-        upper_relative_saturation=1.0,
-        lower_relative_saturation=0.0,
+        available_relative_saturation=1.0,
         porosity=1.0,
         potential_evapotranspiration_rate=1.0,
     )
