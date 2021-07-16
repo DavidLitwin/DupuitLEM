@@ -121,7 +121,7 @@ svm = SchenkVadoseModel(
                  num_bins=500,
                  )
 hm = HydrologyEventVadoseStreamPower(
-                                    grid,
+                                    mg,
                                     precip_generator=pdr,
                                     groundwater_model=gdp,
                                     vadose_model=svm,
