@@ -8,6 +8,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
+from tqdm import tqdm
 
 from landlab import imshow_grid
 from landlab.io.netcdf import from_netcdf, to_netcdf
@@ -121,7 +122,8 @@ hm = HydrologySteadyStreamPower(
 )
 
 #run model
-hm.run_step()
+for i in tqdm(range(500), desc="Completion"):
+    hm.run_step()
 
 ##########  Analysis
 
