@@ -47,8 +47,8 @@ def b_fun(hg, eta):
 def ksat_fun(p, hg, lg, hi):
     return (lg**2*p*hi)/hg**2
 
-def ds_fun(p, rho):
-    return p/rho
+def ds_fun(p, tr, rho):
+    return (p*tr)/rho
 
 def tb_fun(tr, rho):
     return tr*(1/rho - 1)
@@ -61,14 +61,14 @@ def generate_parameters(p, tr, n, v0, hg, lg, tg, eta, hi, rho):
     U = U_fun(hg, tg)
     b = b_fun(hg, eta)
     ksat = ksat_fun(p, hg, lg, hi)
-    ds = ds_fun(p, rho)
+    ds = ds_fun(p, tr, rho)
     tb = tb_fun(tr, rho)
 
     return K, D, U, ksat, p, b, n, v0, hg, lg, tg, ds, tr, tb, eta, hi, rho
 
 
 #parameters
-eta_all = np.geomspace(0.1, 50, 5)
+eta_all = np.geomspace(0.25, 25, 5)
 hi_all = np.geomspace(0.05, 5, 5)
 hi1 = np.array(list(product(hi_all, eta_all)))[:,0]
 eta1 = np.array(list(product(hi_all, eta_all)))[:,1]
@@ -94,6 +94,7 @@ df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n
 df_params['alpha'] = df_params['hg']/df_params['lg']
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['beta'] = (df_params['tr'] + df_params['tb'])/df_params['td']
+df_params['gam'] = df_params['eta']*df_params['hi']
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['ksf'] = ksf_base/df_params['beta'] # morphologic scaling factor
