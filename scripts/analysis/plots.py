@@ -29,6 +29,7 @@ import copy
 import numpy as np
 import pandas as pd
 import pickle
+from itertools import combinations
 
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -100,6 +101,19 @@ for i, ax in subplots.items():
         ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $y/\ell_g$'%hg)
 
 plt.savefig('%s/hs_hg_lg_simple_lem.png'%save_directory, dpi=300)
+
+
+mean_rel_diff_all= []
+abs_diff_all = []
+for c in combinations(range(len(elev_star_all)), 2): 
+    
+    abs_diff = np.max(abs(elev_star_all[c[0]]-elev_star_all[c[1]]))
+    abs_diff_all.append(abs_diff)
+    
+    mean_rel1 = np.mean(elev_star_all[c[0]])
+    mean_rel2 = np.mean(elev_star_all[c[1]])
+    mean_rel_diff = (mean_rel1-mean_rel2)/min(mean_rel1,mean_rel2)
+    mean_rel_diff_all.append(mean_rel_diff)
 
 
 #%% NoHyd: scaling with varying hg and lg cross sections
@@ -183,7 +197,6 @@ elev_star_all = []
 ticks = range(0,100, 25)
 
 for i, ax in subplots.items():
-
     lg = lg_all[i] # geomorphic length scale [m]
     hg = hg_all[i] # geomorphic height scale [m]
 
@@ -218,6 +231,19 @@ for i, ax in subplots.items():
         ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $y/\ell_g$'%hg)
 
 plt.savefig('%s/hs_hg_lg_steady_sp.png'%save_directory, dpi=300)
+
+
+# constant alpha: [0,4,6]
+# bottom row: [0,3,5]
+# vertical coulumn: [0,1,2]
+mean_rel_diff_all= []
+for c in combinations([0,3,5], 2): 
+    
+    mean_rel1 = np.mean(elev_star_all[c[0]])
+    mean_rel2 = np.mean(elev_star_all[c[1]])
+    mean_rel_diff = abs((mean_rel1-mean_rel2))/min(mean_rel1,mean_rel2)
+    mean_rel_diff_all.append(mean_rel_diff)
+
 
 #%% DupuitLEM Hi=5: scaling with varying hg and lg cross sections
 
@@ -359,6 +385,16 @@ for i, ax in subplots.items():
 
 plt.savefig('%s/hs_hg_lg_steady_sp_low_lam.png'%save_directory, dpi=300)
 
+# bottom row: [0,3,5]
+# vertical coulumn: [0,1,2]
+mean_rel_diff_all= []
+for c in combinations([0,1,2], 2): 
+    
+    mean_rel1 = np.mean(elev_star_all[c[0]])
+    mean_rel2 = np.mean(elev_star_all[c[1]])
+    mean_rel_diff = abs((mean_rel1-mean_rel2))/min(mean_rel1,mean_rel2)
+    mean_rel_diff_all.append(mean_rel_diff)
+
 #%% DupuitLEM Hi=0.01: scaling with varying hg and lg cross sections
 
 ls = LightSource(azdeg=135, altdeg=45)
@@ -424,6 +460,77 @@ for i, ax in subplots.items():
 
 
 plt.savefig('%s/hs_hg_lg_steady_sp_low_lam_XS.png'%save_directory, dpi=300)
+
+
+#%% DupuitLEM: vary Hi for large values of Hi
+
+base_output_path = 'steady_sp_hi_1'
+df_params = pickle.load(open('%s/%s/parameters.p'%(directory,base_output_path), 'rb'))
+lg_all = df_params['lg']
+hg_all = df_params['hg']
+ticks = range(0, 100, 25)
+elev_star_all = []
+
+ls = LightSource(azdeg=135, altdeg=45)
+fig, axs = plt.subplots(ncols=4, figsize=(9, 3))
+for i, ax in enumerate(axs):
+    lg = lg_all[i] # geomorphic length scale [m]
+    hg = hg_all[i] # geomorphic height scale [m]
+
+    grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
+    elev = grid.at_node['topographic__elevation']
+    elev_star = elev/hg
+    elev_star_all.append(elev_star)
+    dx_star = grid.dx/lg
+    y = np.arange(grid.shape[0] + 1) * dx_star - dx_star * 0.5
+    x = np.arange(grid.shape[1] + 1) * dx_star - dx_star * 0.5
+
+    ax.imshow(ls.hillshade(elev_star.reshape(grid.shape).T, vert_exag=2, dx=dx_star, dy=dx_star), origin="lower", extent=(x[0], x[-1], y[0], y[-1]), cmap='gray')
+    ax.plot((min(grid.y_of_node)/lg,max(grid.y_of_node)/lg),(np.median(grid.x_of_node)/lg,np.median(grid.x_of_node)/lg), 'r--', alpha=0.85 )
+    ax.set_title(r'Hi=%.1f'%df_params['hi'][i])
+    ax.set_xticks(ticks)
+    ax.set_yticks(ticks)
+    ax.set_xlabel(r'$x/\ell_g$')
+axs[0].set_ylabel(r'$y/\ell_g$')
+fig.tight_layout()
+plt.savefig('%s/steady_sp_high_hi.png'%save_directory, dpi=300)
+
+mean_rel1 = np.mean(elev_star_all[2])
+mean_rel2 = np.mean(elev_star_all[3])
+mean_rel_diff = abs((mean_rel1-mean_rel2))/min(mean_rel1,mean_rel2)
+
+#%%
+
+zmax = 100
+zmin = 0
+
+xticks = range(0,100, 25)
+yticks = range(zmin,zmax+50, 25)
+
+fig, axs = plt.subplots(ncols=4, figsize=(9, 2.5))
+for i, ax in enumerate(axs):
+    lg = df_params['lg'][i] # geomorphic length scale [m]
+    hg = df_params['hg'][i] # geomorphic height scale [m]
+    b =  df_params['b'][i]
+
+    grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
+    elev = grid.at_node['topographic__elevation'] - b
+    base = grid.at_node['aquifer_base__elevation'] - b
+    wt = grid.at_node['water_table__elevation'] - b
+    middle_row = np.where(grid.x_of_node == np.median(grid.x_of_node))[0][1:-1]
+
+    y = grid.y_of_node[middle_row]/lg
+    ax.fill_between(y,elev[middle_row]/hg,base[middle_row]/hg,facecolor=(198/256,155/256,126/256) )
+    ax.fill_between(y,wt[middle_row]/hg,base[middle_row]/hg,facecolor=(145/256,176/256,227/256))
+    ax.fill_between(y,base[middle_row]/hg,zmin*np.ones_like(base[middle_row]),facecolor=(111/256,111/256,111/256))
+    ax.set_ylim((zmin,zmax))
+    ax.set_xticks(xticks)
+    ax.set_yticks(yticks)
+    ax.set_xlabel(r'$x/\ell_g$')
+axs[0].set_ylabel(r'$z/h_g$')  
+fig.tight_layout()
+plt.savefig('%s/steady_sp_high_hi_XS.png'%save_directory, dpi=300)
+
 
 #%% DupuitLEM: vary gamma and Hi (formerly lambda), load results
 
