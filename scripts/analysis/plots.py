@@ -1191,72 +1191,11 @@ plt.savefig('%s/hydrologic_balance_%s.png'%(save_directory, base_output_path), d
 
 #%% DupuitLEM: hydromorphic balance 3D manifold
 
-i = 24
-
 manifold_curv= lambda steep, ti, gam: steep - gam*(steep/ti) - 1
 
-grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
-lg = df_params['lg'][i]
-hg = df_params['hg'][i]
-S = grid.at_node['slope_D8']
-A = grid.at_node['drainage_area']
-curvature = grid.at_node['curvature']
-S4 = grid.at_node['slope_D4']
-twi = grid.at_node['topographic__index_D4']/np.cos(np.arctan(S4))**2
-qstar = grid.at_node['qstar']
-
-# make dimensionless versions
-a_star = (A/grid.dx)/lg
-S_star = S*lg/hg
-steepness_star = np.sqrt(a_star)*S_star
-curvature_star = curvature*lg**2/hg
-twi_star = twi*hg/lg**2
-
-steep = np.linspace(0.1, 5, 100)
-ti = np.geomspace(1.5,1e7, 100)
-# steep = np.linspace(1.0, 75, 100)
-# ti = np.geomspace(5,1e7, 100)
-Steep, Ti = np.meshgrid(steep, ti)
-Curv = manifold_curv(Steep, Ti, df_params['gam'][i])
-
-fig = plt.figure(figsize=(5,3))
-ax = fig.add_subplot(111, projection='3d')
-ax.plot_surface(Steep, np.log(Ti), Curv, alpha=0.6, color='0.3')
-sc = ax.scatter(steepness_star[grid.core_nodes],
-                 np.log(twi_star[grid.core_nodes]),
-                 curvature_star[grid.core_nodes],
-                  s=3,
-                  alpha=0.8,
-                  c=qstar[grid.core_nodes],
-                  cmap='plasma_r',
-                  vmin=0.0,
-                  vmax=1.0,
-                  )
-fig.colorbar(sc, label=r'$Q^*$')
-ax.set_xlabel(r"$S_z$")
-ax.set_ylabel(r"log($T_z$)")
-ax.set_zlabel(r"$C_z$")
-# ax.set_zlim((-2, 75))
-ax.set_zlim((-2, 5))
-ax.view_init(elev=30., azim=230)
-plt.tight_layout()
-plt.savefig('%s/manifold_%s_%d.png'%(save_directory, base_output_path, i), dpi=300)
-
-#%% DupuitLEM: hydromorphic balance map view
-
-xmin =0; xmax=87.5; ymin=0; ymax=87.5
-
-plot_runs = np.array([29,5,24,0])
-
-cmap1 = copy.copy(cm.hot)
-cmap1.set_bad(color='gray')
-cmap1.set_over(color='magenta')
-cmap1.set_under(color='blue')
-fig, axs = plt.subplots(nrows=4, ncols=4, figsize=(8,8))
-for j in range(len(plot_runs)):
-    i = plot_runs[j]
-
+def add_manifold_plot(base_output_path, i, ax, steep_range, ti_range):
     grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
+    df_params = pickle.load(open('%s/%s/parameters.p'%(directory,base_output_path), 'rb'))
     lg = df_params['lg'][i]
     hg = df_params['hg'][i]
     S = grid.at_node['slope_D8']
@@ -1264,7 +1203,14 @@ for j in range(len(plot_runs)):
     curvature = grid.at_node['curvature']
     S4 = grid.at_node['slope_D4']
     twi = grid.at_node['topographic__index_D4']/np.cos(np.arctan(S4))**2
-    qstar = grid.at_node['qstar']
+    try:
+        qstar = grid.at_node['qstar']
+    except KeyError:
+        qstar = np.ones_like(A)
+    try:
+        gam = df_params['gam'][i]
+    except KeyError:
+        gam = 0.0
 
     # make dimensionless versions
     a_star = (A/grid.dx)/lg
@@ -1273,83 +1219,56 @@ for j in range(len(plot_runs)):
     curvature_star = curvature*lg**2/hg
     twi_star = twi*hg/lg**2
 
-    inds = curvature_star<0
-    T1 = df_params['gam'][i]*1/twi_star
-    T1[grid.boundary_nodes] = np.nan
-    T1[inds] = np.nan
+    Steep, Ti = np.meshgrid(steep_range, ti_range)
+    Curv = manifold_curv(Steep, Ti, gam)
 
-    T2 = curvature_star/steepness_star
-    T2[grid.boundary_nodes] = np.nan
-    T2[inds] = np.nan
+    ax.plot_surface(Steep, np.log(Ti), Curv, alpha=0.6, color='0.3')
+    sc = ax.scatter(steepness_star[grid.core_nodes],
+                     np.log(twi_star[grid.core_nodes]),
+                     curvature_star[grid.core_nodes],
+                      s=3,
+                      alpha=0.8,
+                      c=qstar[grid.core_nodes],
+                      cmap='plasma_r',
+                      vmin=0.0,
+                      vmax=1.0,
+                      )
 
-    T3 = 1/steepness_star
-    T3[grid.boundary_nodes] = np.nan
-    T3[inds] = np.nan
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_zticklabels([])
+    ax.view_init(elev=5., azim=190)
+    # ax.view_init(elev=30., azim=230)
+    return ax, sc
 
-    dx = grid.dx/df_params['lg'][i]
-    y = np.arange(grid.shape[0] + 1) * dx - dx * 0.5
-    x = np.arange(grid.shape[1] + 1) * dx - dx * 0.5
+fig = plt.figure(figsize=(4,4))
+ax = fig.add_subplot(1, 1, 1, projection='3d')
+steep = np.linspace(1.0, 75, 100)
+ti = np.geomspace(5,1e7, 100)
+add_manifold_plot('steady_sp_3_18', 29, ax, steep, ti)
+# ax.set_title(r"$\gamma=5.0$")
+plt.savefig('%s/manifold_%s_%d_1.png'%(save_directory,'steady_sp_3_18', 29), dpi=300)
 
-    im = axs[j, 0].imshow(T1.reshape(grid.shape).T,
-                         origin="lower",
-                         extent=(x[0], x[-1], y[0], y[-1]),
-                          cmap=cmap1,
-                         vmin=0.0,
-                         vmax=1.0,
-                         interpolation='none'
-                         )
-    axs[j,0].set_ylabel(r'\LARGE (%d)'%i, rotation=0, labelpad=20)
+fig = plt.figure(figsize=(4,4))
+ax = fig.add_subplot(1, 1, 1, projection='3d')
+steep = np.linspace(0.1, 5, 100)
+ti = np.geomspace(1.5,1e7, 100)
+ax, sc = add_manifold_plot('steady_sp_3_18', 24, ax, steep, ti)
+# fig.colorbar(sc, label=r'$Q^*$')
+# ax.set_title(r"$\gamma=0.5$")
+plt.savefig('%s/manifold_%s_%d_1.png'%(save_directory, 'steady_sp_3_18', 24), dpi=300)
 
-    im = axs[j, 1].imshow(T2.reshape(grid.shape).T,
-                         origin="lower",
-                         extent=(x[0], x[-1], y[0], y[-1]),
-                         cmap=cmap1,
-                         vmin=0.0,
-                         vmax=1.0,
-                         )
+fig = plt.figure(figsize=(4,4))
+ax = fig.add_subplot(1, 1, 1, projection='3d')
+steep = np.linspace(0.1, 5, 100)
+ti = np.geomspace(0.1,1e7, 100)
+ax, sc = add_manifold_plot('simple_lem_5_5', 0, ax, steep, ti)
+# ax.set_title(r"NoHyd")
 
-    im = axs[j, 2].imshow(T3.reshape(grid.shape).T,
-                         origin="lower",
-                         extent=(x[0], x[-1], y[0], y[-1]),
-                         cmap=cmap1,
-                         vmin=0.0,
-                         vmax=1.0,
-                         )
-
-    im = axs[j, 3].imshow((T1+T2+T3-1).reshape(grid.shape).T,
-                         origin="lower",
-                         extent=(x[0], x[-1], y[0], y[-1]),
-                         cmap=cmap1,
-                         vmin=0.0,
-                         vmax=1.0,
-                         )
-
-    if j==0:
-        axs[j, 0].set_title(r"$\frac{\gamma}{T_z}$", fontsize=20, y=1.08)
-        axs[j, 1].set_title(r"$\frac{C_z}{S_z}$", fontsize=20, y=1.08)
-        axs[j, 2].set_title(r"$\frac{1}{S_z}$", fontsize=20, y=1.08)
-        axs[j, 3].set_title(r'$\frac{\gamma}{T_z}+\frac{C_z}{S_z}+\frac{1}{S_z}-1$', fontsize=13, y=1.08)
-
-
-    for k in range(0,4):
-        axs[j, k].set_xlim((xmin,xmax))
-        axs[j, k].set_ylim((ymin,ymax))
-
-        if j != 3:
-            axs[j, k].set_xticklabels([])
-        else:
-            axs[j, k].set_xticks([0, 25, 50, 75])
-        if k != 0:
-            axs[j, k].set_yticklabels([])
-        else:
-            axs[j, k].set_yticks([0, 25, 50, 75])
-
-
-plt.subplots_adjust(right=0.8)
-cbar_ax = fig.add_axes([0.85, 0.2, 0.02, 0.6]) #Left, Bottom, Width, Height
-fig.colorbar(im, cax=cbar_ax, label="Term value", extend='both')
-axs[-1, 0].set_xlabel(r'$x/\ell_g$')
-plt.savefig('%s/hydromorphic_balance_%s.png'%(save_directory, base_output_path), dpi=400)
+# ax.set_xlabel(r"$\sqrt{a'} |\nabla' z'|$")
+# ax.set_ylabel(r"log($a'/(|\nabla' z'| \cos^2 \theta)$)")
+# ax.set_zlabel(r"$\nabla'^{2} z'$")
+plt.savefig('%s/manifold_%s_%d_1.png'%(save_directory, 'simple_lem_5_5', 0), dpi=300)
 
 #%% DupuitLEM: load data for hillslope length
 
