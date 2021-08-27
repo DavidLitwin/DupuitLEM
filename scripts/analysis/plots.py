@@ -535,7 +535,7 @@ plt.savefig('%s/steady_sp_high_hi_XS.png'%save_directory, dpi=300)
 #%% DupuitLEM: vary gamma and Hi (formerly lambda), load results
 
 # specify model runs
-base_output_path = 'steady_sp_3_20'
+base_output_path = 'steady_sp_3_18'
 model_runs = np.arange(30)
 
 # load params
@@ -1165,6 +1165,63 @@ cbar = fig.colorbar(sc, cax=ax_cb, label=r'$Q^*$', orientation="vertical")
 cbar.solids.set_edgecolor("face")
 # plt.tight_layout()
 plt.savefig('%s/curv_twi_qstar_%s.png'%(save_directory, base_output_path), dpi=300)
+
+#%% DupuitLEM: aggregate view TI Q*
+
+cmap1 = copy.copy(cm.RdBu)
+# cmap1.set_over('magenta')
+
+nrows=3
+ncols=2
+plot_runs = np.array([0,2,5,24,26,29])
+plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
+
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
+for i in plot_runs:
+    m = np.where(plot_array==i)[0][0]
+    n = np.where(plot_array==i)[1][0]
+
+    grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
+    lg = df_params['lg'][i]
+    hg = df_params['hg'][i]
+    curvature = grid.at_node['curvature']
+    S4 = grid.at_node['slope_D4']
+    twi = grid.at_node['topographic__index_D4']/np.cos(np.arctan(S4))**2
+    qstar = grid.at_node['qstar']
+
+    # make dimensionless versions
+    twi_star = twi*hg/lg**2
+    curvature_star = curvature*lg**2/hg
+
+    sc = axs[m,n].scatter(twi_star[grid.core_nodes],
+                  qstar[grid.core_nodes],
+                  s=8,
+                  alpha=0.25,
+                  c=curvature_star[grid.core_nodes],
+                  cmap=cmap1,
+                  norm=TwoSlopeNorm(0.0, vmin=-1.1, vmax=5)
+                  )
+    axs[m,n].text(0.89,
+                0.11,
+                str(i),
+                transform=axs[m,n].transAxes,
+                fontsize=10,
+                verticalalignment='top',
+                bbox=dict(ec='w',fc='w')
+                )
+    axs[m,n].set_xscale('log')
+    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=9)
+
+axs[-1,0].set_xlabel(r"$a'/(|\nabla' z'| \cos^2 \theta)$")
+axs[-1,0].set_ylabel(r'$Q^*$')
+fig.subplots_adjust(right=0.75, hspace=0.3)
+rect_cb = [0.8, 0.35, 0.03, 0.3]
+ax_cb = plt.axes(rect_cb)
+cbar = fig.colorbar(cm.ScalarMappable(norm=TwoSlopeNorm(0.0, vmin=-1.1, vmax=5), cmap=cmap1), cax=ax_cb, label=r"$\nabla'^{2} z'$", orientation="vertical", extend='max')
+cbar.solids.set_edgecolor("face")
+# plt.tight_layout()
+plt.savefig('%s/twi_qstar_curv_%s.png'%(save_directory, base_output_path), dpi=300)
+
 
 #%% DupuitLEM: geomorphic balance
 
