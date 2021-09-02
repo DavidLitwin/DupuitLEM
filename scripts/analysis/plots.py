@@ -1460,6 +1460,10 @@ for base_output_path in base_output_paths:
     dfs_tog.append(pd.concat(dfs, axis=0, ignore_index=True))
 df_results = pd.concat(dfs_tog, axis=0, ignore_index=True)
 
+
+df_params['aspect_ratio'] = df_params['b']/df_results['mean hillslope len ridges']
+df_params['kr_ratio'] = df_params['ksat']/df_params['p']
+
 #%% DupuitLEM: hillslope length for all model results
 
 lam_all = pd.unique(df_params['lam'])
