@@ -2,7 +2,7 @@
 Stochastic recharge + constant thickness + StreamPowerModel
 
 This script uses characteristic scales and dimensionless parameters presented
-in Litwin et al. 2021, but extends using parameters Beta and Rho that
+in Litwin et al. 2021, but extends using parameters Rho and Beta that
 describe rainfall steadiness and storage variability respectively.
 
 
