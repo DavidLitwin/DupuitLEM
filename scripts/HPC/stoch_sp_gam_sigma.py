@@ -84,7 +84,7 @@ v0 = 2.0*lg # contour width (also grid spacing) [m]
 n = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # steady recharge rate
 
-Tg_nd = 3000 # total duration in units of tg [-]
+Tg_nd = 2000 # total duration in units of tg [-]
 dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
@@ -96,6 +96,7 @@ for i in range(len(sigma1)):
 df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'gam', 'hi', 'sigma', 'rho'])
 df_params['alpha'] = df_params['hg']/df_params['lg']
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
+df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['ksf'] = ksf_base/df_params['beta'] # morphologic scaling factor
