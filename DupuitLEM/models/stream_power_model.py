@@ -223,10 +223,14 @@ class StreamPowerModel:
         If output dictionary and steady state condition were provided, record output and stop when steady state condition is met.
         """
 
+        relief_change = np.zeros((self.N, 2))
         # Run model forward
         for i in tqdm(range(self.N), desc="Completion"):
 
             self.run_step(self.dt_m, dt_m_max=self.dt_m_max)
+
+            relief_change[i,0] = np.mean(self._elev[self._grid.core_nodes])
+            relief_change[i,1] = (relief_change[i,0]- relief_change[i-1,0])/self.dt_m
 
             if self.save_output:
 
@@ -240,6 +244,8 @@ class StreamPowerModel:
                         include=self.output_fields,
                         format="NETCDF4",
                     )
+
+                    np.savetxt(self.base_path + 'relief_change_%d.csv'%self.id, relief_change, delimiter=',', fmt='%.4f')
 
                 if self.stop_cond and i % self.output_interval == 0 and i > 0:
 
