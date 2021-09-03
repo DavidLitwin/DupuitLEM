@@ -133,7 +133,7 @@ output["output_fields"] = [
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
         ]
-output["base_output_path"] = './data/stoch_sp_gam_beta_'
+output["base_output_path"] = './data/stoch_sp_gam_sigma_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
