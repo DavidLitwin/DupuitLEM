@@ -47,8 +47,10 @@ directory = 'C:/Users/dgbli/Documents/Research Data/HPC output/DupuitLEMResults/
 #%% NoHyd: scaling with varying hg and lg
 
 plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=14) 
+plt.rc('axes', labelsize=16) 
 ls = LightSource(azdeg=135, altdeg=45)
-fig = plt.figure(figsize=(7.5,7.5))
+fig = plt.figure(figsize=(4.5,5.0))
 gs = GridSpec(3, 3, figure=fig)
 subplots = {}
 subplots[0] = fig.add_subplot(gs[2, 0])
@@ -63,7 +65,7 @@ base_output_path = 'simple_lem_5_5'
 df_params = pickle.load(open('%s/%s/parameters.p'%(directory,base_output_path), 'rb'))
 names = ['i', 'iv', 'vi', 'ii', 'v', '', 'iii', '', 'vii']
 elev_star_all = []
-ticks = range(0,100, 25)
+ticks = range(0,100, 50)
 
 for i, ax in subplots.items():
 
@@ -94,11 +96,11 @@ for i, ax in subplots.items():
     if i%3 != 0:
         ax.set_xticklabels([])
     else:
-        ax.set_xlabel(r'$x/\ell_g$ \newline \vspace{12mm} {\LARGE $\ell_g=%d$ m}'%lg)
+        ax.set_xlabel(r'$\ell_g=%d$ m'%lg)
     if i>2:
         ax.set_yticklabels([])
     else:
-        ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $y/\ell_g$'%hg)
+        ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
 
 plt.savefig('%s/hs_hg_lg_simple_lem.png'%save_directory, dpi=300)
 
@@ -119,8 +121,10 @@ for c in combinations(range(len(elev_star_all)), 2):
 #%% NoHyd: scaling with varying hg and lg cross sections
 
 plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=14) 
+plt.rc('axes', labelsize=16) 
 ls = LightSource(azdeg=135, altdeg=45)
-fig = plt.figure(figsize=(7.5,7.5))
+fig = plt.figure(figsize=(4.5,5.0))
 gs = GridSpec(3, 3, figure=fig)
 subplots = {}
 subplots[0] = fig.add_subplot(gs[2, 0])
@@ -135,8 +139,8 @@ base_output_path = 'simple_lem_5_5'
 df_params = pickle.load(open('%s/%s/parameters.p'%(directory,base_output_path), 'rb'))
 names = ['i', 'iv', 'vi', 'ii', 'v', '', 'iii', '', 'vii']
 elev_star_all = []
-xticks = range(0,100, 25)
-yticks = range(0,25,5)
+xticks = range(0,100, 50)
+yticks = range(0,20,10)
 
 for i, ax in subplots.items():
 
@@ -150,9 +154,9 @@ for i, ax in subplots.items():
     y = grid.y_of_node[middle_row]/lg
     ax.fill_between(y,elev[middle_row]/hg,np.zeros_like(elev[middle_row]),facecolor=(111/256,111/256,111/256))
 
-    ax.set_title(r'$\alpha$=%.3f'%(hg/lg))
-    ax.text(0.04,
-            0.96,
+    # ax.set_title(r'$\alpha$=%.3f'%(hg/lg))
+    ax.text(0.07,
+            0.93,
             names[i],
             transform=ax.transAxes,
             fontsize=10,
@@ -165,19 +169,22 @@ for i, ax in subplots.items():
     if i%3 != 0:
         ax.set_xticklabels([])
     else:
-        ax.set_xlabel(r'$x/\ell_g$ \newline \vspace{12mm} {\LARGE $\ell_g=%d$ m}'%lg)
+        ax.set_xlabel(r'$\ell_g=%d$ m'%lg)
     if i>2:
         ax.set_yticklabels([])
     else:
-        ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $z/h_g$'%hg)
-
+        ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
+        
 plt.savefig('%s/hs_hg_lg_simple_lem_XS.png'%save_directory, dpi=300)
 
 
 #%% DupuitLEM Hi=5: scaling with varying hg and lg
 
+plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=14) 
+plt.rc('axes', labelsize=16) 
 ls = LightSource(azdeg=135, altdeg=45)
-fig = plt.figure(figsize=(7.5, 7.5))
+fig = plt.figure(figsize=(4.5,5.0))
 gs = GridSpec(3, 3, figure=fig)
 subplots = {}
 subplots[0] = fig.add_subplot(gs[2, 0])
@@ -194,7 +201,7 @@ lg_all = df_params['lg']
 hg_all = df_params['hg']
 names = ['i', 'iv', 'vi', 'ii', 'v', '', 'iii', '', 'vii']
 elev_star_all = []
-ticks = range(0,100, 25)
+ticks = range(0,100, 50)
 
 for i, ax in subplots.items():
     lg = lg_all[i] # geomorphic length scale [m]
@@ -224,12 +231,12 @@ for i, ax in subplots.items():
     if i%3 != 0:
         ax.set_xticklabels([])
     else:
-        ax.set_xlabel(r'$x/\ell_g$ \newline \vspace{12mm} {\LARGE $\ell_g=%d$ m}'%lg)
+        ax.set_xlabel(r'$\ell_g=%d$ m'%lg)
     if i>2:
         ax.set_yticklabels([])
     else:
-        ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $y/\ell_g$'%hg)
-
+        ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
+        
 plt.savefig('%s/hs_hg_lg_steady_sp.png'%save_directory, dpi=300)
 
 
@@ -247,8 +254,11 @@ for c in combinations([0,3,5], 2):
 
 #%% DupuitLEM Hi=5: scaling with varying hg and lg cross sections
 
+plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=14) 
+plt.rc('axes', labelsize=16) 
 ls = LightSource(azdeg=135, altdeg=45)
-fig = plt.figure(figsize=(7.5, 7.5))
+fig = plt.figure(figsize=(4.5,5.0))
 gs = GridSpec(3, 3, figure=fig)
 subplots = {}
 subplots[0] = fig.add_subplot(gs[2, 0])
@@ -266,8 +276,8 @@ zmin = -10
 
 names = ['i', 'iv', 'vi', 'ii', 'v', '', 'iii', '', 'vii']
 elev_star_all = []
-xticks = range(0,100, 25)
-yticks = range(0,200, 50)
+xticks = range(0,100, 50)
+yticks = range(0,200, 100)
 
 for i, ax in subplots.items():
 
@@ -287,9 +297,9 @@ for i, ax in subplots.items():
     ax.fill_between(y,base[middle_row]/hg,zmin*np.ones_like(base[middle_row]),facecolor=(111/256,111/256,111/256))
     ax.set_ylim((zmin,zmax))
 
-    ax.set_title(r'$\alpha$=%.3f'%(hg/lg))
-    ax.text(0.04,
-            0.96,
+    # ax.set_title(r'$\alpha$=%.3f'%(hg/lg))
+    ax.text(0.07,
+            0.93,
             names[i],
             transform=ax.transAxes,
             fontsize=10,
@@ -303,12 +313,12 @@ for i, ax in subplots.items():
     if i%3 != 0:
         ax.set_xticklabels([])
     else:
-        ax.set_xlabel(r'$x/\ell_g$ \newline \vspace{12mm} {\LARGE $\ell_g=%d$ m}'%lg)
+        ax.set_xlabel(r'$\ell_g=%d$ m'%lg)
     if i>2:
         ax.set_yticklabels([])
     else:
-        ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $z/h_g$'%hg)
-
+        ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
+        
     if i==0:
         axins = ax.inset_axes([0.5, 0.5, 0.47, 0.47])
         y = grid.y_of_node[middle_row]/lg
@@ -323,13 +333,16 @@ for i, ax in subplots.items():
         axins.set_yticklabels('')
 
         ax.indicate_inset_zoom(axins)
-
+# plt.tight_layout()
 plt.savefig('%s/hs_hg_lg_steady_sp_XS.png'%save_directory, dpi=300)
 
 #%% DupuitLEM Hi=0.01: scaling with varying hg and lg
 
+plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=14) 
+plt.rc('axes', labelsize=16) 
 ls = LightSource(azdeg=135, altdeg=45)
-fig = plt.figure(figsize=(7.5, 7.5))
+fig = plt.figure(figsize=(5.0,5.5))
 gs = GridSpec(3, 3, figure=fig)
 subplots = {}
 subplots[0] = fig.add_subplot(gs[2, 0])
@@ -346,7 +359,7 @@ lg_all = df_params['lg']
 hg_all = df_params['hg']
 names = ['i', 'iv', 'vi', 'ii', 'v', '', 'iii', '', 'vii']
 elev_star_all = []
-ticks = range(0,150, 25)
+ticks = range(0,150, 50)
 
 for i, ax in subplots.items():
 
@@ -377,12 +390,12 @@ for i, ax in subplots.items():
     if i%3 != 0:
         ax.set_xticklabels([])
     else:
-        ax.set_xlabel(r'$x/\ell_g$ \newline \vspace{12mm} {\LARGE $\ell_g=%d$ m}'%lg)
+        ax.set_xlabel(r'$\ell_g=%d$ m'%lg)
     if i>2:
         ax.set_yticklabels([])
     else:
-        ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $y/\ell_g$'%hg)
-
+        ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
+        
 plt.savefig('%s/hs_hg_lg_steady_sp_low_lam.png'%save_directory, dpi=300)
 
 # bottom row: [0,3,5]
@@ -397,8 +410,11 @@ for c in combinations([0,1,2], 2):
 
 #%% DupuitLEM Hi=0.01: scaling with varying hg and lg cross sections
 
+plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=14) 
+plt.rc('axes', labelsize=16) 
 ls = LightSource(azdeg=135, altdeg=45)
-fig = plt.figure(figsize=(7.5, 7.5))
+fig = plt.figure(figsize=(5.0,5.5))
 gs = GridSpec(3, 3, figure=fig)
 subplots = {}
 subplots[0] = fig.add_subplot(gs[2, 0])
@@ -416,7 +432,7 @@ zmin = -300
 
 names = ['i', 'iv', 'vi', 'ii', 'v', '', 'iii', '', 'vii']
 elev_star_all = []
-xticks = range(0,200, 50)
+xticks = range(0,150, 50)
 yticks = range(zmin,zmax+300, 300)
 
 for i, ax in subplots.items():
@@ -437,9 +453,9 @@ for i, ax in subplots.items():
     ax.fill_between(y,base[middle_row]/hg,zmin*np.ones_like(base[middle_row]),facecolor=(111/256,111/256,111/256))
     ax.set_ylim((zmin,zmax))
 
-    ax.set_title(r'$\alpha$=%.3f'%(hg/lg))
-    ax.text(0.04,
-            0.96,
+    # ax.set_title(r'$\alpha$=%.3f'%(hg/lg))
+    ax.text(0.07,
+            0.93,
             names[i],
             transform=ax.transAxes,
             fontsize=10,
@@ -452,12 +468,12 @@ for i, ax in subplots.items():
     if i%3 != 0:
         ax.set_xticklabels([])
     else:
-        ax.set_xlabel(r'$x/\ell_g$ \newline \vspace{12mm} {\LARGE $\ell_g=%d$ m}'%lg)
+        ax.set_xlabel(r'$\ell_g=%d$ m'%lg)
     if i>2:
         ax.set_yticklabels([])
     else:
-        ax.set_ylabel(r'\centering {\LARGE $h_g=%.2f$ m} \newline \vspace{12mm} $z/h_g$'%hg)
-
+        ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
+        
 
 plt.savefig('%s/hs_hg_lg_steady_sp_low_lam_XS.png'%save_directory, dpi=300)
 
@@ -468,11 +484,14 @@ base_output_path = 'steady_sp_hi_1'
 df_params = pickle.load(open('%s/%s/parameters.p'%(directory,base_output_path), 'rb'))
 lg_all = df_params['lg']
 hg_all = df_params['hg']
-ticks = range(0, 100, 25)
+ticks = range(0, 100, 50)
 elev_star_all = []
 
 ls = LightSource(azdeg=135, altdeg=45)
-fig, axs = plt.subplots(ncols=4, figsize=(9, 3))
+plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=15) 
+plt.rc('axes', labelsize=14) 
+fig, axs = plt.subplots(ncols=4, figsize=(7, 2.2))
 for i, ax in enumerate(axs):
     lg = lg_all[i] # geomorphic length scale [m]
     hg = hg_all[i] # geomorphic height scale [m]
@@ -499,15 +518,19 @@ mean_rel1 = np.mean(elev_star_all[2])
 mean_rel2 = np.mean(elev_star_all[3])
 mean_rel_diff = abs((mean_rel1-mean_rel2))/min(mean_rel1,mean_rel2)
 
-#%%
+#%% DupuitLEM: vary Hi for large values of Hi cross sections
 
 zmax = 100
 zmin = 0
 
-xticks = range(0,100, 25)
-yticks = range(zmin,zmax+50, 25)
+xticks = range(0,100, 50)
+yticks = range(zmin,zmax+50, 50)
 
-fig, axs = plt.subplots(ncols=4, figsize=(9, 2.5))
+plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=15) 
+plt.rc('axes', labelsize=14) 
+fig, axs = plt.subplots(ncols=4, figsize=(7, 2.1))
+# fig, axs = plt.subplots(ncols=4, figsize=(9, 2.5))
 for i, ax in enumerate(axs):
     lg = df_params['lg'][i] # geomorphic length scale [m]
     hg = df_params['hg'][i] # geomorphic height scale [m]
@@ -811,10 +834,16 @@ plt.figure()
 plt.imshow(ls.hillshade(elev_star.reshape(grid.shape).T, vert_exag=2, dx=dx_star, dy=dx_star), origin="lower", extent=(x[0], x[-1], y[0], y[-1]), cmap='gray')
 plt.ylabel(r'$y/\ell_g$')
 plt.xlabel(r'$x/\ell_g$')
-plt.savefig('%s/hillshade_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/hillshade_%s.png'%(save_directory, base_output_path), dpi=300)
 
+#%%
 # plot slope-area and steepness-curvature
-fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(8,4))
+plt.rc('text', usetex=True)
+plt.rc('axes', titlesize=15) 
+plt.rc('axes', labelsize=14) 
+plt.rc('xtick', labelsize=12)
+plt.rc('ytick', labelsize=12) 
+fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(6,3))
 axs[0].scatter(a_star[grid.core_nodes], S_star[grid.core_nodes], alpha=0.2, s=5)
 axs[0].set_xlabel("$a'$")
 axs[0].set_ylabel("$S'$")
