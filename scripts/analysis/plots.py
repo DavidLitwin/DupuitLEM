@@ -581,7 +581,7 @@ ncols = 5
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 # plot_runs hillshades:
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(8,9))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -615,8 +615,8 @@ for i in plot_runs:
     if n != 0:
         axs[m, n].set_yticklabels([])
 
-axs[-1, 0].set_ylabel(r'$y/\ell_g$')
-axs[-1, 0].set_xlabel(r'$x/\ell_g$')
+# axs[-1, 0].set_ylabel(r'$y/\ell_g$')
+# axs[-1, 0].set_xlabel(r'$x/\ell_g$')
 plt.subplots_adjust(left=0.15, bottom=0.15, right=None, top=None, wspace=0.15, hspace=0.15)
 plt.savefig('%s/hillshade_%s.png'%(save_directory, base_output_path), dpi=300)
 
@@ -632,7 +632,7 @@ ncols = 5
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 # plot_runs hillshades:
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(8,9))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,7))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -658,8 +658,8 @@ for i in plot_runs:
     if m != nrows-1:
         axs[m, n].set_xticklabels([])
 
-axs[-1, 0].set_ylabel(r'$z/h_g$')
-axs[-1, 0].set_xlabel(r'$x/\ell_g$')
+# axs[-1, 0].set_ylabel(r'$z/h_g$')
+# axs[-1, 0].set_xlabel(r'$x/\ell_g$')
 plt.tight_layout()
 plt.savefig('%s/cross_section_%s.png'%(save_directory, base_output_path), dpi=300)
 
@@ -672,7 +672,7 @@ ncols = 5
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 max_steep=0
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(8,7))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6,5.25))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -693,26 +693,29 @@ for i in plot_runs:
                          vmin=0.0,
                          vmax=1.0,
                          )
-    axs[m,n].text(0.05,
-                0.95,
-                str(i),
-                transform=axs[m,n].transAxes,
-                fontsize=8,
-                verticalalignment='top',
-                bbox=dict(ec='w',fc='w')
-                )
-    if m != nrows-1:
-        axs[m, n].set_xticklabels([])
-    if n != 0:
-        axs[m, n].set_yticklabels([])
+    axs[m ,n].tick_params(axis='both', length=2)
+    axs[m, n].set_xticklabels([])
+    axs[m, n].set_yticklabels([])
+    # axs[m,n].text(0.05,
+    #             0.95,
+    #             str(i),
+    #             transform=axs[m,n].transAxes,
+    #             fontsize=8,
+    #             verticalalignment='top',
+    #             bbox=dict(ec='w',fc='w')
+    #             )
+    # if m != nrows-1:
+    #     axs[m, n].set_xticklabels([])
+    # if n != 0:
+    #     axs[m, n].set_yticklabels([])
 
 plt.subplots_adjust(left=0.15, right=0.8, wspace=0.15, hspace=0.15)
 # plt.tight_layout()
 cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7]) #Left, Bottom, Width, Height
 fig.colorbar(im, cax=cbar_ax, label=r"$Q^*$")
-axs[-1, 0].set_ylabel(r'$y/\ell_g$')
-axs[-1, 0].set_xlabel(r'$x/\ell_g$')
-plt.savefig('%s/qstar_%s.png'%(save_directory, base_output_path), dpi=300)
+# axs[-1, 0].set_ylabel(r'$y/\ell_g$')
+# axs[-1, 0].set_xlabel(r'$x/\ell_g$')
+plt.savefig('%s/qstar_%s.png'%(save_directory, base_output_path), dpi=600)
 
 #%% DupuitLEM: vary gamma and Hi (formerly lambda), CDF of Q*
 
@@ -722,7 +725,7 @@ ncols=5
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4,4))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(3,3))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -735,7 +738,7 @@ for i in plot_runs:
 
 
     axs[m, n].plot(Qstar, Ep)
-    axs[m, n].tick_params(axis='both', which='major', labelsize=6)
+    axs[m, n].tick_params(axis='both', which='major', labelsize=7, length=1)
     axs[m, n].set_xlim((0, 1.0))
     axs[m, n].set_ylim((0, 1.05))
 
@@ -749,7 +752,7 @@ plt.subplots_adjust(wspace=0.35, hspace=0.2)
 axs[-1, 0].set_ylabel('CDF')
 axs[-1, 0].set_xlabel('$Q^*$')
 # axs[-1, 0].legend(frameon=False, loc=4)
-plt.savefig('%s/qstar_cdf_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('%s/qstar_cdf_%s.png'%(save_directory, base_output_path), dpi=600)
 
 #%% DupuitLEM: vary gamma and Hi, Q* and curvature probabilities
 
@@ -771,8 +774,10 @@ for i in range(len(df_params)):
     qstar_0[i] = np.sum(qstar[grid.core_nodes]>0.001)/grid.number_of_core_nodes
     curv_0[i] = np.sum(curv[grid.core_nodes]>0.0)/grid.number_of_core_nodes
 
+plt.rc('xtick', labelsize=11)
+plt.rc('ytick', labelsize=11)
 styles = [':', '--', '-']
-fig, ax = plt.subplots(figsize=(4,3))
+fig, ax = plt.subplots(figsize=(4.5,3))
 for i in range(len(lam_all)):
     ax.plot(gam_all, curv_0[n*i:n*i+n], color=col[i], linestyle=styles[0])
     ax.scatter(gam_all, curv_0[n*i:n*i+n], color=col[i])
@@ -784,21 +789,21 @@ for i in range(len(lam_all)):
     ax.scatter(gam_all, qstar_0[n*i:n*i+n], color=col[i])
 
 ax.set_xscale('log')
-ax.set_xlabel(r'$\gamma$', fontsize=14)
-ax.set_ylabel(r'$P(\cdot)$')
-legend0 = plt.legend(frameon=False, loc=(0.63,0.45))
+ax.set_xlabel(r'$\gamma$', fontsize=18)
+ax.set_ylabel(r'$P(\cdot)$', fontsize=14)
+legend0 = plt.legend(frameon=False, loc=(0.60,0.42), fontsize=12)
 
 # dummy lines to make a legend of different linestyles, independent of Hi legend
 dummy_lines = []
 for style in styles:
     dummy_lines.append(ax.plot([],[], c="black", ls = style)[0])
-legend1 = plt.legend([dummy_lines[i] for i in [0,1,2]], [r'$\nabla^2 z >$0', r'$Q^*>$0.5', r'$Q^*>$0.001'], loc=(0.63,0.15), frameon=False) #[r'$\nabla z >0$', r'$Q^*>0.5$', r'$Q^*>0.001&'])
+legend1 = plt.legend([dummy_lines[i] for i in [0,1,2]], [r'$\nabla^2 z >$0', r'$Q^*>$0.5', r'$Q^*>$0.001'], loc=(0.60,0.12), frameon=False, fontsize=12) #[r'$\nabla z >0$', r'$Q^*>0.5$', r'$Q^*>0.001&'])
 # ax.set_ylim((0.1, 30))
 ax.add_artist(legend0)
 
 
 plt.tight_layout()
-plt.savefig('%s/qstar_cond_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('%s/qstar_cond_%s.png'%(save_directory, base_output_path), dpi=600)
 
 
 #%% NoHyd: slope-area and steepness-curvature
@@ -869,7 +874,7 @@ plot_runs = np.array([0,2,5,24,26,29])
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 max_steep=0
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5,6))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -895,7 +900,7 @@ for i in plot_runs:
                          cmap='viridis',
                          norm = colors.LogNorm(vmin=1, vmax=90)
                          )
-    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=9)
+    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=11)
     axs[m,n].text(0.04,
                 0.96,
                 str(i),
@@ -909,11 +914,12 @@ for i in plot_runs:
     if n != 0:
         axs[m, n].set_yticklabels([])
 
-plt.subplots_adjust(left=0.15, right=0.8, wspace=0.15, hspace=0.15)
-cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7]) #Left, Bottom, Width, Height
-fig.colorbar(im, cax=cbar_ax, label=r"$\sqrt{a'} |\nabla' z'|$")
-axs[-1, 0].set_ylabel(r'$y/\ell_g$')
-axs[-1, 0].set_xlabel(r'$x/\ell_g$')
+plt.subplots_adjust(left=0.15, right=0.8, wspace=0.15, hspace=0.25)
+cbar_ax = fig.add_axes([0.83, 0.15, 0.02, 0.7]) #Left, Bottom, Width, Height
+cbar = fig.colorbar(im, cax=cbar_ax)
+cbar.set_label(label=r"$\sqrt{a'} |\nabla' z'|$", size=14)
+axs[-1, 0].set_ylabel(r'$y/\ell_g$', fontsize=12)
+axs[-1, 0].set_xlabel(r'$x/\ell_g$', fontsize=12)
 plt.savefig('%s/steepness_%s.png'%(save_directory, base_output_path), dpi=300)
 
 #%% DupuitLEM: map view curvature
@@ -925,7 +931,7 @@ plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 max_curv=0
 min_curv=0
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5,6))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -949,8 +955,9 @@ for i in plot_runs:
                          cmap='RdBu',
                          norm=TwoSlopeNorm(0.0, vmin=-1.1)
                          )
-    fig.colorbar(im, ax=axs[m,n], label=r"$\nabla'^{2} z'$", fraction=0.046, pad=0.04)
-    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=9)
+    cbar = fig.colorbar(im, ax=axs[m,n], fraction=0.046, pad=0.04)
+    cbar.set_label(label=r"$\nabla'^{2} z'$", size=12)
+    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=11)
     axs[m,n].text(0.05,
                 0.95,
                 str(i),
@@ -965,9 +972,9 @@ for i in plot_runs:
     if n != 0:
         axs[m, n].set_yticklabels([])
 
-plt.subplots_adjust(wspace=0.35, hspace=0.15, right=0.85)
-axs[-1, 0].set_ylabel(r'$y/\ell_g$')
-axs[-1, 0].set_xlabel(r'$x/\ell_g$')
+plt.subplots_adjust(wspace=0.4, hspace=0.15, right=0.85)
+axs[-1, 0].set_ylabel(r'$y/\ell_g$', fontsize=12)
+axs[-1, 0].set_xlabel(r'$x/\ell_g$', fontsize=12)
 plt.savefig('%s/curvature_%s.png'%(save_directory, base_output_path), dpi=300)
 
 #%% DupuitLEM: map view topographic index
@@ -979,7 +986,7 @@ plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 max_twi=0
 min_twi=0
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5, 6))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -1004,7 +1011,7 @@ for i in plot_runs:
                          cmap='viridis',
                          norm = colors.LogNorm(vmin=0.1, vmax=2e7)
                          )
-    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=9)
+    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=11)
     axs[m,n].text(0.05,
                 0.95,
                 str(i),
@@ -1019,13 +1026,14 @@ for i in plot_runs:
     if n != 0:
         axs[m, n].set_yticklabels([])
 
-plt.subplots_adjust(left=0.15, bottom=0.15, right=0.8, top=None, wspace=0.15, hspace=0.15)
-cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7]) #Left, Bottom, Width, Height
-fig.colorbar(im, cax=cbar_ax, label=r"$a'/(|\nabla' z'| \cos^2 \theta)$")
-axs[-1, 0].set_ylabel(r'$y/\ell_g$')
-axs[-1, 0].set_xlabel(r'$x/\ell_g$')
+plt.subplots_adjust(left=0.12, bottom=0.15, right=0.78, top=None, wspace=0.15, hspace=0.25)
+cbar_ax = fig.add_axes([0.81, 0.15, 0.02, 0.7]) #Left, Bottom, Width, Height
+cbar = fig.colorbar(im, cax=cbar_ax)
+cbar.set_label(label=r"$a'/(|\nabla' z'| \cos^2 \theta)$", size=14)
+axs[-1, 0].set_ylabel(r'$y/\ell_g$', fontsize=12)
+axs[-1, 0].set_xlabel(r'$x/\ell_g$', fontsize=12)
 plt.savefig('%s/TI_%s.png'%(save_directory, base_output_path), dpi=300)
-
+ 
 
 #%% DupuitLEM: aggregate view slope area
 
@@ -1034,7 +1042,7 @@ ncols=2
 plot_runs = np.array([0,2,5,24,26,29])
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5,6))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -1070,17 +1078,17 @@ for i in plot_runs:
                 )
     axs[m,n].set_xscale('log')
     axs[m,n].set_yscale('log')
-    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=9)
+    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=11)
 
-axs[-1,0].set_xlabel(r"$a'$")
-axs[-1,0].set_ylabel(r"$|\nabla'z'|$")
-fig.subplots_adjust(right=0.75, hspace=0.3, wspace=0.3)
-rect_cb = [0.8, 0.35, 0.03, 0.3]
+axs[-1,0].set_xlabel(r"$a'$", fontsize=12)
+axs[-1,0].set_ylabel(r"$|\nabla'z'|$", fontsize=12)
+fig.subplots_adjust(left=0.15, right=0.8, hspace=0.35, wspace=0.35)
+rect_cb = [0.83, 0.35, 0.03, 0.3]
 ax_cb = plt.axes(rect_cb)
-cbar = fig.colorbar(sc, cax=ax_cb, label=r'$Q^*$', orientation="vertical")
+cbar = fig.colorbar(sc, cax=ax_cb, orientation="vertical")
 cbar.solids.set_edgecolor("face")
-plt.savefig('%s/slope_area_qstar_%s.png'%(save_directory, base_output_path), dpi=300)
-
+cbar.set_label(label=r'$Q^*$', size=14)
+plt.savefig('%s/slope_area_qstar_%s.png'%(save_directory, base_output_path), dpi=300) 
 
 #%% DupuitLEM: aggregate view steepness curvature
 
@@ -1089,7 +1097,7 @@ ncols=2
 plot_runs = np.array([0,2,5,24,26,29])
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5,6))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -1128,17 +1136,18 @@ for i in plot_runs:
                 verticalalignment='top',
                 bbox=dict(ec='w',fc='w')
                 )
-    axs[m,n].plot(x,y_theory, 'k--', label=r'$\sqrt{a^*} |\nabla^* z^*| - 1$')
-    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=9)
+    axs[m,n].plot(x,y_theory, 'k--', label=r"$\sqrt{a'} |\nabla' z'| - 1$")
+    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=11)
 
-axs[-1,0].set_xlabel(r"$\sqrt{a'} |\nabla' z'|$")
-axs[-1,0].set_ylabel(r"$\nabla'^{2} z'$")
-fig.subplots_adjust(right=0.75, hspace=0.3)
+axs[-1,0].set_xlabel(r"$\sqrt{a'} |\nabla' z'|$", fontsize=12)
+axs[-1,0].set_ylabel(r"$\nabla'^{2} z'$", fontsize=12)
+fig.subplots_adjust(right=0.75, hspace=0.35, top=None)
 rect_cb = [0.8, 0.35, 0.03, 0.3]
 ax_cb = plt.axes(rect_cb)
-cbar = fig.colorbar(sc, cax=ax_cb, label=r'$Q^*$', orientation="vertical")
+cbar = fig.colorbar(sc, cax=ax_cb, orientation="vertical")
+cbar.set_label(label=r'$Q^*$', size=14)
 cbar.solids.set_edgecolor("face")
-axs[0,0].legend(frameon=False)
+axs[0,0].legend(facecolor='w', edgecolor='w', fontsize=8, loc=(0.05,0.7))
 plt.savefig('%s/curv_steep_qstar_%s.png'%(save_directory, base_output_path), dpi=300)
 
 #%% DupuitLEM: aggregate view TI curvature
@@ -1205,7 +1214,7 @@ ncols=2
 plot_runs = np.array([0,2,5,24,26,29])
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(7,8))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5,6))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -1230,8 +1239,8 @@ for i in plot_runs:
                   cmap=cmap1,
                   norm=TwoSlopeNorm(0.0, vmin=-1.1, vmax=5)
                   )
-    axs[m,n].text(0.89,
-                0.11,
+    axs[m,n].text(0.83,
+                0.17,
                 str(i),
                 transform=axs[m,n].transAxes,
                 fontsize=10,
@@ -1239,15 +1248,16 @@ for i in plot_runs:
                 bbox=dict(ec='w',fc='w')
                 )
     axs[m,n].set_xscale('log')
-    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=9)
+    axs[m,n].set_title(r"$\gamma$=%.2f, Hi=%.2f"%(df_params['gam'][i], df_params['lam'][i]), fontsize=11)
 
-axs[-1,0].set_xlabel(r"$a'/(|\nabla' z'| \cos^2 \theta)$")
-axs[-1,0].set_ylabel(r'$Q^*$')
-fig.subplots_adjust(right=0.75, hspace=0.3)
+axs[-1,0].set_xlabel(r"$a'/(|\nabla' z'| \cos^2 \theta)$", fontsize=12)
+axs[-1,0].set_ylabel(r'$Q^*$', fontsize=12)
+fig.subplots_adjust(right=0.75, hspace=0.35, wspace=0.3)
 rect_cb = [0.8, 0.35, 0.03, 0.3]
 ax_cb = plt.axes(rect_cb)
-cbar = fig.colorbar(cm.ScalarMappable(norm=TwoSlopeNorm(0.0, vmin=-1.1, vmax=5), cmap=cmap1), cax=ax_cb, label=r"$\nabla'^{2} z'$", orientation="vertical", extend='max')
+cbar = fig.colorbar(cm.ScalarMappable(norm=TwoSlopeNorm(0.0, vmin=-1.1, vmax=5), cmap=cmap1), cax=ax_cb, orientation="vertical", extend='max')
 cbar.solids.set_edgecolor("face")
+cbar.set_label(label=r"$\nabla'^{2} z'$", size=14)
 # plt.tight_layout()
 plt.savefig('%s/twi_qstar_curv_%s.png'%(save_directory, base_output_path), dpi=300)
 
@@ -1259,7 +1269,7 @@ nrows=6
 ncols=5
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6,6))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5,4.5))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -1285,10 +1295,10 @@ for i in plot_runs:
     axs[m, n].scatter(t1+t2, qstar[grid.core_nodes], s=10, alpha=0.2)
     axs[m,n].plot([0,1.0],[0.0,1.0], 'k--', label='1:1')
     axs[m, n].text(0.05,
-                    0.95,
+                    0.93,
                     str(i),
                     transform=axs[m, n].transAxes,
-                    fontsize=10,
+                    fontsize=9,
                     verticalalignment='top',
                     )
     axs[m, n].ticklabel_format(style='sci')
@@ -1303,10 +1313,10 @@ for i in plot_runs:
 
 
 plt.subplots_adjust(wspace=0.35, hspace=0.2)
-axs[-1, 0].legend(frameon=False, loc=4, fontsize=8)
+axs[-1, 0].legend(facecolor='w', edgecolor='w', loc=8, fontsize=7)
 axs[-1, 0].set_xlabel('RHS')
 axs[-1, 0].set_ylabel('$Q^*$')
-fig.suptitle('Geomorphic Balance', fontsize=14, y=0.92)
+fig.suptitle('Geomorphic Balance', fontsize=14, y=0.94)
 plt.savefig('%s/geomorphic_balance_%s.png'%(save_directory, base_output_path), dpi=300)
 
 #%% DupuitLEM: hydrologic balance
@@ -1317,7 +1327,7 @@ ncols=5
 plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
 
 
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(6,6))
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(4.5,4.5))
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
@@ -1346,23 +1356,23 @@ for i in plot_runs:
     # make dimensionless versions
     twi_star = twi*hg/lg**2
 
-    # inds = np.logical_and(qstar>0.001, A>2*dx**2)
-    inds = qstar>0.001
+    inds = np.logical_and(qstar>0.001, A>2*dx**2)
+    # inds = qstar>0.001
     t2 = (ks*b)/p * 1/twi
     Qgw_in = grid.at_node['gw_flux_in']
     Qgw_out = grid.at_node['gw_flux_out']
     Qgw_in_max = grid.at_node['gw_flux_in_max']
     Qgw_out_max = grid.at_node['gw_flux_out_max']
 
-    t2_alt3 = Qgw_in_max/(p*A)
+    # t2_alt3 = Qgw_in_max/(p*A)
 
     axs[m, n].scatter(1-t2[inds], qstar[inds], s=6, alpha=0.15)
     axs[m,n].plot([0,1.0],[0.0,1.0], 'k--', label='1:1')
     axs[m, n].text(0.05,
-                    0.95,
+                    0.93,
                     str(i),
                     transform=axs[m, n].transAxes,
-                    fontsize=10,
+                    fontsize=9,
                     verticalalignment='top',
                     )
     axs[m, n].ticklabel_format(style='sci')
@@ -1376,10 +1386,10 @@ for i in plot_runs:
         axs[m, n].set_yticklabels([])
 
 plt.subplots_adjust(wspace=0.35, hspace=0.2)
-fig.suptitle('Hydrologic Balance', fontsize=14, y=0.92)
+fig.suptitle('Hydrologic Balance', fontsize=14, y=0.94)
 axs[-1, 0].set_xlabel('RHS')
 axs[-1, 0].set_ylabel('$Q^*$')
-axs[-1, 0].legend(frameon=False, loc=4, fontsize=8)
+axs[-1, 0].legend(facecolor='w', edgecolor='w', loc=8, fontsize=7)
 plt.savefig('%s/hydrologic_balance_%s.png'%(save_directory, base_output_path), dpi=300)
 
 #%% DupuitLEM: hydromorphic balance 3D manifold
