@@ -74,7 +74,7 @@ def generate_parameters(p, n, v0, hg, lg, tg, eta, hi, sigma, rho):
 #parameters
 eta_all = np.geomspace(0.1, 50, 5)
 hi_all = np.geomspace(0.05, 5, 5)
-sigma_all = np.array([10, 100])
+sigma_all = np.array([50, 200])
 sigma1 = np.array(list(product(sigma_all, hi_all, eta_all)))[:,0]
 hi1 = np.array(list(product(sigma_all, hi_all, eta_all)))[:,1]
 eta1 = np.array(list(product(sigma_all, hi_all, eta_all)))[:,2]
@@ -91,11 +91,11 @@ dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
-params = np.zeros((len(beta1),18))
-for i in range(len(beta1)):
+params = np.zeros((len(sigma1),18))
+for i in range(len(sigma1)):
     params[i,:] = generate_parameters(p, n, v0, hg, lg, tg, eta1[i], hi1[i], sigma1[i], rho)
 
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'eta', 'hi', 'beta', 'rho'])
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'ksat', 'p', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'eta', 'hi', 'sigma', 'rho'])
 df_params['alpha'] = df_params['hg']/df_params['lg']
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
