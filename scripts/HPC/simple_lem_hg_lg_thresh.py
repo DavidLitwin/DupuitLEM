@@ -4,7 +4,7 @@ NoHyd model Q*=1 for all (x,y).
 
 This script uses characteristic scales and dimensionless parameters presented
 in Litwin et al. 2021. Vary lg and hg to confirm the independence of these
-length scales.
+length scales. Include a streampower erosion threshold.
 
 Date: 2 Jan 2020
 """
