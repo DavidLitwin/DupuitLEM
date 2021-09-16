@@ -20,6 +20,7 @@ from landlab.components import (
     LinearDiffuser,
     FlowAccumulator,
     FastscapeEroder,
+    LakeMapperBarnes,
     )
 from landlab.io.netcdf import to_netcdf
 
@@ -89,7 +90,8 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.1*hg*np.random.rand(len(z))
 
-fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes')
+lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False, track_lakes=False)
+fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder=lmb)
 ld = LinearDiffuser(grid, D)
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=0.5, n_sp=1.0, threshold_sp=E0)
 
