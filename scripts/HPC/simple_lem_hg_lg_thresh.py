@@ -21,6 +21,7 @@ from landlab.components import (
     FlowAccumulator,
     FastscapeEroder,
     LakeMapperBarnes,
+    DepressionFinderAndRouter,
     )
 from landlab.io.netcdf import to_netcdf
 
@@ -90,20 +91,37 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.1*hg*np.random.rand(len(z))
 
-lmb = LakeMapperBarnes(grid, method='D8', fill_flat=False, track_lakes=False)
-fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder=lmb)
+fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8')
+lmb = LakeMapperBarnes(
+    grid,
+    method='D8',
+    fill_flat=False,
+    surface="topographic__elevation",
+    fill_surface="topographic__elevation",
+    redirect_flow_steepest_descent=False,
+    reaccumulate_flow=False,
+    track_lakes=False,
+    ignore_overfill=True,
+)
+dfr = DepressionFinderAndRouter(grid)
+
+
 ld = LinearDiffuser(grid, D)
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=0.5, n_sp=1.0, threshold_sp=E0)
 
 for i in range(N):
-
+    
+    dfr._find_pits()
+    if dfr._number_of_pits > 0:
+        lmb.run_one_step()
+        
     z[grid.core_nodes] += U*dt
 
     ld.run_one_step(dt)
     fa.run_one_step()
     sp.run_one_step(dt)
 
-    # print('completed loop %d'%i)
+    print('completed loop %d'%i)
 
     if i%output_interval==0:
         print('finished iteration %d'%i)
