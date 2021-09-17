@@ -35,15 +35,15 @@ def D_fun(lg, tg):
 def U_fun(hg, tg):
     return hg/tg
 
-def E0_fun(Ntheta, hg, tg):
-    return Ntheta*(hg/tg)
+def E0_fun(theta, hg, tg):
+    return theta*(hg/tg)
 
-def generate_parameters(hg, lg, tg, v0, Ntheta):
+def generate_parameters(hg, lg, tg, v0, theta):
     K = K_fun(v0, lg, tg)
     D = D_fun(lg, tg)
     U = U_fun(hg, tg)
-    E0 = E0_fun(Ntheta, hg, tg)
-    return K, D, U, v0, hg, lg, tg, E0, Ntheta
+    E0 = E0_fun(theta, hg, tg)
+    return K, D, U, v0, hg, lg, tg, E0, theta
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -55,12 +55,12 @@ lg_all = np.array(list(product(lg_1, hg_1)))[:,0]
 hg_all = np.array(list(product(lg_1, hg_1)))[:,1]
 v0_all = 0.7*lg_all # contour width (also grid spacing) [m]
 tg = 22500 # geomorphic timescale [yr]
-Ntheta = 1.0
+theta = 1.0
 
 params = np.zeros((len(lg_all),9))
 for i in range(len(lg_all)):
-    params[i,:] = generate_parameters(hg_all[i], lg_all[i], tg, v0_all[i], Ntheta)
-df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'v0', 'hg', 'lg', 'tg', 'E0', 'Ntheta'])
+    params[i,:] = generate_parameters(hg_all[i], lg_all[i], tg, v0_all[i], theta)
+df_params = pandas.DataFrame(params,columns=['K', 'D', 'U', 'v0', 'hg', 'lg', 'tg', 'E0', 'theta'])
 df_params['dt'] = 2e-3*tg
 df_params['T'] = 500*tg
 df_params['alpha'] = df_params['hg']/df_params['lg']
@@ -110,11 +110,11 @@ ld = LinearDiffuser(grid, D)
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=0.5, n_sp=1.0, threshold_sp=E0)
 
 for i in range(N):
-    
+
     dfr._find_pits()
     if dfr._number_of_pits > 0:
         lmb.run_one_step()
-        
+
     z[grid.core_nodes] += U*dt
 
     ld.run_one_step(dt)
