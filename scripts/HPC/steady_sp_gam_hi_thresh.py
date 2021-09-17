@@ -64,7 +64,7 @@ def generate_parameters(p, n, v0, hg, lg, tg, gam, hi, theta):
 hi_all = np.geomspace(0.05, 5, 5)
 gam_all = np.array([0.5, 0.75, 1.0, 1.25, 2.5, 5.0])
 theta = 1.0
-lg = 30 # geomorphic length scale [m]
+lg = 15 # geomorphic length scale [m]
 hg = 2.25 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 v0 = 0.7*lg # contour width (also grid spacing) [m]
