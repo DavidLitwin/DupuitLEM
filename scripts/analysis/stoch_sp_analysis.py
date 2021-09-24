@@ -277,7 +277,7 @@ df_output['sat_always'] = np.sum(sat_always[grid.core_nodes])/grid.number_of_cor
 # saturtion probability and entropy
 sat_prob = grid.add_zeros('node', 'saturation_probability')
 sat_entropy = grid.add_zeros('node', 'saturation_entropy')
-calc_entropy = lambda x: -x*np.log2(x) - (1-x)*np.log2(1-x)
+calc_entropy = lambda x: -x*np.log(x)
 sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
 sat_entropy[:] = calc_entropy(sat_prob)
 df_output['total_sat_entropy'] = np.sum(sat_entropy[grid.core_nodes])
