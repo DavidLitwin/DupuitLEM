@@ -280,7 +280,8 @@ sat_entropy = grid.add_zeros('node', 'saturation_entropy')
 calc_entropy = lambda x: -x*np.log(x)
 sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
 sat_entropy[:] = calc_entropy(sat_prob)
-df_output['total_sat_entropy'] = np.sum(sat_entropy[grid.core_nodes])
+df_output['entropy_sat_total'] = np.sum(sat_entropy[grid.core_nodes])
+df_output['entropy_sat_variable_norm'] = np.sum(sat_entropy[sat_variable])*df_output['sat_variable']
 
 ##### channel network
 #find number of saturated cells
