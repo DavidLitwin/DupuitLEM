@@ -263,24 +263,24 @@ Q_end_storm[:] = np.mean(Q_all[intensity>0,:], axis=0)
 Q_end_interstorm[:] = np.mean(Q_all[intensity==0.0,:], axis=0)
 
 # classify zones of saturation
-sat_class = grid.add_zeros('node', 'saturation_class')
+sat_class = mg.add_zeros('node', 'saturation_class')
 sat_never = np.logical_and(sat_end_storm < 0.001, sat_end_interstorm < 0.001)
 sat_always = np.logical_and(sat_end_interstorm > 0.999, sat_end_storm > 0.999)
 sat_variable = ~np.logical_or(sat_never, sat_always)
 sat_class[sat_never] = 0
 sat_class[sat_variable] = 1
 sat_class[sat_always] = 2
-df_output['sat_never'] = np.sum(sat_never[grid.core_nodes])/grid.number_of_core_nodes
-df_output['sat_variable'] = np.sum(sat_variable[grid.core_nodes])/grid.number_of_core_nodes
-df_output['sat_always'] = np.sum(sat_always[grid.core_nodes])/grid.number_of_core_nodes
+df_output['sat_never'] = np.sum(sat_never[mg.core_nodes])/mg.number_of_core_nodes
+df_output['sat_variable'] = np.sum(sat_variable[mg.core_nodes])/mg.number_of_core_nodes
+df_output['sat_always'] = np.sum(sat_always[mg.core_nodes])/mg.number_of_core_nodes
 
 # saturtion probability and entropy
-sat_prob = grid.add_zeros('node', 'saturation_probability')
-sat_entropy = grid.add_zeros('node', 'saturation_entropy')
+sat_prob = mg.add_zeros('node', 'saturation_probability')
+sat_entropy = mg.add_zeros('node', 'saturation_entropy')
 calc_entropy = lambda x: -x*np.log(x)
 sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
 sat_entropy[:] = calc_entropy(sat_prob)
-df_output['entropy_sat_total'] = np.sum(sat_entropy[grid.core_nodes])
+df_output['entropy_sat_total'] = np.sum(sat_entropy[mg.core_nodes])
 df_output['entropy_sat_variable_norm'] = np.sum(sat_entropy[sat_variable])*df_output['sat_variable']
 
 ##### channel network
