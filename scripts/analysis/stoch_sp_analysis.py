@@ -287,42 +287,43 @@ df_output['entropy_sat_variable_norm'] = np.sum(sat_entropy[sat_variable])*df_ou
 #find number of saturated cells
 count_sat_nodes = np.sum(sat_all,axis=1)
 # find median channel network at end of storm and end of interstorm
-interstorm_network_id = np.where(count_sat_nodes == np.percentile(count_sat_nodes[intensity==0], 50, interpolation='nearest'))[0][0]
-storm_network_id = np.where(count_sat_nodes == np.percentile(count_sat_nodes[intensity>0], 50, interpolation='nearest'))[0][0]
+network_id_sat_interstorm = np.where(count_sat_nodes == np.percentile(count_sat_nodes[intensity==0], 50, interpolation='nearest'))[0][0]
 
 #set fields
-storm_network = mg.add_zeros('node', 'channel_mask_storm')
-interstorm_network = mg.add_zeros('node', 'channel_mask_interstorm')
-storm_network[:] = sat_all[storm_network_id,:]
-interstorm_network[:] = sat_all[interstorm_network_id,:]
+network_curvature = mg.add_zeros('node', 'channel_mask_curvature')
+network_sat = mg.add_zeros('node', 'channel_mask_sat_interstorm')
+network_curvature[:] = curvature > 0
+network_sat[:] = sat_all[network_id_sat_interstorm,:]
 
 
 ######## Calculate HAND
-hand_storm = mg.add_zeros('node', 'hand_storm')
-hand_interstorm = mg.add_zeros('node', 'hand_interstorm')
+hand_curvature = mg.add_zeros('node', 'hand_curvature')
+hand_sat = mg.add_zeros('node', 'hand_sat_interstorm')
 
-hd = HeightAboveDrainageCalculator(mg, channel_mask=storm_network)
+hd = HeightAboveDrainageCalculator(mg, channel_mask=network_curvature)
 try:
     hd.run_one_step()
-    hand_storm[:] = mg.at_node["height_above_drainage__elevation"].copy()
-    df_output['mean_hand_storm'] = np.mean(hand_storm[mg.core_nodes])
+    hand_curvature[:] = mg.at_node["height_above_drainage__elevation"].copy()
+    df_output['mean_hand_curvature'] = np.mean(hand_curvature[mg.core_nodes])
 
-    hd.channel_mask = interstorm_network
+    hd.channel_mask = network_sat
     hd.run_one_step()
-    hand_interstorm[:] = mg.at_node["height_above_drainage__elevation"].copy()
-    df_output['mean_hand_interstorm'] = np.mean(hand_interstorm[mg.core_nodes])
+    hand_sat[:] = mg.at_node["height_above_drainage__elevation"].copy()
+    df_output['mean_hand_sat_interstorm'] = np.mean(hand_sat[mg.core_nodes])
 
 except:
     print('failed to calculate HAND')
 
 ######## Calculate drainage density
-dd = DrainageDensity(mg, channel__mask=np.uint8(storm_network))
+dd = DrainageDensity(mg, channel__mask=np.uint8(network_curvature))
 try:
     channel_mask = mg.at_node['channel__mask']
-    df_output['dd_storm'] = dd.calculate_drainage_density()
+    df_output['dd_curvature'] = dd.calculate_drainage_density()
+    df_output['mean hillslope len curvature'] = 1/(2*df_output['dd_curvature'])
 
-    channel_mask[:] = np.uint8(interstorm_network)
-    df_output['dd_interstorm'] = dd.calculate_drainage_density()
+    channel_mask[:] = np.uint8(network_sat)
+    df_output['dd_sat_interstorm'] = dd.calculate_drainage_density()
+    df_output['mean hillslope len sat interstorm'] = 1/(2*df_output['dd_sat_interstorm'])
 
 except:
     print('failed to calculate drainage density')
@@ -377,10 +378,10 @@ r_change['t_nd'] = np.arange(len(files))*(dt/df_params['tg'][ID])
 output_fields = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
-        'at_node:channel_mask_storm',
-        'at_node:channel_mask_interstorm',
-        'at_node:hand_storm',
-        'at_node:hand_interstorm',
+        'at_node:channel_mask_curvature',
+        'at_node:channel_mask_sat_interstorm',
+        'at_node:hand_curvature',
+        'at_node:hand_sat_interstorm',
         'at_node:saturation_class',
         'at_node:saturation_probability',
         'at_node:saturation_entropy',
