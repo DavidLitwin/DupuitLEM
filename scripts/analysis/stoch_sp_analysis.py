@@ -277,11 +277,10 @@ df_output['sat_always'] = np.sum(sat_always[mg.core_nodes])/mg.number_of_core_no
 # saturtion probability and entropy
 sat_prob = mg.add_zeros('node', 'saturation_probability')
 sat_entropy = mg.add_zeros('node', 'saturation_entropy')
-calc_entropy = lambda x: -x*np.log(x)
+calc_entropy = lambda x: -x*np.log2(x) - (1-x)*np.log2(1-x)
 sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
 sat_entropy[:] = calc_entropy(sat_prob)
-df_output['entropy_sat_total'] = np.sum(sat_entropy[mg.core_nodes])
-df_output['entropy_sat_variable_norm'] = np.sum(sat_entropy[sat_variable])*df_output['sat_variable']
+df_output['entropy_sat_variable'] = np.sum(sat_entropy[sat_variable])
 
 ##### channel network
 #find number of saturated cells
