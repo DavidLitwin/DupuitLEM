@@ -61,7 +61,7 @@ p = df_params['p'][ID] #average precipitation rate [m/s]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 10*df_params['Th'][ID] #total hydrological time [s]
+T_h = 50*df_params['Th'][ID] #total hydrological time [s]
 
 #initialize grid
 dx = grid.dx
@@ -274,13 +274,29 @@ df_output['sat_never'] = np.sum(sat_never[mg.core_nodes])/mg.number_of_core_node
 df_output['sat_variable'] = np.sum(sat_variable[mg.core_nodes])/mg.number_of_core_nodes
 df_output['sat_always'] = np.sum(sat_always[mg.core_nodes])/mg.number_of_core_nodes
 
-# saturtion probability and entropy
+#### saturtion probability and entropy
+calc_entropy = lambda x: -x*np.log2(x) - (1-x)*np.log2(1-x)
+
+# first method: time weighted variability in saturation
 sat_prob = mg.add_zeros('node', 'saturation_probability')
 sat_entropy = mg.add_zeros('node', 'saturation_entropy')
-calc_entropy = lambda x: -x*np.log2(x) - (1-x)*np.log2(1-x)
 sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
 sat_entropy[:] = calc_entropy(sat_prob)
 df_output['entropy_sat_variable'] = np.sum(sat_entropy[sat_variable])
+
+# second method: interstorm-storm unsat-sat probability
+sat_unsat_prob = mg.add_zeros('node', 'sat_unsat_union_probability')
+sat_unsat_entropy = mg.add_zeros('node', 'sat_unsat_union_entropy')
+# P(sat_storm and unsat_interstorm) = P(sat_storm given unsat_interstorm)*P(unsat_interstorm)
+sat_storms = sat_all[intensity>0,:]; sat_interstorms = sat_all[intensity==0.0,:] # first storm record precedes interstorm record
+sat_storms = sat_storms[1:,:]; sat_interstorms = sat_interstorms[:-1,:] # adjust indices so that prev interstorm is aligned with storm
+p_unsat_interstorm = np.sum(~sat_interstorms, axis=0)/len(sat_interstorms) # prob unsaturated at the end of an interstorm
+p_cond_sat_storm_unsat_interstorm = np.sum(sat_storms*~sat_interstorms, axis=0)/np.sum(~sat_interstorms, axis=0) # prob that saturated at end of storm given that it's unsaturated at end of interstorm
+p_union_sat_storm_unsat_interstorm = p_cond_sat_storm_unsat_interstorm*p_unsat_interstorm # prob that unsaturated at end of interstorm and saturated at end of storm
+sat_unsat_prob[:] = p_union_sat_storm_unsat_interstorm
+sat_unsat_entropy[:] = calc_entropy(sat_unsat_prob)
+df_output['entropy_sat_unsat_union'] = np.sum(sat_unsat_entropy[np.logical_and(sat_unsat_entropy>0.0, sat_unsat_entropy<1.0)])
+
 
 ##### channel network
 #find number of saturated cells
@@ -384,6 +400,8 @@ output_fields = [
         'at_node:saturation_class',
         'at_node:saturation_probability',
         'at_node:saturation_entropy',
+        'at_node:sat_unsat_union_probability',
+        'at_node:sat_unsat_union_entropy',
         'at_node:topographic__index_D8',
         'at_node:topographic__index_D4',
         'at_node:slope_D8',
