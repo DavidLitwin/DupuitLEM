@@ -762,6 +762,125 @@ class HydrologyEventStreamPower(HydrologicalModel):
         )
 
 
+class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
+    """
+    This model expands the HydrologyEventStreamPower model for
+    cases where there is a streampower incision threshold. Rather than tracking
+    discharge at storms and interstorms, erosion-producing discharge Q-Q0 is
+    tracked, and returned in a fashion that is correctly averaged with threshold
+    accounted for in the field "surface_water_effective__discharge".
+    CONSEQUENTLY ONE SHOULD LEAVE THE INCISION THRESHOLD FIELD OF
+    FastscapeEroder SET TO ZERO!
+
+    Parameters
+    -----
+    grid: landlab grid
+    routing_method: either "D8" or "Steepest"
+    precip_generator: instantiated PrecipitationDistribution
+    groundwater_model: instantiated GroundwaterDupuitPercolator
+    E0: the streampower incision threshold in the equation
+        E = K v0 Q* sqrt(a) S - E0, where Q*=Q/(pA). Units: L/T
+        Default value: 0.0
+    sp_coefficient: streampower coefficient used in the FastscapeEroder
+        component. Note that in DupuitLEM, the expected value has units 1/L,
+        because it takes a coefficient K/p, where K is the usual streampower
+        coefficient, with units 1/T, and p is the mean precipitation rate with
+        units L/T.
+        Default value: 1e-12
+    """
+
+    def __init__(
+        self,
+        grid,
+        routing_method="D8",
+        precip_generator=None,
+        groundwater_model=None,
+        sp_threshold=0.0,
+        sp_coefficient=1e-5,
+    ):
+        super().__init__(grid, routing_method, precip_generator, groundwater_model)
+        self.E0 = sp_threshold
+        self.Ksp = sp_coefficient
+        self.Q0 = self._grid.add_zeros("node", "critical_erosion__discharge")
+        self._elev = self._grid.at_node["topographic__elevation"]
+        self._recievers = self._grid.at_node["flow__link_to_receiver_node"]
+
+        if routing_method == "D8":
+            self._calc_grad = self._grid.calc_grad_at_d8
+        else:
+            self._calc_grad = self._grid.calc_grad_at_link
+
+    def run_step(self):
+        """"
+        Run hydrological model for series of event-interevent pairs, calculate
+        flow rates at end of events and interevents over total_hydrological_time.
+        Effective flow rates are calculated during event periods only.
+        Update groundwater state, routes and accumulates flow, update
+        surface_water_effective__discharge and surface_water_area_norm__discharge.
+        """
+
+        # find and route flow if there are pits
+        self.dfr._find_pits()
+        if self.dfr._number_of_pits > 0:
+            self.lmb.run_one_step()
+
+        # update flow directions
+        self.fd.run_one_step()
+
+        # calculate critical_erosion__discharge
+        dzdx = self._calc_grad(self._elev)
+        S = abs(dzdx[self._recievers])  # slope is in direction of flow
+        _, _ = self.fa.accumulate_flow(update_flow_director=False)  # to update area
+        self.Q0[:] = np.divide(
+            self.E0 * np.sqrt(self.area),
+            self.Ksp * S,
+            where=S > 0.0,
+            out=np.zeros_like(S),
+        )
+
+        self.max_substeps_storm = 0
+        self.max_substeps_interstorm = 0
+        q_total_vol = np.zeros_like(self.q_eff)
+        q2 = np.zeros_like(self.q_eff)
+        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+
+            intensity = float(self._grid.at_grid["rainfall__flux"])
+
+            q0 = q2.copy()  # save prev end of interstorm flow rate
+
+            # run event, accumulate flow
+            self.gdp.recharge = intensity
+            self.gdp.run_with_adaptive_time_step_solver(storm_dt)
+            _, q = self.fa.accumulate_flow(update_flow_director=False)
+            q1 = np.maximum(q - self.Q0, 0.0)
+            # print('storm q:%.10f, q1:%.10f'%(q[4], q1[4]))
+            self.max_substeps_storm = max(
+                self.max_substeps_storm, self.gdp.number_of_substeps
+            )
+
+            # run interevent, accumulate flow
+            self.gdp.recharge = 0.0
+            self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
+            _, q = self.fa.accumulate_flow(update_flow_director=False)
+            q2 = np.maximum(q - self.Q0, 0.0)
+            # print('interstorm q:%.10f, q2:%.10f'%(q[4], q2[4]))
+            self.max_substeps_interstorm = max(
+                self.max_substeps_interstorm, self.gdp.number_of_substeps
+            )
+
+            # volume of runoff contributed during timestep
+            q_total_vol += 0.5 * (q0 + q1) * storm_dt
+            # print('storm dt:%.10f'%storm_dt)
+
+        self.q_eff[:] = q_total_vol / self.T_h
+        self.q_an[:] = np.divide(
+            self.q_eff,
+            np.sqrt(self.area),
+            where=self.area > 0,
+            out=np.zeros_like(self.q_eff),
+        )
+
+
 class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
     def __init__(
         self,
