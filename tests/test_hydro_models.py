@@ -16,6 +16,7 @@ from landlab.components import (
 from DupuitLEM.auxiliary_models import (
     HydrologyEventStreamPower,
     HydrologySteadyStreamPower,
+    HydrologyEventThresholdStreamPower,
 )
 
 
@@ -200,3 +201,179 @@ def test_stoch_sp_raster_record_state():
     assert_equal(hm.qs_all[0, :], np.zeros(9))
     assert_equal(hm.Q_all[0, :], np.zeros(9))
     assert_equal(hm.wt_all[0, :], wt0)
+
+
+def test_stoch_sp_threshold_raster_null():
+    """
+    Initialize HydrologyEventThresholdStreamPower on a raster grid.
+    Use single storm-interstorm pair and make sure it returns the
+    quantity calculated. This is not an analytical solution, just
+    the value that is returned when using gdp and adaptive
+    timestep solver. Confirms that when streampower threshold is
+    zero (Default), returns the same values as HydrologyEventStreamPower.
+    """
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg.add_ones("node", "topographic__elevation")
+    mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, recharge_rate=1e-6)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=100,
+    )
+    pd.seed_generator(seedval=1)
+    hm = HydrologyEventThresholdStreamPower(
+        mg, precip_generator=pd, groundwater_model=gdp
+    )
+
+    hm.run_step()
+
+    assert_almost_equal(hm.q_eff[4], 0.00017614)
+    assert_almost_equal(hm.q_an[4], 0.00017614 / 10.0)
+
+
+def test_stoch_sp_threshold_hex():
+    """
+    Initialize HydrologyEventStreamPower on a hex grid.
+    Use single storm-interstorm pair and make sure it returns the
+    quantity calculated. This is not an analytical solution, just
+    the value that is returned when using gdp and adaptive
+    timestep solver. Confirms that hex grid returns the same value
+    as raster grid, adjusted for cell area. Confirms that when streampower
+    threshold is zero (Default), returns the same values as
+    HydrologyEventStreamPower.
+    """
+
+    mg = HexModelGrid((3, 3), node_layout="rect", spacing=10.0)
+    mg.status_at_node[mg.status_at_node == 1] = 4
+    mg.status_at_node[0] = 1
+
+    mg.add_ones("node", "topographic__elevation")
+    mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, recharge_rate=1e-6)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=100,
+    )
+    pd.seed_generator(seedval=1)
+    hm = HydrologyEventThresholdStreamPower(
+        mg, precip_generator=pd, groundwater_model=gdp, routing_method="Steepest"
+    )
+
+    hm.run_step()
+
+    assert_almost_equal(hm.q_eff[4], 0.00017614 * np.sqrt(3) / 2)
+    assert_almost_equal(
+        hm.q_an[4], 0.00017614 * np.sqrt(3) / 2 / np.sqrt(np.sqrt(3) / 2 * 100)
+    )
+
+
+def test_stoch_sp_threshold_below_threshold():
+    """
+    Test the stochastic event model with stream power threshold in which
+    the one core node is set up to not exceed erosion threshold for the value
+    of Q that it attains. This can be checked by comparing the accumulated q
+    to the threshold value needed for erosion Q0.
+    """
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    elev = mg.add_ones("node", "topographic__elevation")
+    mg.add_zeros("node", "aquifer_base__elevation")
+    wt = mg.add_ones("node", "water_table__elevation")
+    elev[4] += 0.01
+    wt[:] = elev
+
+    gdp = GroundwaterDupuitPercolator(mg, recharge_rate=1e-6)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=100,
+    )
+    pd.seed_generator(seedval=1)
+    hm = HydrologyEventThresholdStreamPower(
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        sp_coefficient=1e-5,
+        sp_threshold=1e-10,
+    )
+
+    hm.run_step()
+
+    assert_almost_equal(hm.q_eff[4], 0.0)
+
+
+def test_stoch_sp_threshold_above_threshold():
+    """
+    Test the stochastic event model with stream power threshold in which
+    the one core node is set up to exceed erosion threshold for the value
+    of Q that it attains. This can be checked by comparing the accumulated q
+    to the threshold value needed for erosion Q0.
+    """
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    elev = mg.add_ones("node", "topographic__elevation")
+    mg.add_zeros("node", "aquifer_base__elevation")
+    wt = mg.add_ones("node", "water_table__elevation")
+    elev[4] += 0.01
+    wt[:] = elev
+
+    gdp = GroundwaterDupuitPercolator(mg, recharge_rate=1e-6)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=100,
+    )
+    pd.seed_generator(seedval=1)
+    hm = HydrologyEventThresholdStreamPower(
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        sp_coefficient=1e-5,
+        sp_threshold=1e-12,
+    )
+
+    hm.run_step()
+
+    storm_dt = 1.4429106411  # storm duration
+    storm_q = 0.0244046740  # accumulated q before threshold effect subtracted
+    interstorm_q = 0.0  # interstorm q is zero in this case
+    assert_almost_equal(
+        hm.q_eff[4],
+        0.5
+        * (max(interstorm_q - hm.Q0[4], 0) + max(storm_q - hm.Q0[4], 0))
+        * storm_dt
+        / hm.T_h,
+    )
