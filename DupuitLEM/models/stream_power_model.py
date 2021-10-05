@@ -6,7 +6,6 @@ Author: David Litwin
 26 May 2020
 """
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 
 from landlab.io.netcdf import to_netcdf, from_netcdf
