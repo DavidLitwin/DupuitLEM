@@ -286,7 +286,6 @@ df_output['entropy_sat_variable'] = np.sum(sat_entropy[sat_variable])
 
 # second method: interstorm-storm unsat-sat probability
 sat_unsat_prob = mg.add_zeros('node', 'sat_unsat_union_probability')
-sat_unsat_entropy = mg.add_zeros('node', 'sat_unsat_union_entropy')
 # P(sat_storm and unsat_interstorm) = P(sat_storm given unsat_interstorm)*P(unsat_interstorm)
 sat_storms = sat_all[intensity>0,:]; sat_interstorms = sat_all[intensity==0.0,:] # first storm record precedes interstorm record
 sat_storms = sat_storms[1:,:]; sat_interstorms = sat_interstorms[:-1,:] # adjust indices so that prev interstorm is aligned with storm
@@ -294,8 +293,6 @@ p_unsat_interstorm = np.sum(~sat_interstorms, axis=0)/len(sat_interstorms) # pro
 p_cond_sat_storm_unsat_interstorm = np.sum(sat_storms*~sat_interstorms, axis=0)/np.sum(~sat_interstorms, axis=0) # prob that saturated at end of storm given that it's unsaturated at end of interstorm
 p_union_sat_storm_unsat_interstorm = p_cond_sat_storm_unsat_interstorm*p_unsat_interstorm # prob that unsaturated at end of interstorm and saturated at end of storm
 sat_unsat_prob[:] = p_union_sat_storm_unsat_interstorm
-sat_unsat_entropy[:] = calc_entropy(sat_unsat_prob)
-df_output['entropy_sat_unsat_union'] = np.sum(sat_unsat_entropy[np.logical_and(sat_unsat_entropy>0.0, sat_unsat_entropy<1.0)])
 
 
 ##### channel network
@@ -401,7 +398,6 @@ output_fields = [
         'at_node:saturation_probability',
         'at_node:saturation_entropy',
         'at_node:sat_unsat_union_probability',
-        'at_node:sat_unsat_union_entropy',
         'at_node:topographic__index_D8',
         'at_node:topographic__index_D4',
         'at_node:slope_D8',
