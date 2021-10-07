@@ -29,9 +29,8 @@ ID = int(task_id)
 
 ks_all = np.geomspace(1e-7, 1e-5, 10)
 b_all = np.array([0.25, 1.0, 4.0])
-alpha_all = np.geomspace(0.05,0.5,5) # characteristic gradient
-lam = 20 # Lh = lam*lg
-lg = 15 # horizontal length scale
+alpha_all = np.geomspace(0.01,0.5,10) # characteristic gradient
+Lh = 300 # hillslope length
 n = 0.1 # porosity
 ds = 13.28/1000 # storm depth (m) Hawk and Eagleson 1992, Atlanta
 tr = 8.75*3600 # storm duration (sec) Hawk and Eagleson 1992, Atlanta
@@ -42,8 +41,7 @@ params = np.array(list(product(ks_all, b_all, alpha_all)))
 
 columns=['alpha', 'gam', 'hi', 'sigma', 'rho', 'lam', 'p', 'ks', 'hg', 'lg', 'b', 'ds','tr', 'tb', 'Lh']
 df_params = pd.DataFrame(params,columns = ['ks', 'b', 'alpha'])
-df_params['lam'] = lam; df_params['Lh'] = lam*lg
-df_params['lg'] = lg; df_params['hg'] = lg*df_params['alpha']
+df_params['Lh'] = Lh; df_params['Hh'] = df_params['alpha']*Lh; 
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt
 df_params['tr'] = tr; df_params['tb'] = tb; df_params['ds'] = ds
 df_params['p'] = ds/(tr+tb)
@@ -55,9 +53,8 @@ b = df_params['b'][ID]
 ds = df_params['ds'][ID]
 tr = df_params['tr'][ID]
 tb = df_params['tb'][ID]
-lg = df_params['lg'][ID]
-hg = df_params['hg'][ID]
 Lh = df_params['Lh'][ID]
+Hh = df_params['Hh'][ID]
 
 # initialize grid
 grid = RasterModelGrid((Ny, Nx), xy_spacing=Lh/Nx)
@@ -65,9 +62,7 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_
                               left=grid.BC_NODE_IS_FIXED_VALUE, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 x = grid.x_of_node
-# zmax = alpha*Lh
-# a1 = -zmax/Lh**2; a2 = 2*zmax/Lh; a3 = b
-a1 = -hg/(2*lg**2); a2 = (hg*Lh)/lg**2; a3 = b # curvature hg/lg**2 with peak at x=Lh and fixed value boundary at x=0
+a1 = -Hh/(Lh**2); a2 = 2*Hh/Lh; a3 = b # curvature Hh/Lh**2 with peak at x=Lh and fixed value boundary at x=0
 elev[:] = a1*x**2 + a2*x + a3
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 base[:] = elev - b
@@ -163,8 +158,8 @@ Q_end_interstorm[:] = np.mean(Q_all[intensity==0.0,:], axis=0)
 
 # classify zones of saturation
 sat_class = grid.add_zeros('node', 'saturation_class')
-sat_never = np.logical_and(sat_end_storm < 0.001, sat_end_interstorm < 0.001)
-sat_always = np.logical_and(sat_end_interstorm > 0.999, sat_end_storm > 0.999)
+sat_never = np.logical_and(sat_end_storm < 0.01, sat_end_interstorm < 0.01)
+sat_always = np.logical_and(sat_end_interstorm > 0.99, sat_end_storm > 0.99)
 sat_variable = ~np.logical_or(sat_never, sat_always)
 sat_class[sat_never] = 0
 sat_class[sat_variable] = 1
@@ -185,7 +180,6 @@ df_output['entropy_sat_variable'] = np.sum(sat_entropy[sat_variable])
 
 # second method: interstorm-storm unsat-sat probability
 sat_unsat_prob = grid.add_zeros('node', 'sat_unsat_union_probability')
-sat_unsat_entropy = grid.add_zeros('node', 'sat_unsat_union_entropy')
 # P(sat_storm and unsat_interstorm) = P(sat_storm given unsat_interstorm)*P(unsat_interstorm)
 sat_storms = sat_all[intensity>0,:]; sat_interstorms = sat_all[intensity==0.0,:] # first storm record precedes interstorm record
 sat_storms = sat_storms[1:,:]; sat_interstorms = sat_interstorms[:-1,:] # adjust indices so that prev interstorm is aligned with storm
@@ -193,8 +187,6 @@ p_unsat_interstorm = np.sum(~sat_interstorms, axis=0)/len(sat_interstorms) # pro
 p_cond_sat_storm_unsat_interstorm = np.sum(sat_storms*~sat_interstorms, axis=0)/np.sum(~sat_interstorms, axis=0) # prob that saturated at end of storm given that it's unsaturated at end of interstorm
 p_union_sat_storm_unsat_interstorm = p_cond_sat_storm_unsat_interstorm*p_unsat_interstorm # prob that unsaturated at end of interstorm and saturated at end of storm
 sat_unsat_prob[:] = p_union_sat_storm_unsat_interstorm
-sat_unsat_entropy[:] = calc_entropy(sat_unsat_prob)
-df_output['entropy_sat_unsat_union'] = np.sum(sat_unsat_entropy[np.logical_and(sat_unsat_entropy>0.0, sat_unsat_entropy<1.0)])
 
 df_output['runtime'] = t2 - t1
 
@@ -214,7 +206,6 @@ output_fields = [
         "at_node:saturation_probability",
         "at_node:saturation_entropy",
         "at_node:sat_unsat_union_probability",
-        "at_node:sat_unsat_union_entropy",
         "at_node:qstar_mean_no_interevent",
         ]
 to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
