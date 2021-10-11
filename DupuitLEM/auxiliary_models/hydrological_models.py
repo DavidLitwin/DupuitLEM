@@ -945,7 +945,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
             q0 = q2.copy()  # save prev end of interstorm flow rate
 
             # run event, accumulate flow
-            self.gdp.recharge = intensity
+            self.gdp.recharge = self.intensities[i]
             self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q1 = np.maximum(q - self.Q0, 0.0)
