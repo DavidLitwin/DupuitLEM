@@ -4,7 +4,7 @@
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 # number of tasks (processes) per node
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=3
 #SBATCH --mail-type=begin,end
 #SBATCH --mail-user=dlitwin3@jhu.edu
 #SBATCH -o ../../../DupuitLEMResults/slurm/slurm-%A_%a.out
