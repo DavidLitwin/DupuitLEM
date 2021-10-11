@@ -30,7 +30,7 @@ ID = int(task_id)
 ks_all = np.geomspace(1e-7, 1e-5, 10)
 b_all = np.array([0.25, 1.0, 4.0])
 alpha_all = np.geomspace(0.01,0.5,10) # characteristic gradient
-Lh = 300 # hillslope length
+Lh = 100 # hillslope length
 n = 0.1 # porosity
 # ds = 13.28/1000 # storm depth (m) Hawk and Eagleson 1992, Atlanta
 # tr = 8.75*3600 # storm duration (sec) Hawk and Eagleson 1992, Atlanta
@@ -44,7 +44,7 @@ params = np.array(list(product(ks_all, b_all, alpha_all)))
 
 columns=['alpha', 'gam', 'hi', 'sigma', 'rho', 'lam', 'p', 'ks', 'hg', 'lg', 'b', 'ds','tr', 'tb', 'Lh']
 df_params = pd.DataFrame(params,columns = ['ks', 'b', 'alpha'])
-df_params['Lh'] = Lh; df_params['Hh'] = df_params['alpha']*Lh; 
+df_params['Lh'] = Lh; df_params['Hh'] = df_params['alpha']*Lh;
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt
 df_params['tr'] = tr; df_params['tb'] = tb; df_params['ds'] = ds
 df_params['p'] = ds/(tr+tb)
