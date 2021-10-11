@@ -1,7 +1,10 @@
 """
 Analysis of results on HPC for stochastic stream power model runs.
 
-update for new stochastic models
+In comparison to the main stoch_sp_analysis script, the field
+'surface_water_effective__discharge' is saved, capturing the effect of
+the threshold discharge that causes erosion at each point. See the
+HydrologyEventThresholdStreamPower model for more detail.
 """
 
 import os
@@ -21,7 +24,7 @@ from landlab.components import (
     DrainageDensity,
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
-from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
+from DupuitLEM.auxiliary_models import HydrologyEventThresholdStreamPower
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -58,12 +61,13 @@ Ks = df_params['ksat'][ID] #hydraulic conductivity [m/s]
 n = df_params['n'][ID] #drainable porosity [-]
 b = df_params['b'][ID] #characteristic depth  [m]
 p = df_params['p'][ID] #average precipitation rate [m/s]
-pet = df_params['pet'][ID]
-Srange = df_params['Srange'][ID]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 10*df_params['Th'][ID] #total hydrological time [s]
+K = df_params['K'][ID]
+Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
+E0 = df_params['E0'][ID]
+T_h = 50*df_params['Th'][ID] #total hydrological time [s]
 
 #initialize grid
 dx = grid.dx
@@ -113,19 +117,14 @@ pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
     mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
 pdr.seed_generator(seedval=2)
-svm = SchenkVadoseModel(
-                potential_evapotranspiration_rate=pet,
-                 available_relative_saturation=Srange,
-                 profile_depth=b,
-                 porosity=n,
-                 num_bins=500,
-                 )
-hm = HydrologyEventVadoseStreamPower(
-                                    mg,
-                                    precip_generator=pdr,
-                                    groundwater_model=gdp,
-                                    vadose_model=svm,
-                                    )
+
+hm = HydrologyEventThresholdStreamPower(
+        grid,
+        precip_generator=pdr,
+        groundwater_model=gdp,
+        sp_threshold=E0,
+        sp_coefficient=Ksp,
+)
 
 #run model
 hm.run_step_record_state()
@@ -237,11 +236,6 @@ Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
 qstar_mean = mg.add_zeros('node', 'qstar_mean_no_interevent')
-
-# recharge
-recharge = hm.r_all[1:,:]
-recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
-recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
 
 # mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
 Q_event_sum = np.zeros(Q_all.shape[1])
@@ -419,7 +413,7 @@ output_fields = [
         'at_node:curvature',
         'at_node:steepness',
         'at_node:qstar_mean_no_interevent',
-        'at_node:recharge_rate_mean_storm',
+        'at_node:surface_water_effective__discharge',
         'at_node:wtrel_mean_end_storm',
         'at_node:wtrel_mean_end_interstorm',
         'at_node:sat_mean_end_storm',
