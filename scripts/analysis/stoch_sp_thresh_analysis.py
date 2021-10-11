@@ -119,7 +119,7 @@ pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
 pdr.seed_generator(seedval=2)
 
 hm = HydrologyEventThresholdStreamPower(
-        grid,
+        mg,
         precip_generator=pdr,
         groundwater_model=gdp,
         sp_threshold=E0,
