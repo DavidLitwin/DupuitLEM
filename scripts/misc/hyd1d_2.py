@@ -97,7 +97,7 @@ t1 = time.time()
 hm.run_step()
 t2 = time.time()
 
-open file and make function for saving gdp subtimestep data
+# open file and make function for saving gdp subtimestep data
 f = open('./gdp_flux_state_%d.csv'%ID, 'w')
 def write_SQ(grid, r, dt, file=f):
     cores = grid.core_nodes
