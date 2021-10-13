@@ -97,26 +97,26 @@ t1 = time.time()
 hm.run_step()
 t2 = time.time()
 
-# open file and make function for saving gdp subtimestep data
-f = open('./gdp_flux_state_%d.csv'%ID, 'w')
-def write_SQ(grid, r, dt, file=f):
-    cores = grid.core_nodes
-    h = grid.at_node["aquifer__thickness"]
-    area = grid.cell_area_at_node
-    storage = np.sum(n*h[cores]*area[cores])
-
-    qs = grid.at_node["surface_water__specific_discharge"]
-    qs_tot = np.sum(qs[cores]*area[cores])
-    qs_nodes = np.sum(qs[cores]>1e-10)
-
-    r_tot = np.sum(r[cores]*area[cores])
-
-    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
-gdp.callback_fun = write_SQ
+# # open file and make function for saving gdp subtimestep data
+# f = open('./gdp_flux_state_%d.csv'%ID, 'w')
+# def write_SQ(grid, r, dt, file=f):
+#     cores = grid.core_nodes
+#     h = grid.at_node["aquifer__thickness"]
+#     area = grid.cell_area_at_node
+#     storage = np.sum(n*h[cores]*area[cores])
+#
+#     qs = grid.at_node["surface_water__specific_discharge"]
+#     qs_tot = np.sum(qs[cores]*area[cores])
+#     qs_nodes = np.sum(qs[cores]>1e-10)
+#
+#     r_tot = np.sum(r[cores]*area[cores])
+#
+#     file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
+# gdp.callback_fun = write_SQ
 
 # run and record state
 hm.run_step_record_state()
-f.close()
+# f.close()
 
 ############ Analysis ############
 df_output = {}
@@ -144,7 +144,7 @@ wtrel_all[:, grid.core_nodes] = (wt_all[:, grid.core_nodes] - base_all[:, grid.c
 
 # water table and saturation at end of storm and interstorm
 thresh = 1e-10 #np.mean(grid.cell_area_at_node[grid.core_nodes])*df_params['p'][ID]
-sat_all = (Q_all > thresh)
+sat_all = (wtrel_all > 0.99)
 wtrel_end_interstorm = grid.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = grid.add_zeros('node', 'wtrel_mean_end_storm')
 sat_end_interstorm = grid.add_zeros('node', 'sat_mean_end_interstorm')
