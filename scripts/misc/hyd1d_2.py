@@ -27,17 +27,17 @@ from DupuitLEM.auxiliary_models import (
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
-ks_all = np.geomspace(1e-8, 1e-4, 20)
-b_all = np.array([0.25, 1.0, 4.0])
+ks_all = np.geomspace(1e-7, 1e-4, 20)
+b_all = np.array([0.25, 1.0, 2.5])
 alpha_all = np.geomspace(0.01,0.5,10) # characteristic gradient
 Lh = 100 # hillslope length
-n = 0.1 # porosity
-ds = 13.28/1000 # storm depth (m) Hawk and Eagleson 1992, Atlanta
-tr = 8.75*3600 # storm duration (sec) Hawk and Eagleson 1992, Atlanta
-tb = 88.17*3600 # interstorm duration (sec) Hawk and Eagleson 1992, Atlanta
-# ds = 3.68/1000 # same total rainfall as atlanta, shorter, more frequent storms
-# tr = 2.0/3600
-# tb = 24.0/3600
+n = 0.3 # porosity
+# ds = 13.28/1000 # storm depth (m) Hawk and Eagleson 1992, Atlanta
+# tr = 8.75*3600 # storm duration (sec) Hawk and Eagleson 1992, Atlanta
+# tb = 88.17*3600 # interstorm duration (sec) Hawk and Eagleson 1992, Atlanta
+ds = 2e-2 # match freeze 1980 parameters
+tr = 1e3
+tb = 3e5
 Nt = 2000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = np.array(list(product(ks_all, b_all, alpha_all)))
