@@ -27,7 +27,7 @@ from DupuitLEM.auxiliary_models import (
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
-ks_all = np.geomspace(1e-7, 1e-5, 10)
+ks_all = np.geomspace(1e-8, 1e-4, 20)
 b_all = np.array([0.25, 1.0, 4.0])
 alpha_all = np.geomspace(0.01,0.5,10) # characteristic gradient
 Lh = 100 # hillslope length
