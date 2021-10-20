@@ -56,14 +56,14 @@ def generate_parameters(p, n, v0, hg, lg, tg, gam, hi):
     return K, D, U, ksat, p, b, n, v0, hg, lg, tg, gam, hi
 
 #parameters
-hi_all = np.geomspace(0.05, 5, 5)
-gam_all = np.array([0.5, 0.75, 1.0, 1.25, 2.5, 5.0])
-lg = 30 # geomorphic length scale [m]
+hi_all = np.array([0.5, 5.0])
+gam_all = np.array([1.0, 2.0, 4.0, 8.0, 16.0])
+lg = 15 # geomorphic length scale [m]
 hg = 2.25 # geomorphic height scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
-v0 = 0.7*lg # contour width (also grid spacing) [m]
+v0 = 2.0*lg # contour width (also grid spacing) [m]
 n1 = 0.1 # drainable porosity [-]
-p1 = 0.75/(365*24*3600) # steady recharge rate
+p1 = 1.0/(365*24*3600) # steady recharge rate
 
 Tg_nd = 1000 # total duration in units of tg [-]
 dtg_nd = 2e-3 # geomorphic timestep in units of tg [-]
