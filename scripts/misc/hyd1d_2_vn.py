@@ -152,6 +152,8 @@ thresh = 1e-10 #np.mean(grid.cell_area_at_node[grid.core_nodes])*df_params['p'][
 sat_all = (wtrel_all > 0.99)
 wtrel_end_interstorm = grid.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = grid.add_zeros('node', 'wtrel_mean_end_storm')
+wtrel_max = grid.add_zeros('node', 'wtrel_99')
+wtrel_min = grid.add_zeros('node', 'wtrel_01')
 sat_end_interstorm = grid.add_zeros('node', 'sat_mean_end_interstorm')
 sat_end_storm = grid.add_zeros('node', 'sat_mean_end_storm')
 Q_end_interstorm = grid.add_zeros('node', 'Q_mean_end_interstorm')
@@ -159,6 +161,8 @@ Q_end_storm = grid.add_zeros('node', 'Q_mean_end_storm')
 
 wtrel_end_storm[:] = np.mean(wtrel_all[intensity>0,:], axis=0)
 wtrel_end_interstorm[:] = np.mean(wtrel_all[intensity==0.0,:], axis=0)
+wtrel_max[:] = np.percentile(wtrel_all, 99, axis=0)
+wtrel_min[:] = np.percentile(wtrel_all, 1, axis=0)
 sat_end_storm[:] = np.mean(sat_all[intensity>0,:], axis=0)
 sat_end_interstorm[:] = np.mean(sat_all[intensity==0.0,:], axis=0)
 Q_end_storm[:] = np.mean(Q_all[intensity>0,:], axis=0)
@@ -204,8 +208,8 @@ output_fields = [
         "at_node:aquifer_base__elevation",
         "at_node:wtrel_mean_end_storm",
         "at_node:wtrel_mean_end_interstorm",
-        "at_node:wtrel_max",
-        "at_node:wtrel_min",
+        "at_node:wtrel_99",
+        "at_node:wtrel_01",
         "at_node:sat_mean_end_storm",
         "at_node:sat_mean_end_interstorm",
         "at_node:Q_mean_end_storm",
