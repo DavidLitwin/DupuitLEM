@@ -230,3 +230,4 @@ output_fields = [
 to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('output_%d.p'%ID, 'wb'))
+pickle.dump(grid, open('grid_%d.p'%ID, 'wb'))
