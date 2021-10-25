@@ -39,11 +39,10 @@ n = 0.3 # porosity
 ds = 2e-2 # match freeze 1980 parameters
 tr = 1e3
 tb = 3e5
-Nt = 2000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
+Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = np.array(list(product(ks_all, b_all, alpha_all)))
 
-columns=['alpha', 'gam', 'hi', 'sigma', 'rho', 'lam', 'p', 'ks', 'hg', 'lg', 'b', 'ds','tr', 'tb', 'Lh']
 df_params = pd.DataFrame(params,columns = ['ks', 'b', 'alpha'])
 df_params['Lh'] = Lh; df_params['Hh'] = df_params['alpha']*Lh;
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt
@@ -66,7 +65,7 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_
                               left=grid.BC_NODE_IS_FIXED_GRADIENT, bottom=grid.BC_NODE_IS_CLOSED)
 elev = grid.add_zeros('node', 'topographic__elevation')
 x = grid.x_of_node
-a1 = -Hh/(2*Lh**2); a2 = Hh/Lh; a3 = b # curvature Hh/Lh**2 with peak at x=Lh and fixed value boundary at x=0
+a1 = -Hh/(2*Lh**2); a2 = Hh/Lh; a3 = 0 # curvature Hh/Lh**2 with peak at x=Lh and downslope boundary at x=0
 elev[:] = a1*x**2 + a2*x + a3
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 base[:] = elev - b
