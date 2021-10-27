@@ -159,10 +159,10 @@ df_output = {}
 ######## Runoff generation
 # find times with rain. Note in df qs and S are at the end of the timestep.
 # i is at the beginning of the timestep. Assumes timeseries starts with rain.
-df = pd.read_csv('./gdp_flux_state_%d.csv'%ID, sep=',',header=None, names=['dt','r', 'qs', 'S', 'qs_nodes'])
-df['t'] = np.cumsum(df['dt'])
-df_output['qs_tot'] = np.trapz(df['qs'], df['t'])
-df_output['r_tot'] = np.sum(df['dt'] * df['r'])
+# df = pd.read_csv('./gdp_flux_state_%d.csv'%ID, sep=',',header=None, names=['dt','r', 'qs', 'S', 'qs_nodes'])
+# df['t'] = np.cumsum(df['dt'])
+# df_output['qs_tot'] = np.trapz(df['qs'], df['t'])
+# df_output['r_tot'] = np.sum(df['dt'] * df['r'])
 
 # effective Qstar
 Q_all = hm.Q_all[1:,:]
