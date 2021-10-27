@@ -133,21 +133,21 @@ hm.run_step()
 t2 = time.time()
 
 # open file and make function for saving gdp subtimestep data
-f = open('./gdp_flux_state_%d.csv'%ID, 'w')
-def write_SQ(grid, r, dt, file=f):
-    cores = grid.core_nodes
-    h = grid.at_node["aquifer__thickness"]
-    area = grid.cell_area_at_node
-    storage = np.sum(n*h[cores]*area[cores])
-
-    qs = grid.at_node["surface_water__specific_discharge"]
-    qs_tot = np.sum(qs[cores]*area[cores])
-    qs_nodes = np.sum(qs[cores]>1e-10)
-
-    r_tot = np.sum(r[cores]*area[cores])
-
-    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
-gdp.callback_fun = write_SQ
+# f = open('./gdp_flux_state_%d.csv'%ID, 'w')
+# def write_SQ(grid, r, dt, file=f):
+#     cores = grid.core_nodes
+#     h = grid.at_node["aquifer__thickness"]
+#     area = grid.cell_area_at_node
+#     storage = np.sum(n*h[cores]*area[cores])
+#
+#     qs = grid.at_node["surface_water__specific_discharge"]
+#     qs_tot = np.sum(qs[cores]*area[cores])
+#     qs_nodes = np.sum(qs[cores]>1e-10)
+#
+#     r_tot = np.sum(r[cores]*area[cores])
+#
+#     file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
+# gdp.callback_fun = write_SQ
 
 # run and record state
 hm.run_step_record_state()
