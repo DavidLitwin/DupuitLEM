@@ -57,12 +57,14 @@ def generate_parameters(p, n, lg, alpha, gam, hi, lam, sigma, rho):
     return ksat, p, b, n, Lh, kappa, hg, lg, ds, tr, tb, alpha, gam, hi, lam, sigma, rho
 
 alpha_all = np.array([0.01, 0.02, 0.04, 0.08, 0.16])
-gam_all = np.array([1.0, 2.0, 4.0, 8.0, 16.0])
-alpha1 = np.array(list(product(alpha_all, gam_all)))[:,0]
-gam1 = np.array(list(product(alpha_all, gam_all)))[:,1]
+gam_all = np.array([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
+lam_all = np.array([5, 10, 20, 40])
+alpha1 = np.array(list(product(alpha_all, gam_all, lam_all)))[:,0]
+gam1 = np.array(list(product(alpha_all, gam_all, lam_all)))[:,1]
+lam1 = np.array(list(product(alpha_all, gam_all, lam_all)))[:,2]
 hi = 5.0
-lam = 10
-sigma = 64
+
+sigma = 32
 rho = 0.03
 lg = 15 # geomorphic length scale [m]
 n = 0.1 # drainable porosity [-]
@@ -71,7 +73,7 @@ Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = np.zeros((len(gam1),17))
 for i in range(len(gam1)):
-    params[i,:] = generate_parameters(p, n, lg, alpha1[i], gam1[i], hi, lam, sigma, rho)
+    params[i,:] = generate_parameters(p, n, lg, alpha1[i], gam1[i], hi, lam1[i], sigma, rho)
 
 df_params = pd.DataFrame(params,columns=['ksat', 'p', 'b', 'n', 'Lh', 'kappa', 'hg', 'lg', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'lam', 'sigma', 'rho'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
