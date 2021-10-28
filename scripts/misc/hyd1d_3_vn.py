@@ -81,8 +81,11 @@ gdp = GroundwaterDupuitPercolator(grid,
                                   courant_coefficient=0.5,
                                   )
 # set kinematic boundary condition
+# note that we multiply by cosine of the base gradient because
+# hydraulic gradient in gdp is defined as dz_wt/dx * cos(alpha)
 S = grid.calc_grad_at_link(elev)
-grid.at_link['hydraulic__gradient'][grid.fixed_links] = S[grid.fixed_links]
+cosa = np.cos(np.arctan(S))
+grid.at_link['hydraulic__gradient'][grid.fixed_links] = (S*cosa)[grid.fixed_links]
 
 pdr = PrecipitationDistribution(grid,
                                mean_storm_duration=tr,
