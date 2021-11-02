@@ -1551,6 +1551,48 @@ ax.add_artist(legend0)
 plt.tight_layout()
 plt.savefig('%s/length_scales_%s.png'%(save_directory, base_output_path), dpi=300)
 
+#%%
+
+from landlab.components import FlowAccumulator, DrainageDensity
+
+nrows=6
+ncols=5
+plot_runs = model_runs #np.array([0,2,4,20,22,24])
+plot_array = np.flipud(plot_runs.reshape((ncols, nrows)).T)
+
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10,8))
+for i in plot_runs:
+    m = np.where(plot_array==i)[0][0]
+    n = np.where(plot_array==i)[1][0]
+
+    grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
+    lg = df_params['lg'][i]
+    hg = df_params['hg'][i]
+    
+    fa = FlowAccumulator(grid, flow_director="D8", depression_finder='DepressionFinderAndRouter')
+    fa.run_one_step()
+    dd = DrainageDensity(grid, channel__mask=np.uint8(grid.at_node['channel_mask']))
+    ddensity = dd.calculate_drainage_density()
+    
+    L_field = grid.at_node["surface_to_channel__minimum_distance"]
+    H_field = grid.at_node["hand"]
+    c_field = grid.at_node["qstar"]
+    axs[m,n].scatter(L_field[grid.core_nodes],
+                     H_field[grid.core_nodes],
+                     c=c_field[grid.core_nodes],
+                     alpha=0.2,
+                     s=8)
+    
+    axs[m,n].text(0.05,
+            0.95,
+            str(i),
+            transform=axs[m,n].transAxes,
+            fontsize=10,
+            verticalalignment='top',
+            bbox=dict(ec='w',fc='w')
+            )
+
+
 #%% steady state relief condition
 
 lam_all = pd.unique(df_params['lam'])
