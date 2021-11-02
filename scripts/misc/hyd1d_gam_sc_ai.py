@@ -65,11 +65,8 @@ def generate_parameters(U, lg, p, n, sc, alpha, gam, hi, lam, sigma, rho, ai):
 Sc_all = np.array([0.05, 0.15, 0.3, 0.6, 1.0, 10.0])
 gam_all = np.array([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
 lam_all = np.array([5, 10, 20, 40])
-Sc1 = np.array(list(product(Sc_all, gam_all, lam_all)))[:,0]
-gam1 = np.array(list(product(Sc_all, gam_all, lam_all)))[:,1]
-lam1 = np.array(list(product(Sc_all, gam_all, lam_all)))[:,2]
-hi = 5.0
 
+hi = 5.0
 sigma = 32
 rho = 0.03
 alpha = 0.15
@@ -82,12 +79,11 @@ Srange = 0.2 # range of relative saturation
 Nz = 500 # number of bins in vadose model
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
+params = []
+for sc, gam, lam in product(Sc_all, gam_all, lam_all):
+    params.append(generate_parameters(U, lg, p, n, sc, alpha, gam, hi, lam, sigma, rho, ai))
 
-params = np.zeros((len(gam1),21))
-for i in range(len(gam1)):
-    params[i,:] = generate_parameters(U, lg, p, n, Sc1[i], alpha, gam1[i], hi, lam1[i], sigma, rho, ai)
-
-df_params = pd.DataFrame(params,columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n',  'alpha', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
+df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n',  'alpha', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['Srange'] = Srange
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']

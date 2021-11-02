@@ -2,7 +2,7 @@
 This script is used to explore how saturation varies on a 1D parabolic hillslope.
 This explores the idea presented by Freeze (1980) that only a narrow combination
 of slopes and hydraulic conductivities produce variable saturation on hillslopes.
-Use dimensioned parameters rather than starting with dimensionless ones.
+Use dimensionless parameters for comparison with landscape evolution simulations.
 
 """
 
