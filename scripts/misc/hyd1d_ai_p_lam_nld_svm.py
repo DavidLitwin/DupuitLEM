@@ -190,6 +190,11 @@ dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
 qstar_mean = grid.add_zeros('node', 'qstar_mean_no_interevent')
 
+# recharge
+recharge = hm.r_all[1:,:]
+recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
+recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
+
 # mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
 Q_event_sum = np.zeros(Q_all.shape[1])
 for i in range(1,len(Q_all)):
@@ -264,6 +269,7 @@ df_output['runtime'] = t2 - t1
 output_fields = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
+        "at_node:recharge_rate_mean_storm",
         "at_node:wtrel_mean_end_storm",
         "at_node:wtrel_mean_end_interstorm",
         "at_node:wtrel_99",
