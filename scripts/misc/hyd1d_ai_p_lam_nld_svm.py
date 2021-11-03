@@ -192,7 +192,7 @@ qstar_mean = grid.add_zeros('node', 'qstar_mean_no_interevent')
 
 # recharge
 recharge = hm.r_all[1:,:]
-recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
+recharge_event = grid.add_zeros('node', 'recharge_rate_mean_storm')
 recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
 
 # mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
