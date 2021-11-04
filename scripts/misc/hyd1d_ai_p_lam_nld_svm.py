@@ -99,7 +99,6 @@ b = df_params['b'][ID]
 ds = df_params['ds'][ID]
 tr = df_params['tr'][ID]
 tb = df_params['tb'][ID]
-Lh = df_params['Lh'][ID]
 D = df_params['D'][ID]
 U = df_params['U'][ID]
 sc = df_params['sc'][ID]
@@ -191,7 +190,7 @@ intensity = hm.intensity[:-1]
 qstar_mean = grid.add_zeros('node', 'qstar_mean_no_interevent')
 
 # recharge
-recharge = hm.r_all[1:,:]
+recharge = hm.r_all[:-1,:]
 recharge_event = grid.add_zeros('node', 'recharge_rate_mean_storm')
 recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
 
@@ -209,6 +208,7 @@ base_all = np.ones(wt_all.shape)*grid.at_node['aquifer_base__elevation']
 elev_all = np.ones(wt_all.shape)*grid.at_node['topographic__elevation']
 wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, grid.core_nodes] = (wt_all[:, grid.core_nodes] - base_all[:, grid.core_nodes])/(elev_all[:, grid.core_nodes] - base_all[:, grid.core_nodes])
+wtrel_all[:,:] = (wt_all[:, :] - base_all[:, :])/(elev_all[:, :] - base_all[:, :])
 
 # water table and saturation at end of storm and interstorm
 thresh = 1e-10 #np.mean(grid.cell_area_at_node[grid.core_nodes])*df_params['p'][ID]
