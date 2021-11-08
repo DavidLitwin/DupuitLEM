@@ -88,7 +88,7 @@ Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
 for alpha, gam, lam in product(alpha_all, gam_all, lam_all):
-    params.append(generate_parameters(U, lg, p, n, sc, alpha, gam, hi, lam, sigma, rho, ai))
+    params.append(generate_parameters(U, lg, p, n, psi, alpha, gam, hi, lam, sigma, rho, ai))
 
 df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'psi', 'alpha', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
