@@ -111,7 +111,8 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED, top=grid.BC_NODE_
 elev = grid.add_zeros('node', 'topographic__elevation')
 x = grid.x_of_node
 z =  calc_z(x, sc, U, D) - calc_z(x[-1], sc, U, D)
-elev[:] = np.flip(z)
+z = np.fliplr(z.reshape(grid.shape))
+elev[:] = z.flatten()
 base = grid.add_zeros('node', 'aquifer_base__elevation')
 base[:] = elev - b
 wt = grid.add_zeros('node', 'water_table__elevation')

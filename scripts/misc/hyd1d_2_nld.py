@@ -1,7 +1,9 @@
 """
-This script is used to explore how saturation varies on a 1D parabolic hillslope,
-focusing on the case where we have both nonlinear diffusion and evapotranspiration.
-This allows for comparison with the 2D simulations both coupled and uncoupled.
+This script is used to explore how saturation varies on a 1D parabolic hillslope.
+This explores the idea presented by Freeze (1980) that only a narrow combination
+of slopes and hydraulic conductivities produce variable saturation on hillslopes.
+Use dimensioned parameters rather than starting with dimensionless ones.
+
 """
 
 import os
@@ -19,27 +21,11 @@ from landlab.components import (
 from landlab.io.netcdf import to_netcdf
 
 from DupuitLEM.auxiliary_models import (
-    HydrologyEventVadoseStreamPower,
-    SchenkVadoseModel,
+    HydrologyEventStreamPower,
     )
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
-
-def b_fun(hg, gam, hi):
-    return (hg*gam)/hi
-
-def ksat_fun(p, hg, lg, hi):
-    return (lg**2*p*hi)/hg**2
-
-def ds_fun(hg, n, gam, sigma, hi):
-    return (hg*n*gam)/(hi*sigma)
-
-def tr_fun(hg, p, n, gam, sigma, hi, rho):
-    return (hg*n*gam*rho)/(p*sigma*hi)
-
-def tb_fun(hg, p, n, gam, sigma, hi, rho):
-    return (hg*n*gam)*(1-rho)/(p*sigma*hi)
 
 def D_fun(Lh, U, psi):
     return (Lh*U)/(1 + psi)
@@ -53,63 +39,44 @@ def calc_z(x, Sc, U, D):
     t2 = D*np.log((t1 + D)/(2*U/Sc))
     return -Sc**2/(2*U) * (t1 - t2)
 
-#generate dimensioned parameters
-def generate_parameters(U, lg, p, n, psi, alpha, gam, hi, lam, sigma, rho, ai):
-
-    hg = alpha*lg
-    Lh = lam*lg
-    D = D_fun(Lh, U, psi)
-    sc = Sc_fun(psi)
-    b = b_fun(hg, gam, hi)
-    ksat = ksat_fun(p, hg, lg, hi)
-    ds = ds_fun(hg, n, gam, sigma, hi)
-    tr = tr_fun(hg, p, n, gam, sigma, hi, rho)
-    tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
-    pet = ai*p
-
-    return D, U, hg, lg, Lh, sc, ksat, p, pet, b, ds, tr, tb, n, psi, alpha, gam, hi, lam, sigma, rho, ai
-
-alpha_all = np.array([0.01, 0.02, 0.04, 0.08, 0.16])
-gam_all = np.array([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
-lam_all = np.array([5, 10, 20, 40])
-
-hi = 5.0
-sigma = 32
-rho = 0.03
+ks_all = np.geomspace(1e-7, 1e-4, 20)
+b_all = np.array([0.25, 1.0, 2.5])
+alpha_all = np.geomspace(0.01,0.5,10) # characteristic gradient
+Lh = 100 # hillslope length
+U = 1e-4 # uplift
 psi = 20.0
-ai = 1.0
-lg = 15 # geomorphic length scale [m]
-n = 0.1 # drainable porosity [-]
-p = 1.0/(365*24*3600) # steady recharge rate
-U = 1e-4 # m/yr
-Srange = 0.2 # range of relative saturation
-Nz = 500 # number of bins in vadose model
+n = 0.3 # porosity
+# ds = 13.28/1000 # storm depth (m) Hawk and Eagleson 1992, Atlanta
+# tr = 8.75*3600 # storm duration (sec) Hawk and Eagleson 1992, Atlanta
+# tb = 88.17*3600 # interstorm duration (sec) Hawk and Eagleson 1992, Atlanta
+ds = 2e-2 # match freeze 1980 parameters
+tr = 1e3
+tb = 3e5
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
-params = []
-for alpha, gam, lam in product(alpha_all, gam_all, lam_all):
-    params.append(generate_parameters(U, lg, p, n, psi, alpha, gam, hi, lam, sigma, rho, ai))
+params = np.array(list(product(ks_all, b_all, alpha_all)))
 
-df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'psi', 'alpha', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
-df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
-df_params['Srange'] = Srange
-df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
-df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
-df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt; df_params['Nz'] = Nz
+df_params = pd.DataFrame(params,columns = ['ks', 'b', 'alpha'])
+df_params['Lh'] = Lh; df_params['Hh'] = df_params['alpha']*Lh;
+df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt
+df_params['tr'] = tr; df_params['tb'] = tb; df_params['ds'] = ds
+df_params['p'] = ds/(tr+tb)
+df_params['n'] = n
+df_params['U'] = U
+df_params['psi'] = psi
+df_params['D'] = D_fun(df_params.Lh, df_params.U, df_params.psi)
+df_params['sc'] = Sc_fun(df_params.psi)
 pickle.dump(df_params, open('parameters.p','wb'))
 
-ks = df_params['ksat'][ID]
-pet = df_params['pet'][ID]
-Srange = df_params['Srange'][ID]
+ks = df_params['ks'][ID]
 b = df_params['b'][ID]
 ds = df_params['ds'][ID]
 tr = df_params['tr'][ID]
 tb = df_params['tb'][ID]
 Lh = df_params['Lh'][ID]
-D = df_params['D'][ID]
-U = df_params['U'][ID]
 sc = df_params['sc'][ID]
-Lh = df_params['Lh'][ID]
+U = df_params['U'][ID]
+D = df_params['D'][ID]
 
 # initialize grid
 grid = RasterModelGrid((Ny, Nx), xy_spacing=Lh/Nx)
@@ -139,27 +106,18 @@ pdr = PrecipitationDistribution(grid,
                                mean_storm_depth=ds,
                                total_t=Nt*(tr+tb))
 pdr.seed_generator(seedval=1235)
-svm = SchenkVadoseModel(
-                potential_evapotranspiration_rate=pet,
-                 available_relative_saturation=Srange,
-                 profile_depth=b,
-                 porosity=n,
-                 num_bins=Nz,
-                 )
-hm = HydrologyEventVadoseStreamPower(
-                                    grid,
-                                    precip_generator=pdr,
-                                    groundwater_model=gdp,
-                                    vadose_model=svm,
-                                    )
-
+hm = HydrologyEventStreamPower(
+                                grid,
+                                precip_generator=pdr,
+                                groundwater_model=gdp,
+                                )
 
 # run once to spin up model
 t1 = time.time()
 hm.run_step()
 t2 = time.time()
 
-# open file and make function for saving gdp subtimestep data
+# # open file and make function for saving gdp subtimestep data
 # f = open('./gdp_flux_state_%d.csv'%ID, 'w')
 # def write_SQ(grid, r, dt, file=f):
 #     cores = grid.core_nodes
@@ -182,14 +140,6 @@ hm.run_step_record_state()
 
 ############ Analysis ############
 df_output = {}
-
-######## Runoff generation
-# find times with rain. Note in df qs and S are at the end of the timestep.
-# i is at the beginning of the timestep. Assumes timeseries starts with rain.
-# df = pd.read_csv('./gdp_flux_state_%d.csv'%ID, sep=',',header=None, names=['dt','r', 'qs', 'S', 'qs_nodes'])
-# df['t'] = np.cumsum(df['dt'])
-# df_output['qs_tot'] = np.trapz(df['qs'], df['t'])
-# df_output['r_tot'] = np.sum(df['dt'] * df['r'])
 
 # effective Qstar
 Q_all = hm.Q_all[1:,:]
@@ -288,4 +238,3 @@ output_fields = [
 to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('output_%d.p'%ID, 'wb'))
-pickle.dump(grid, open('grid_%d.p'%ID, 'wb'))
