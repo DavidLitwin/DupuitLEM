@@ -77,7 +77,7 @@ hi = 5.0
 alpha = 0.15
 rho = 0.03
 psi = 20.0
-ai = 0.0
+ai = 1.0
 lg = 15 # geomorphic length scale [m]
 n = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # steady recharge rate
@@ -190,6 +190,12 @@ df_output = {}
 # df['t'] = np.cumsum(df['dt'])
 # df_output['qs_tot'] = np.trapz(df['qs'], df['t'])
 # df_output['r_tot'] = np.sum(df['dt'] * df['r'])
+
+"""ratio of total recharge to total precipitation, averaged over space and time.
+this accounts for time varying recharge with precipitation rate, unsat
+storage and ET, as well as spatially variable recharge with water table depth.
+"""
+df_output['recharge_efficiency'] = hm.recharge_efficiency
 
 # effective Qstar
 Q_all = hm.Q_all[1:,:]
