@@ -698,15 +698,17 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.fd.run_one_step()
 
         # fields to record:
-        self.time = np.zeros(2 * len(self.storm_dts) + 1)
-        self.intensity = np.zeros(2 * len(self.storm_dts) + 1)
+        Ns = 2 * len(self.storm_dts) + 1
+        N = len(self.q_eff)
+        self.time = np.zeros(Ns)
+        self.intensity = np.zeros(Ns)
         # all discharge
-        self.Q_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.Q_all = np.zeros((Ns, N))
         # water table elevation
-        self.wt_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.wt_all = np.zeros((Ns, N))
         self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
         # all surface water specific discharge
-        self.qs_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.qs_all = np.zeros((Ns, N))
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -926,15 +928,17 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
         )
 
         # fields to record:
-        self.time = np.zeros(2 * len(self.storm_dts) + 1)
-        self.intensity = np.zeros(2 * len(self.storm_dts) + 1)
+        Ns = 2 * len(self.storm_dts) + 1
+        N = len(self.q_eff)
+        self.time = np.zeros(Ns)
+        self.intensity = np.zeros(Ns)
         # all discharge
-        self.Q_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.Q_all = np.zeros((Ns, N))
         # water table elevation
-        self.wt_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.wt_all = np.zeros((Ns, N))
         self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
         # all surface water specific discharge
-        self.qs_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.qs_all = np.zeros((Ns, N))
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -1019,6 +1023,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         Update groundwater state, routes and accumulates flow, update
         surface_water_effective__discharge and surface_water_area_norm__discharge.
         """
+        cores = self._grid.core_nodes
 
         # find and route flow if there are pits
         self.dfr._find_pits()
@@ -1040,16 +1045,12 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
             self.svm.run_event(intensity * storm_dt)
-            wt_from_surface = (
-                self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
-            )
+            wt_from_surface = self.elev[cores] - self.wt[cores]
             wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
             wt_digitized[wt_digitized == len(self.svm.depths)] = (
                 len(self.svm.depths) - 1
             )
-            self.r[self._grid.core_nodes] = (
-                self.svm.recharge_at_depth[wt_digitized] / storm_dt
-            )
+            self.r[cores] = self.svm.recharge_at_depth[wt_digitized] / storm_dt
 
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
@@ -1099,6 +1100,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             Q_all: discharge (m3/s)
 
         """
+        cores = self._grid.core_nodes
 
         # generate new precip time series
         self.generate_exp_precip()
@@ -1112,20 +1114,29 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.fd.run_one_step()
 
         # fields to record:
-        self.time = np.zeros(2 * len(self.storm_dts) + 1)
-        self.intensity = np.zeros(2 * len(self.storm_dts) + 1)
+        Ns = 2 * len(self.storm_dts) + 1
+        N = len(self.q_eff)
+        self.time = np.zeros(Ns)
+        self.intensity = np.zeros(Ns)
         # all discharge
-        self.Q_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.Q_all = np.zeros((Ns, N))
         # water table elevation
-        self.wt_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.wt_all = np.zeros((Ns, N))
         self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
         # all surface water specific discharge
-        self.qs_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.qs_all = np.zeros((Ns, N))
         # all recharge
-        self.r_all = np.zeros((2 * len(self.storm_dts) + 1, len(self.q_eff)))
+        self.r_all = np.zeros((Ns, N))
 
-        self.cum_recharge = np.zeros_like(self.svm.depths)
-        self.bool_recharge = np.zeros_like(self.svm.depths)
+        # vadose profile properties
+        self.cum_recharge_profile = np.zeros_like(self.svm.depths)
+        self.bool_recharge_profile = np.zeros_like(self.svm.depths)
+
+        # precip/recharge spatially-averaged properties
+        areas = self._grid.cell_area_at_node[cores]
+        area_tot = np.sum(areas)
+        self.cum_precip = 0.0
+        self.cum_recharge = 0.0
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -1138,16 +1149,12 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
             self.svm.run_event(self.intensities[i] * self.storm_dts[i])
-            wt_from_surface = (
-                self.elev[self._grid.core_nodes] - self.wt[self._grid.core_nodes]
-            )
+            wt_from_surface = self.elev[cores] - self.wt[cores]
             wt_digitized = np.digitize(wt_from_surface, self.svm.depths, right=True)
             wt_digitized[wt_digitized == len(self.svm.depths)] = (
                 len(self.svm.depths) - 1
             )
-            self.r[self._grid.core_nodes] = (
-                self.svm.recharge_at_depth[wt_digitized] / self.storm_dts[i]
-            )
+            self.r[cores] = self.svm.recharge_at_depth[wt_digitized] / self.storm_dts[i]
 
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
@@ -1190,8 +1197,14 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             ]
 
             # record vadose characteristics
-            self.cum_recharge += self.svm.recharge_at_depth
-            self.bool_recharge += self.svm.recharge_at_depth > 0.0
+            self.cum_recharge_profile += self.svm.recharge_at_depth
+            self.bool_recharge_profile += self.svm.recharge_at_depth > 0.0
+
+            # record precip/recharge spatially-averaged characteristics
+            self.cum_precip += self.intensities[i] * self.storm_dts[i]
+            self.cum_recharge += (
+                np.sum(self.r[cores] * areas) / area_tot * self.storm_dts[i]
+            )
 
             # volume of runoff contributed during timestep
             q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
@@ -1204,5 +1217,8 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             out=np.zeros_like(self.q_eff),
         )
 
-        self.mean_recharge_depth = self.cum_recharge / self.bool_recharge
-        self.recharge_frequency = self.bool_recharge / self.T_h
+        self.mean_recharge_depth = (
+            self.cum_recharge_profile / self.bool_recharge_profile
+        )
+        self.recharge_frequency = self.bool_recharge_profile / self.T_h
+        self.recharge_efficiency = self.cum_recharge / self.cum_precip
