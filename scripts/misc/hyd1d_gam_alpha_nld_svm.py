@@ -76,7 +76,7 @@ lam_all = np.array([5, 10, 20, 40])
 hi = 5.0
 sigma = 32
 rho = 0.03
-psi = 20.0
+psi = 5.0
 ai = 1.0
 lg = 15 # geomorphic length scale [m]
 n = 0.1 # drainable porosity [-]
@@ -285,7 +285,8 @@ output_fields = [
         "at_node:sat_unsat_union_probability",
         "at_node:qstar_mean_no_interevent",
         ]
-to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
 
 pickle.dump(df_output, open('output_%d.p'%ID, 'wb'))
 pickle.dump(grid, open('grid_%d.p'%ID, 'wb'))
+
+to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
