@@ -96,7 +96,8 @@ df_params['Srange'] = Srange
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt; df_params['Nz'] = Nz
-pickle.dump(df_params, open('parameters.p','wb'))
+if ID==0:
+    pickle.dump(df_params, open('parameters.p','wb'))
 
 ks = df_params['ksat'][ID]
 pet = df_params['pet'][ID]

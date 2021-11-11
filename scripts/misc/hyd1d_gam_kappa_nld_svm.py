@@ -58,7 +58,7 @@ def calc_z(x, Sc, U, D):
 def generate_parameters(U, lg, p, n, psi, kappa, gam, hi, lam, sigma, rho, ai):
 
     Lh = lam*lg
-    alpha = kappa*lam
+    alpha = kappa/lam
     hg = alpha*lg
     D = D_fun(Lh, U, psi)
     sc = Sc_fun(psi)
@@ -71,7 +71,7 @@ def generate_parameters(U, lg, p, n, psi, kappa, gam, hi, lam, sigma, rho, ai):
 
     return D, U, hg, lg, Lh, sc, ksat, p, pet, b, ds, tr, tb, n, psi, alpha, kappa, gam, hi, lam, sigma, rho, ai
 
-kappa_all = np.array([0.05, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4]) # alpha/lam = hg/lg^2 * Lh
+kappa_all = np.array([0.05, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4]) # kappa = alpha*lam = hg/lg^2 * Lh
 gam_all = np.array([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
 
 hi = 5.0
