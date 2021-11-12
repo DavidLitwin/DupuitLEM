@@ -11,13 +11,18 @@
 #### load and unload modules you may need
 script=$1
 output_folder=$2
-mkdir ~/data_charman1/DupuitLEMResults/$output_folder
-cd ~/dlitwin3/DupuitLEM
-git rev-parse HEAD > ~/data_charman1/DupuitLEMResults/$output_folder/script_id.txt
-cd ~/dlitwin3/landlab
-git rev-parse HEAD > ~/data_charman1/DupuitLEMResults/$output_folder/gdp_id.txt
-cp ~/dlitwin3/DupuitLEM/scripts/misc/$script ~/data_charman1/DupuitLEMResults/$output_folder
-cd ~/data_charman1/DupuitLEMResults/$output_folder
+savedir = ~/data_charman1/DupuitLEMResults/$output_folder
+if [ ! -d $savedir ]; then
+  mkdir $savedir
+  cd ~/dlitwin3/DupuitLEM
+  git rev-parse HEAD > $savedir/script_id.txt
+  cd ~/dlitwin3/landlab
+  git rev-parse HEAD > $savedir/gdp_id.txt
+fi
+scriptloc = ~/dlitwin3/DupuitLEM/scripts/misc/$script
+if [ ! -f $scriptdir ]; then
+  cp $scriptloc $savedir
+fi
+cd $savedir
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > slurm.txt
-# python -u $script > pythonlog.out
 python $script
