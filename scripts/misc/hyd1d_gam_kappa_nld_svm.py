@@ -42,12 +42,6 @@ def tr_fun(hg, p, n, gam, sigma, hi, rho):
 def tb_fun(hg, p, n, gam, sigma, hi, rho):
     return (hg*n*gam)*(1-rho)/(p*sigma*hi)
 
-def D_fun(Lh, U, psi):
-    return (Lh*U)/(1 + psi)
-
-def Sc_fun(psi):
-    return np.sqrt(1 + psi)/np.sqrt(psi)
-
 def calc_z(x, Sc, U, D):
     """Nonlinear diffusion elevation profile"""
     t1 = np.sqrt(D**2 + (2*U*x/Sc)**2)
@@ -55,13 +49,12 @@ def calc_z(x, Sc, U, D):
     return -Sc**2/(2*U) * (t1 - t2)
 
 #generate dimensioned parameters
-def generate_parameters(U, lg, p, n, psi, kappa, gam, hi, lam, sigma, rho, ai):
+def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
 
     Lh = lam*lg
     alpha = kappa/lam
     hg = alpha*lg
-    D = D_fun(Lh, U, psi)
-    sc = Sc_fun(psi)
+    D = U*lg**2/hg
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
     ds = ds_fun(hg, n, gam, sigma, hi)
@@ -69,15 +62,15 @@ def generate_parameters(U, lg, p, n, psi, kappa, gam, hi, lam, sigma, rho, ai):
     tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
     pet = ai*p
 
-    return D, U, hg, lg, Lh, sc, ksat, p, pet, b, ds, tr, tb, n, psi, alpha, kappa, gam, hi, lam, sigma, rho, ai
+    return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai
 
-kappa_all = np.array([0.05, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4]) # kappa = alpha*lam = hg/lg^2 * Lh
+kappa_all = np.array([0.05, 0.1, 0.2, 0.4, 0.8, 1.6]) # kappa = alpha*lam = hg/lg^2 * Lh
 gam_all = np.array([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
 
 hi = 5.0
 sigma = 32
 rho = 0.03
-psi = 5.0
+Sc = 0.0
 ai = 0.0
 lg = 15 # geomorphic length scale [m]
 lam = 10
@@ -90,9 +83,9 @@ Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
 for kappa, gam in product(kappa_all, gam_all):
-    params.append(generate_parameters(U, lg, p, n, psi, kappa, gam, hi, lam, sigma, rho, ai))
+    params.append(generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai))
 
-df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'psi', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
+df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['Srange'] = Srange
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
