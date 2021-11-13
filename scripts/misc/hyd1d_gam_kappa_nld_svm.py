@@ -65,12 +65,12 @@ def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
     return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai
 
 kappa_all = np.array([0.05, 0.1, 0.2, 0.4, 0.8, 1.6]) # kappa = alpha*lam = hg/lg^2 * Lh
-gam_all = np.array([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
+gam_all = np.array([0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
+Sc_all = np.array([1000.0, 1.0, 0.5])
 
 hi = 5.0
 sigma = 32
 rho = 0.03
-Sc = 0.0
 ai = 0.0
 lg = 15 # geomorphic length scale [m]
 lam = 10
@@ -82,7 +82,7 @@ Nz = 500 # number of bins in vadose model
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
-for kappa, gam in product(kappa_all, gam_all):
+for kappa, gam, Sc in product(kappa_all, gam_all, Sc_all):
     params.append(generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai))
 
 df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
