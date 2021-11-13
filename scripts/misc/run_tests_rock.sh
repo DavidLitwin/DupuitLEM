@@ -20,7 +20,7 @@ if [ ! -d $savedir ]; then
   git rev-parse HEAD > $savedir/gdp_id.txt
 fi
 scriptloc=~/dlitwin3/DupuitLEM/scripts/misc/$script
-if [ ! -f $scriptdir ]; then
+if [ ! -f $scriptloc ]; then
   cp $scriptloc $savedir
 fi
 cd $savedir
