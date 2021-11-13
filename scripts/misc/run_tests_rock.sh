@@ -11,7 +11,7 @@
 #### load and unload modules you may need
 script=$1
 output_folder=$2
-savedir = ~/data_charman1/DupuitLEMResults/$output_folder
+savedir=~/data_charman1/DupuitLEMResults/$output_folder
 if [ ! -d $savedir ]; then
   mkdir $savedir
   cd ~/dlitwin3/DupuitLEM
@@ -19,7 +19,7 @@ if [ ! -d $savedir ]; then
   cd ~/dlitwin3/landlab
   git rev-parse HEAD > $savedir/gdp_id.txt
 fi
-scriptloc = ~/dlitwin3/DupuitLEM/scripts/misc/$script
+scriptloc=~/dlitwin3/DupuitLEM/scripts/misc/$script
 if [ ! -f $scriptdir ]; then
   cp $scriptloc $savedir
 fi
