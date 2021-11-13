@@ -11,14 +11,19 @@
 #### load and unload modules you may need
 script=$1
 output_folder=$2
-mkdir ~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
-mkdir ~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/data
-cd ~/dlitwin3/DupuitLEM
-git rev-parse HEAD > ~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/script_id.txt
-cd ~/work/dlitwin3/landlab
-git rev-parse HEAD > ~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID/gdp_id.txt
-cp ~/dlitwin3/DupuitLEM/scripts/HPC/$script ~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
-cd ~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+savedir=~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
+if [ ! -d $savedir ]; then
+  mkdir $savedir
+  mkdir $savedir/data
+  cd ~/dlitwin3/DupuitLEM
+  git rev-parse HEAD > $savedir/script_id.txt
+  cd ~/dlitwin3/landlab
+  git rev-parse HEAD > $savedir/gdp_id.txt
+fi
+scriptloc=~/dlitwin3/DupuitLEM/scripts/HPC/$script
+if [ ! -f $savedir/$script ]; then
+  cp $scriptloc $savedir
+fi
+cd $savedir
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > slurm.txt
-# python -u $script > pythonlog.out
 python $script
