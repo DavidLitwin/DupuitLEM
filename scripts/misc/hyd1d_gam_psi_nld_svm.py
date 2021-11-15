@@ -55,13 +55,13 @@ def calc_z(x, Sc, U, D):
     return -Sc**2/(2*U) * (t1 - t2)
 
 #generate dimensioned parameters
-def generate_parameters(U, lg, p, n, Sc, psi, stoe, gam, hi, lam, sigma, rho, ai):
+def generate_parameters(U, lg, p, n, psi, stoe, gam, hi, lam, sigma, rho, ai):
 
     Lh = lam*lg
     D_fun(Lh, U, psi, stoe)
     hg = (U/D)*lg**2
     alpha = hg/lg
-    Sc_fun(psi, stoe)
+    Sc = Sc_fun(psi, stoe)
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
     ds = ds_fun(hg, n, gam, sigma, hi)
@@ -91,7 +91,7 @@ Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
 for psi, gam in product(psi_all, gam_all):
-    params.append(generate_parameters(U, lg, p, n, Sc, psi, stoe, gam, hi, lam, sigma, rho, ai))
+    params.append(generate_parameters(U, lg, p, n, psi, stoe, gam, hi, lam, sigma, rho, ai))
 
 df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'stoe', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'psi', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
