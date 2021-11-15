@@ -64,8 +64,8 @@ def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
 
     return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai
 
-kappa_all = np.array([0.05, 0.1, 0.2, 0.4, 0.8, 1.6]) # kappa = alpha*lam = hg/lg^2 * Lh
-gam_all = np.array([0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
+kappa_all = np.array([0.1, 0.2, 0.4, 0.8, 1.6, 3.2]) # kappa = alpha*lam = hg/lg^2 * Lh
+gam_all = np.geomspace(0.25,16,13)
 Sc_all = np.array([1000.0, 1.0, 0.5])
 
 hi = 5.0
