@@ -58,7 +58,7 @@ def calc_z(x, Sc, U, D):
 def generate_parameters(U, lg, p, n, psi, stoe, gam, hi, lam, sigma, rho, ai):
 
     Lh = lam*lg
-    D_fun(Lh, U, psi, stoe)
+    D = D_fun(Lh, U, psi, stoe)
     hg = (U/D)*lg**2
     alpha = hg/lg
     Sc = Sc_fun(psi, stoe)
