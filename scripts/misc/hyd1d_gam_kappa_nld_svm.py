@@ -22,7 +22,7 @@ from DupuitLEM.auxiliary_models import (
     HydrologyEventVadoseStreamPower,
     SchenkVadoseModel,
     )
-print("modules imported")
+#print("modules imported")
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -78,6 +78,7 @@ n = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # steady recharge rate
 U = 1e-4 # m/yr
 Srange = 0.2 # range of relative saturation
+sat_cond = 0.025 # distance from surface (units of hg) for saturation
 Nz = 500 # number of bins in vadose model
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
@@ -91,6 +92,7 @@ df_params['Srange'] = Srange
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt; df_params['Nz'] = Nz
+df_params['sat_cond'] = sat_cond
 if ID == 0:
     pickle.dump(df_params, open('parameters.p','wb'))
 
@@ -148,13 +150,13 @@ hm = HydrologyEventVadoseStreamPower(
                                     groundwater_model=gdp,
                                     vadose_model=svm,
                                     )
-print("components initialized")
+#print("components initialized")
 
 # run once to spin up model
 t1 = time.time()
 hm.run_step()
 t2 = time.time()
-print("Spinup completed")
+#print("Spinup completed")
 
 # open file and make function for saving gdp subtimestep data
 # f = open('./gdp_flux_state_%d.csv'%ID, 'w')
@@ -176,7 +178,7 @@ print("Spinup completed")
 # run and record state
 hm.run_step_record_state()
 # f.close()
-print("Run and record state finished")
+#print("Run and record state finished")
 ############ Analysis ############
 df_output = {}
 
@@ -210,8 +212,7 @@ wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, grid.core_nodes] = (wt_all[:, grid.core_nodes] - base_all[:, grid.core_nodes])/(elev_all[:, grid.core_nodes] - base_all[:, grid.core_nodes])
 
 # water table and saturation at end of storm and interstorm
-thresh = 1e-10 #np.mean(grid.cell_area_at_node[grid.core_nodes])*df_params['p'][ID]
-sat_all = (wtrel_all > 0.99)
+sat_all = (elev_all-wt_all) < sat_cond*df_params['hg'][ID]
 wtrel_end_interstorm = grid.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = grid.add_zeros('node', 'wtrel_mean_end_storm')
 wtrel_max = grid.add_zeros('node', 'wtrel_99')
@@ -283,11 +284,11 @@ output_fields = [
         "at_node:qstar_mean_no_interevent",
         ]
 
-print("analysis finished")
+#print("analysis finished")
 
 pickle.dump(df_output, open('output_%d.p'%ID, 'wb'))
 pickle.dump(grid, open('grid_%d.p'%ID, 'wb'))
-print("pickle output written")
+#print("pickle output written")
 
 to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
-print("netcdf output written")
+#print("netcdf output written")
