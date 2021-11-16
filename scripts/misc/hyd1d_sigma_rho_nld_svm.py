@@ -70,7 +70,7 @@ lam_all = np.array([10,20,40])
 
 hi = 5.0
 ai = 1.0
-gam = 2.5
+gam = 1.0
 lg = 15 # geomorphic length scale [m]
 kappa = 1.5 # kappa = alpha*lam = hg/lg^2 * Lh
 Sc = 0.5
