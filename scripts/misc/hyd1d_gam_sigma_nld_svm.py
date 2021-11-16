@@ -22,6 +22,7 @@ from DupuitLEM.auxiliary_models import (
     HydrologyEventVadoseStreamPower,
     SchenkVadoseModel,
     )
+#print("modules imported")
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -41,12 +42,6 @@ def tr_fun(hg, p, n, gam, sigma, hi, rho):
 def tb_fun(hg, p, n, gam, sigma, hi, rho):
     return (hg*n*gam)*(1-rho)/(p*sigma*hi)
 
-def D_fun(Lh, U, psi):
-    return (Lh*U)/(1 + psi)
-
-def Sc_fun(psi):
-    return np.sqrt(1 + psi)/np.sqrt(psi)
-
 def calc_z(x, Sc, U, D):
     """Nonlinear diffusion elevation profile"""
     t1 = np.sqrt(D**2 + (2*U*x/Sc)**2)
@@ -54,12 +49,12 @@ def calc_z(x, Sc, U, D):
     return -Sc**2/(2*U) * (t1 - t2)
 
 #generate dimensioned parameters
-def generate_parameters(U, lg, p, n, psi, alpha, gam, hi, lam, sigma, rho, ai):
+def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
 
-    hg = alpha*lg
     Lh = lam*lg
-    D = D_fun(Lh, U, psi)
-    sc = Sc_fun(psi)
+    alpha = kappa/lam
+    hg = alpha*lg
+    D = U*lg**2/hg
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
     ds = ds_fun(hg, n, gam, sigma, hi)
@@ -67,36 +62,39 @@ def generate_parameters(U, lg, p, n, psi, alpha, gam, hi, lam, sigma, rho, ai):
     tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
     pet = ai*p
 
-    return D, U, hg, lg, Lh, sc, ksat, p, pet, b, ds, tr, tb, n, psi, alpha, gam, hi, lam, sigma, rho, ai
+    return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai
 
-sigma_all = np.array([8, 16, 32, 64, 128])
-gam_all = np.array([0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0])
-lam_all = np.array([5, 10, 20, 40])
+sigma_all = np.geomspace(8,128,13)
+gam_all = np.geomspace(0.25,16,13)
+lam_all = np.array([10,20,40])
 
 hi = 5.0
-alpha = 0.15
 rho = 0.03
-psi = 20.0
 ai = 1.0
 lg = 15 # geomorphic length scale [m]
+kappa = 1.5 # kappa = alpha*lam = hg/lg^2 * Lh
+Sc = 0.5
 n = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # steady recharge rate
 U = 1e-4 # m/yr
 Srange = 0.2 # range of relative saturation
+sat_cond = 0.025 # distance from surface (units of hg) for saturation
 Nz = 500 # number of bins in vadose model
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
 for sigma, gam, lam in product(sigma_all, gam_all, lam_all):
-    params.append(generate_parameters(U, lg, p, n, psi, alpha, gam, hi, lam, sigma, rho, ai))
+    params.append(generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai))
 
-df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'psi', 'alpha', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
+df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['Srange'] = Srange
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt; df_params['Nz'] = Nz
-pickle.dump(df_params, open('parameters.p','wb'))
+df_params['sat_cond'] = sat_cond
+if ID == 0:
+    pickle.dump(df_params, open('parameters.p','wb'))
 
 ks = df_params['ksat'][ID]
 pet = df_params['pet'][ID]
@@ -152,12 +150,13 @@ hm = HydrologyEventVadoseStreamPower(
                                     groundwater_model=gdp,
                                     vadose_model=svm,
                                     )
-
+#print("components initialized")
 
 # run once to spin up model
 t1 = time.time()
 hm.run_step()
 t2 = time.time()
+#print("Spinup completed")
 
 # open file and make function for saving gdp subtimestep data
 # f = open('./gdp_flux_state_%d.csv'%ID, 'w')
@@ -179,7 +178,7 @@ t2 = time.time()
 # run and record state
 hm.run_step_record_state()
 # f.close()
-
+#print("Run and record state finished")
 ############ Analysis ############
 df_output = {}
 
@@ -219,8 +218,7 @@ wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, grid.core_nodes] = (wt_all[:, grid.core_nodes] - base_all[:, grid.core_nodes])/(elev_all[:, grid.core_nodes] - base_all[:, grid.core_nodes])
 
 # water table and saturation at end of storm and interstorm
-thresh = 1e-10 #np.mean(grid.cell_area_at_node[grid.core_nodes])*df_params['p'][ID]
-sat_all = (wtrel_all > 0.99)
+sat_all = (elev_all-wt_all) < sat_cond*df_params['hg'][ID]
 wtrel_end_interstorm = grid.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = grid.add_zeros('node', 'wtrel_mean_end_storm')
 wtrel_max = grid.add_zeros('node', 'wtrel_99')
@@ -291,7 +289,12 @@ output_fields = [
         "at_node:sat_unsat_union_probability",
         "at_node:qstar_mean_no_interevent",
         ]
-to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
+
+#print("analysis finished")
 
 pickle.dump(df_output, open('output_%d.p'%ID, 'wb'))
 pickle.dump(grid, open('grid_%d.p'%ID, 'wb'))
+#print("pickle output written")
+
+to_netcdf(grid, 'grid_%d.nc'%ID, include=output_fields, format="NETCDF4")
+#print("netcdf output written")

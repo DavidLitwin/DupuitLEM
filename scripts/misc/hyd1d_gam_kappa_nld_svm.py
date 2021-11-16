@@ -190,6 +190,12 @@ df_output = {}
 # df_output['qs_tot'] = np.trapz(df['qs'], df['t'])
 # df_output['r_tot'] = np.sum(df['dt'] * df['r'])
 
+"""ratio of total recharge to total precipitation, averaged over space and time.
+this accounts for time varying recharge with precipitation rate, unsat
+storage and ET, as well as spatially variable recharge with water table depth.
+"""
+df_output['recharge_efficiency'] = hm.recharge_efficiency
+
 # effective Qstar
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
