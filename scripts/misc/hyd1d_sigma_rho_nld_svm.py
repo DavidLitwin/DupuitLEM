@@ -49,7 +49,7 @@ def calc_z(x, Sc, U, D):
     return -Sc**2/(2*U) * (t1 - t2)
 
 #generate dimensioned parameters
-def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
+def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai, Nt, seedval):
 
     Lh = lam*lg
     alpha = kappa/lam
@@ -62,15 +62,17 @@ def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
     tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
     pet = ai*p
 
-    return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai
+    return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai, Nt, seedval
 
-sigma_all = np.geomspace(8,128,13)
-rho_all = np.linspace(0.05,0.95,11)
-lam_all = np.array([10,20,40])
+sigma_all = np.geomspace(8,128,5)
+rho_all = np.linspace(0.05,0.95,7)
+Nt_all = np.array([1000, 2000, 4000, 8000, 16000, 32000])
+seedval_all = np.array([123, 124, 125])
 
 hi = 5.0
 ai = 0.0
 gam = 2.5
+lam = 10
 lg = 15 # geomorphic length scale [m]
 kappa = 1.5 # kappa = alpha*lam = hg/lg^2 * Lh
 Sc = 0.5
@@ -83,15 +85,15 @@ Nz = 500 # number of bins in vadose model
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
-for sigma, rho, lam in product(sigma_all, rho_all, lam_all):
-    params.append(generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai))
+for sigma, rho, Nt, seedval in product(sigma_all, rho_all, Nt_all, seedval_all):
+    params.append(generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai, Nt, seedval))
 
-df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
+df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'Nt', 'seedval'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['Srange'] = Srange
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
-df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nt'] = Nt; df_params['Nz'] = Nz
+df_params['Nx'] = Nx; df_params['Ny'] = Ny; df_params['Nz'] = Nz; #df_params['Nt'] = Nt;
 df_params['sat_cond'] = sat_cond
 if ID == 0:
     pickle.dump(df_params, open('parameters.p','wb'))
@@ -108,6 +110,8 @@ D = df_params['D'][ID]
 U = df_params['U'][ID]
 sc = df_params['sc'][ID]
 Lh = df_params['Lh'][ID]
+Nt = df_params['Nt'][ID]
+seedval = df_params['seedval'][ID]
 
 # initialize grid
 grid = RasterModelGrid((Ny, Nx), xy_spacing=Lh/Nx)
@@ -136,7 +140,7 @@ pdr = PrecipitationDistribution(grid,
                                mean_interstorm_duration=tb,
                                mean_storm_depth=ds,
                                total_t=Nt*(tr+tb))
-pdr.seed_generator(seedval=1235)
+pdr.seed_generator(seedval=int(seedval))
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
                  available_relative_saturation=Srange,
