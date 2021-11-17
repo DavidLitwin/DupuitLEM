@@ -69,7 +69,7 @@ rho_all = np.geomspace(0.03, 0.96, 11)
 lam_all = np.array([10,20,40])
 
 hi = 5.0
-ai = 1.0
+ai = 0.0
 gam = 1.0
 lg = 15 # geomorphic length scale [m]
 kappa = 1.5 # kappa = alpha*lam = hg/lg^2 * Lh
