@@ -65,12 +65,12 @@ def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
     return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai
 
 sigma_all = np.geomspace(8,128,13)
-rho_all = np.geomspace(0.03, 0.96, 11)
+rho_all = np.linspace(0.05,0.95,11)
 lam_all = np.array([10,20,40])
 
 hi = 5.0
 ai = 0.0
-gam = 1.0
+gam = 2.5
 lg = 15 # geomorphic length scale [m]
 kappa = 1.5 # kappa = alpha*lam = hg/lg^2 * Lh
 Sc = 0.5
