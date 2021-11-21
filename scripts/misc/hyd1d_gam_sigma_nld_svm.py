@@ -66,11 +66,11 @@ def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
 
 sigma_all = np.geomspace(8,128,13)
 gam_all = np.geomspace(0.25,16,13)
-lam_all = np.array([10,20,40])
 
 hi = 5.0
 rho = 0.03
 ai = 1.0
+lam = 10
 lg = 15 # geomorphic length scale [m]
 kappa = 1.5 # kappa = alpha*lam = hg/lg^2 * Lh
 Sc = 0.5
@@ -80,10 +80,10 @@ U = 1e-4 # m/yr
 Srange = 0.2 # range of relative saturation
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 Nz = 500 # number of bins in vadose model
-Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
+Nt = 8000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
-for sigma, gam, lam in product(sigma_all, gam_all, lam_all):
+for sigma, gam in product(sigma_all, gam_all):
     params.append(generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai))
 
 df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
@@ -190,11 +190,15 @@ df_output = {}
 # df_output['qs_tot'] = np.trapz(df['qs'], df['t'])
 # df_output['r_tot'] = np.sum(df['dt'] * df['r'])
 
+df_output['cum_precip'] = hm.cum_precip
+df_output['cum_recharge'] = hm.cum_recharge
+df_output['cum_exfiltration'] = hm.cum_exfiltration
+
 """ratio of total recharge to total precipitation, averaged over space and time.
 this accounts for time varying recharge with precipitation rate, unsat
 storage and ET, as well as spatially variable recharge with water table depth.
 """
-df_output['recharge_efficiency'] = hm.recharge_efficiency
+df_output['recharge_efficiency'] = hm.cum_recharge / hm.cum_precip
 
 # effective Qstar
 Q_all = hm.Q_all[1:,:]

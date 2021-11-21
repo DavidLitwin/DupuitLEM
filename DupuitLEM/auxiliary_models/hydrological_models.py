@@ -1137,6 +1137,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         area_tot = np.sum(areas)
         self.cum_precip = 0.0
         self.cum_recharge = 0.0
+        self.cum_exfiltration = 0.0
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -1201,10 +1202,9 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.bool_recharge_profile += self.svm.recharge_at_depth > 0.0
 
             # record precip/recharge spatially-averaged characteristics
-            self.cum_precip += self.intensities[i] * self.storm_dts[i]
-            self.cum_recharge += (
-                np.sum(self.r[cores] * areas) / area_tot * self.storm_dts[i]
-            )
+            self.cum_precip += np.sum(self.intensities[i] * areas) * self.storm_dts[i]
+            self.cum_recharge += np.sum(self.r[cores] * areas) * self.storm_dts[i]
+            self.cum_exfiltration += np.sum(q1[cores] * areas * self.storm_dts[i] + q2[cores] * areas * self.interstorm_dts[i])
 
             # volume of runoff contributed during timestep
             q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
@@ -1217,8 +1217,10 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             out=np.zeros_like(self.q_eff),
         )
 
+        # derived properties
+        # mean recharge at each vadose profile
         self.mean_recharge_depth = (
             self.cum_recharge_profile / self.bool_recharge_profile
         )
+        # frequency of recharge in vadose profile
         self.recharge_frequency = self.bool_recharge_profile / self.T_h
-        self.recharge_efficiency = self.cum_recharge / self.cum_precip
