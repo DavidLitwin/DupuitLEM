@@ -1134,6 +1134,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
         # precip/recharge spatially-averaged properties
         areas = self._grid.cell_area_at_node[cores]
+        obn = self._grid.open_boundary_nodes
         area_tot = np.sum(areas)
         self.cum_precip = 0.0
         self.cum_recharge = 0.0
@@ -1204,7 +1205,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             # record precip/recharge spatially-averaged characteristics
             self.cum_precip += np.sum(self.intensities[i] * areas) * self.storm_dts[i]
             self.cum_recharge += np.sum(self.r[cores] * areas) * self.storm_dts[i]
-            self.cum_exfiltration += np.sum(q1[cores] * areas * self.storm_dts[i] + q2[cores] * areas * self.interstorm_dts[i])
+            self.cum_exfiltration += np.sum(q1[obn] * self.storm_dts[i] + q2[obn] * self.interstorm_dts[i])
 
             # volume of runoff contributed during timestep
             q_total_vol += 0.5 * (q0 + q1) * self.storm_dts[i]
