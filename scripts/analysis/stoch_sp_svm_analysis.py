@@ -23,8 +23,7 @@ from landlab.components import (
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
 
-task_id = os.environ['SLURM_ARRAY_TASK_ID']
-ID = int(task_id)
+ID = int(os.environ['SLURM_ARRAY_TASK_ID'])
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 
 ########## Load and basic plot
@@ -63,7 +62,8 @@ Srange = df_params['Srange'][ID]
 tr = df_params['tr'][ID] #mean storm duration [s]
 tb = df_params['tb'][ID] #mean interstorm duration [s]
 ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 10*df_params['Th'][ID] #total hydrological time [s]
+T_h = 20*df_params['Th'][ID] #total hydrological time [s]
+sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
 #initialize grid
 dx = grid.dx
@@ -136,8 +136,41 @@ f.close()
 #dataframe for output
 df_output = {}
 
+##### steepness, curvature, and topographic index
+S8 = mg.add_zeros('node', 'slope_D8')
+S4 = mg.add_zeros('node', 'slope_D4')
+curvature = mg.add_zeros('node', 'curvature')
+steepness = mg.add_zeros('node', 'steepness')
+TI8 = mg.add_zeros('node', 'topographic__index_D8')
+TI4 = mg.add_zeros('node', 'topographic__index_D4')
+
+#slope for steepness is the absolute value of D8 gradient associated with
+#flow direction. Same as FastscapeEroder. curvature is divergence of gradient.
+#Same as LinearDiffuser. TI is done both ways.
+dzdx_D8 = mg.calc_grad_at_d8(elev)
+dzdx_D4 = mg.calc_grad_at_link(elev)
+dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
+S8[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
+S4[:] = map_downwind_node_link_max_to_node(mg, dzdx_D4)
+
+curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
+steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
+TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
+TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
+
+######## Runoff generation
+df_output['cum_precip'] = hm.cum_precip
+df_output['cum_recharge'] = hm.cum_recharge
+df_output['cum_exfiltration'] = hm.cum_exfiltration
+
+"""ratio of total recharge to total precipitation, averaged over space and time.
+this accounts for time varying recharge with precipitation rate, unsat
+storage and ET, as well as spatially variable recharge with water table depth.
+"""
+df_output['recharge_efficiency'] = hm.cum_recharge / hm.cum_precip
+
 #load the full storage discharge dataset that was just generated
-df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','i', 'qs', 'S', 'qs_cells'])
+df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','r', 'qs', 'S', 'qs_cells'])
 # remove the first row (test row written by init of gdp)
 df.drop(0, inplace=True)
 df.reset_index(drop=True, inplace=True)
@@ -178,44 +211,23 @@ try:
 except:
     print("error fitting recession")
 
-##### steepness, curvature, and topographic index
-S8 = mg.add_zeros('node', 'slope_D8')
-S4 = mg.add_zeros('node', 'slope_D4')
-curvature = mg.add_zeros('node', 'curvature')
-steepness = mg.add_zeros('node', 'steepness')
-TI8 = mg.add_zeros('node', 'topographic__index_D8')
-TI4 = mg.add_zeros('node', 'topographic__index_D4')
-
-#slope for steepness is the absolute value of D8 gradient associated with
-#flow direction. Same as FastscapeEroder. curvature is divergence of gradient.
-#Same as LinearDiffuser. TI is done both ways.
-dzdx_D8 = mg.calc_grad_at_d8(elev)
-dzdx_D4 = mg.calc_grad_at_link(elev)
-dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
-S8[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
-S4[:] = map_downwind_node_link_max_to_node(mg, dzdx_D4)
-
-curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
-steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
-TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
-TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
-
-######## Runoff generation
-# find times with rain. Note in df qs and S are at the end of the timestep.
-# i is at the beginning of the timestep. Assumes timeseries starts with rain.
+# find times with recharge. Note in df qs and S are at the end of the timestep.
+# i is at the beginning of the timestep.
 df['t'] = np.cumsum(df['dt'])
-is_rain = df['i'] > 0.0
-pre_rain = np.where(np.diff(is_rain*1)>0.0)[0] #last data point before rain
-end_rain = np.where(np.diff(is_rain*1)<0.0)[0][1:] #last data point where there is rain
+is_r = df['r'] > 0.0
+pre_r = np.where(np.diff(is_r*1)>0.0)[0] #last data point before recharge
+end_r = np.where(np.diff(is_r*1)<0.0)[0][1:] #last data point where there is recharge
 
-# make a linear-type baseflow separation, where baseflow during rain increases
-# linearly from its initial qs before rain to its final qs after rain.
+# make a linear-type baseflow separation, where baseflow during recharge increases
+# linearly from its initial qs before recharge to its final qs after recharge.
 qb = df['qs'].copy()
 q = df['qs']
 t = df['t']
-for i in range(len(pre_rain)-1): # added -1 but FIX THIS.
-    slope = (q[end_rain[i]+1] - q[pre_rain[i]])/(t[end_rain[i]+1]-t[pre_rain[i]])
-    qb[pre_rain[i]+1:end_rain[i]+1] = q[pre_rain[i]]+slope*(t[pre_rain[i]+1:end_rain[i]+1] - t[pre_rain[i]])
+for i in range(len(end_r)):
+    j = pre_r[i]
+    k = end_r[i]
+    slope = (q[k+1] - q[j])/(t[k+1]-t[j])
+    qb[j+1:k+1] = q[j]+slope*(t[j+1:k+1] - t[j])
 
 df['qb'] = qb
 qe = df['qs'] - df['qb']
@@ -225,10 +237,10 @@ qe = df['qs'] - df['qb']
 qe_tot = np.trapz(qe, df['t'])
 qb_tot = np.trapz(qb, df['t'])
 qs_tot = np.trapz(df['qs'], df['t'])
-p_tot = np.sum(df['dt'] * df['i'])
+r_tot = np.sum(df['dt'] * df['r'])
 
 df_output['BFI'] = qb_tot/qs_tot #baseflow index
-df_output['RR'] = qe_tot/p_tot #runoff ratio
+df_output['RR'] = qe_tot/r_tot #runoff ratio
 
 ###### spatial runoff related quantities
 
@@ -259,8 +271,7 @@ wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
 
 # water table and saturation at end of storm and interstorm
-thresh = 1e-10 #np.mean(mg.cell_area_at_node[grid.core_nodes])*df_params['p'][ID]
-sat_all = (Q_all > thresh)
+sat_all = (elev_all-wt_all) < sat_cond*df_params['hg'][ID]
 wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
 sat_end_interstorm = mg.add_zeros('node', 'sat_mean_end_interstorm')
@@ -277,8 +288,8 @@ Q_end_interstorm[:] = np.mean(Q_all[intensity==0.0,:], axis=0)
 
 # classify zones of saturation
 sat_class = mg.add_zeros('node', 'saturation_class')
-sat_never = np.logical_and(sat_end_storm < 0.001, sat_end_interstorm < 0.001)
-sat_always = np.logical_and(sat_end_interstorm > 0.999, sat_end_storm > 0.999)
+sat_never = np.logical_and(sat_end_storm < 0.01, sat_end_interstorm < 0.01)
+sat_always = np.logical_and(sat_end_interstorm > 0.99, sat_end_storm > 0.99)
 sat_variable = ~np.logical_or(sat_never, sat_always)
 sat_class[sat_never] = 0
 sat_class[sat_variable] = 1
