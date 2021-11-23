@@ -111,8 +111,8 @@ df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulatio
 df_params['dtg'] = df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['output_interval'] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
-if ID == 0:
-    pickle.dump(df_params, open('parameters.p','wb'))
+
+pickle.dump(df_params, open('parameters.p','wb'))
 
 ksat = df_params['ksat'][ID]
 p = df_params['p'][ID]
