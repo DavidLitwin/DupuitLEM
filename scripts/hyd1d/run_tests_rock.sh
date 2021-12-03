@@ -19,7 +19,7 @@ if [ ! -d $savedir ]; then
   cd ~/dlitwin3/landlab
   git rev-parse HEAD > $savedir/gdp_id.txt
 fi
-scriptloc=~/dlitwin3/DupuitLEM/scripts/misc/$script
+scriptloc=~/dlitwin3/DupuitLEM/scripts/hyd1d/$script
 if [ ! -f $savedir/$script ]; then
   cp $scriptloc $savedir
 fi
