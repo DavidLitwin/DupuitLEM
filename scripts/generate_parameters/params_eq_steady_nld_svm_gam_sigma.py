@@ -5,14 +5,15 @@ Generate parameters for StreamPowerModel with
 -- TaylorNonLinearDiffuser
 -- RegolithConstantThickness
 
-Use a 1D hillslope model to determine a recharge_efficiency when varying
+Use a 1D hillslope model to determine a recharge_efficiency 'RE' when varying
 gamma and sigma.
 
 Recharge efficiency is the ratio of total recharge to total precipitation,
-averaged over space and time. this accounts for time varying recharge with
-precipitation rate, unsat storage and ET, as well as spatially variable
+averaged over space and time. This accounts for time-varying recharge with
+precipitation rate, unsat storage and ET, as well as space-varying
 recharge with water table depth.
 
+6 Dec 2021
 """
 
 import os
@@ -110,11 +111,9 @@ df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg'
 df_params_1d['alpha'] = df_params_1d['hg']/df_params_1d['lg']
 df_params_1d['Srange'] = Srange
 df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt; df_params_1d['Nz'] = Nz
-
 df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 
-
-### recharge estimation 
+### recharge estimation
 
 # paraeters
 ks = df_params_1d['ksat'][ID]
@@ -180,7 +179,7 @@ hm.run_step()
 hm.run_step_record_state()
 #print("Run record state finished")
 
-#### Params for lem 
+#### Params for lem
 RE = hm.cum_recharge / hm.cum_precip # recharge efficiency
 
 v0_nd = 2.0 # contour width (also grid spacing)
@@ -205,5 +204,6 @@ df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
 df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
+df_params['output_interval'] = output_interval
 
-df_params.to_csv('parameters.csv'%ID, index=True)
+df_params.to_csv('parameters.csv', index=True)

@@ -6,8 +6,9 @@ This script runs the StreamPowerModel with:
 -- RegolithConstantThickness
 
 ------
-Parameters must be supplied in CSV file, 'parameters.csv'. CSV file must
-contain at least the following columns:
+Parameters must be supplied in CSV file, 'parameters.csv'. The CSV file must
+have a header with the number corresponding to the 'SLURM_ARRAY_TASK_ID' and 
+must contain at least the following columns:
 
 ksat: Saturated hydraulic conductivity (m/s)
 p: steady precip rate (m/s)
@@ -35,12 +36,17 @@ fields:
 - "water_table__elevation"
 - "aquifer_base__elevation"
 at node.
+
+
+6 Dec 2021
 """
+
 import os
 import numpy as np
 import pandas
 
 from landlab import RasterModelGrid
+from landlab.io.netcdf import from_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     TaylorNonLinearDiffuser,
@@ -55,36 +61,37 @@ from DupuitLEM.auxiliary_models import (
 #slurm info
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
+
 try:
-    df_params = pandas.read_csv('parameters.csv')
+    df_params = pandas.read_csv('parameters.csv', index_col=0)[task_id]
     # df = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)
 except FileNotFoundError:
-    print("Supply a parameter file, 'parameters.csv'")
+    print("Supply a parameter file, 'parameters.csv' with column title equal to TASK_ID")
 
 # pull values for this run
-ksat = df_params['ksat'][ID]
-p = df_params['p'][ID]
-b = df_params['b'][ID]
-n = df_params['n'][ID]
+ksat = df_params['ksat']
+p = df_params['p']
+b = df_params['b']
+n = df_params['n']
 
-K = df_params['K'][ID]
+K = df_params['K']
 Ksp = K/p # precip rate from Q* goes in K
-D = df_params['D'][ID]
-U = df_params['U'][ID]
-hg = df_params['hg'][ID]
-Sc = df_params['Sc'][ID]
+D = df_params['D']
+U = df_params['U']
+hg = df_params['hg']
+Sc = df_params['Sc']
 
-Th = df_params['Th'][ID]
-Tg = df_params['Tg'][ID]
-ksf = df_params['ksf'][ID]
+Th = df_params['Th']
+Tg = df_params['Tg']
+ksf = df_params['ksf']
 try:
-    RE = df_params['RE'][ID]
+    RE = df_params['RE']
 except KeyError:
     print("no recharge efficiency 'RE' provided. Using RE = 1.0")
     RE = 1.0
 
 output = {}
-output["output_interval"] = df_params['output_interval'][ID]
+output["output_interval"] = df_params['output_interval']
 output["output_fields"] = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
@@ -117,8 +124,8 @@ try:
 
 except:
     print("Initial grid not present or could not be read. Initializing new grid.")
-    Nx = df_params['Nx'][ID]
-    v0 = df_params['v0'][ID]
+    Nx = df_params['Nx']
+    v0 = df_params['v0']
     np.random.seed(12345)
     grid = RasterModelGrid((Nx, Nx), xy_spacing=v0)
     grid.set_status_at_node_on_edges(
