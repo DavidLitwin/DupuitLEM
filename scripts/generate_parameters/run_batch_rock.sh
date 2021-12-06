@@ -12,14 +12,16 @@
 script=$1
 output_folder=$2
 savedir=~/data_charman1/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
-mkdir $savedir/data
+if [ ! -d $savedir ]; then
+  mkdir $savedir
+fi
 cd ~/dlitwin3/DupuitLEM
-git rev-parse HEAD > $savedir/lem_script_id.txt
+git rev-parse HEAD > $savedir/params_script_id.txt
 cd ~/dlitwin3/landlab
-git rev-parse HEAD > $savedir/lem_gdp_id.txt
+git rev-parse HEAD > $savedir/params_gdp_id.txt
 
-scriptloc=~/dlitwin3/DupuitLEM/scripts/run_models/$script
+scriptloc=~/dlitwin3/DupuitLEM/scripts/generate_parameters/$script
 cp $scriptloc $savedir
 cd $savedir
-echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > lem_slurm.txt
+echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > params_slurm.txt
 python $script
