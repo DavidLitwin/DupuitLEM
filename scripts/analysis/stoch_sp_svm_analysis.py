@@ -57,6 +57,9 @@ Ks = df_params['ksat'] #hydraulic conductivity [m/s]
 n = df_params['n'] #drainable porosity [-]
 b = df_params['b'] #characteristic depth  [m]
 p = df_params['p'] #average precipitation rate [m/s]
+tg = df_params['tg']
+dtg = df_params['dtg']
+hg = df_params['hg']
 try:
     pet = df_params['pet']
     Srange = df_params['Srange']
@@ -269,7 +272,7 @@ Q_event_sum = np.zeros(Q_all.shape[1])
 for i in range(1,len(Q_all)):
     if intensity[i] > 0.0:
         Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*df_params['p'][ID])
+qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*p)
 qstar_mean[np.isnan(qstar_mean)] = 0.0
 
 # mean and variance of water table
@@ -280,7 +283,7 @@ wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
 
 # water table and saturation at end of storm and interstorm
-sat_all = (elev_all-wt_all) < sat_cond*df_params['hg'][ID]
+sat_all = (elev_all-wt_all) < sat_cond*hg
 wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
 sat_end_interstorm = mg.add_zeros('node', 'sat_mean_end_interstorm')
@@ -375,12 +378,12 @@ except:
 
 ####### calculate elevation change
 try:
-    output_interval = df_params['output_interval'][ID]
+    output_interval = df_params['output_interval']
 except KeyError:
     print('output_interval not in params table. Using default.')
-    output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID]
+    output_interval = (10/(dtg/tg)).round().astype(int)
 
-dt = output_interval*df_params['dtg'][ID]
+dt = output_interval*dtg
 
 z_change = np.zeros((len(files),6))
 relief_change = np.zeros((len(files), 2))
@@ -413,9 +416,9 @@ for i in range(1,len(files)):
 
 df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
 r_change = pd.DataFrame()
-r_change['r_nd'] = relief_change[:,0]/df_params['hg'][ID]
-r_change['drdt_nd'] = relief_change[:,1]*(df_params['tg'][ID]/df_params['hg'][ID])
-r_change['t_nd'] = np.arange(len(files))*(dt/df_params['tg'][ID])
+r_change['r_nd'] = relief_change[:,0]/hg
+r_change['drdt_nd'] = relief_change[:,1]*(tg/hg)
+r_change['t_nd'] = np.arange(len(files))*(dt/tg)
 
 
 ####### save things

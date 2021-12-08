@@ -96,14 +96,17 @@ plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
 plt.close()
 
 ########## Run hydrological model
-df_params = pickle.load(open('./parameters.p','rb'))
-pickle.dump(df_params, open('../post_proc/%s/parameters.p'%base_output_path,'wb'))
+df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
+df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
 
-Ks = df_params['ksat'][ID] # hydraulic conductivity [m/s]
-p = df_params['p'][ID] # recharge rate [m/s]
-n = df_params['n'][ID] # drainable porosity [-]
-b = df_params['b'][ID] # characteristic depth  [m]
-Th = df_params['Th'][ID] # hydrological timestep
+Ks = df_params['ksat'] # hydraulic conductivity [m/s]
+p = df_params['p'] # recharge rate [m/s]
+n = df_params['n'] # drainable porosity [-]
+b = df_params['b'] # characteristic depth  [m]
+Th = df_params['Th'] # hydrological timestep
+tg = df_params['tg']
+dtg = df_params['dtg']
+hg = df_params['hg']
 
 gdp = GroundwaterDupuitPercolator(mg,
           porosity=n,
@@ -133,7 +136,7 @@ df_output = {}
 # Qstar
 Q = mg.at_node['surface_water__discharge']
 Qstar = mg.add_zeros('node', 'qstar')
-Qstar[:] = Q/(mg.at_node['drainage_area']*df_params['p'][ID])
+Qstar[:] = Q/(mg.at_node['drainage_area']*p)
 
 # groundwater flux
 q_out_max = mg.add_zeros('node', 'gw_flux_out_max')
@@ -203,7 +206,7 @@ if isinstance(mg, RasterModelGrid):
 
 ####### calculate relief change
 output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
-dt_nd = output_interval*df_params['dtg'][ID]/df_params['tg'][ID]
+dt_nd = output_interval*dtg/tg
 relief_change = np.zeros(len(files))
 for i in range(1,len(files)):
     grid = from_netcdf(files[i])
@@ -211,7 +214,7 @@ for i in range(1,len(files)):
     relief_change[i] = np.mean(elev[grid.core_nodes])
 
 r_change = pd.DataFrame()
-r_change['r_nd'] = relief_change[:]/df_params['hg'][ID]
+r_change['r_nd'] = relief_change[:]/hg
 r_change['drdt_nd'] = np.diff(r_change['r_nd'], prepend=0.0)/dt_nd
 r_change['t_nd'] = np.arange(len(files))*dt_nd
 
