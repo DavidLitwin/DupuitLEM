@@ -23,7 +23,8 @@ from landlab.components import (
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
 
-ID = int(os.environ['SLURM_ARRAY_TASK_ID'])
+task_id = os.environ['SLURM_ARRAY_TASK_ID']
+ID = int(task_id)
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 
 ########## Load and basic plot
