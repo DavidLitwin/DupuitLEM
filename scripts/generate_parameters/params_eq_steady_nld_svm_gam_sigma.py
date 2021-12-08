@@ -191,7 +191,7 @@ ksf_base = 500 # morphologic scaling factor
 Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
 output_interval = 1000
 
-fields = ['D', 'U', 'hg', 'lg', 'tg', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai']
+fields = ['D', 'U', 'hg', 'lg', 'tg', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'tr', 'tb', 'ds', 'pet', 'Srange']
 df_params = df_params_1d.loc[ID,fields]
 df_params['RE'] = RE
 df_params['v0'] = v0_nd*df_params['lg']
