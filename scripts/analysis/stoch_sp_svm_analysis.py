@@ -49,25 +49,33 @@ plt.close()
 
 ########## Run hydrological model
 # load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
-df_params = pickle.load(open('./parameters.p','rb'))
-params = df_params.iloc[ID]
-pickle.dump(params, open('../post_proc/%s/params_ID_%d.p'%(base_output_path,ID),'wb'))
+df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
+df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
 
-Ks = df_params['ksat'][ID] #hydraulic conductivity [m/s]
-n = df_params['n'][ID] #drainable porosity [-]
-b = df_params['b'][ID] #characteristic depth  [m]
-p = df_params['p'][ID] #average precipitation rate [m/s]
-pet = df_params['pet'][ID]
-Srange = df_params['Srange'][ID]
-tr = df_params['tr'][ID] #mean storm duration [s]
-tb = df_params['tb'][ID] #mean interstorm duration [s]
-ds = df_params['ds'][ID] #mean storm depth [m]
-T_h = 20*df_params['Th'][ID] #total hydrological time [s]
+Ks = df_params['ksat'] #hydraulic conductivity [m/s]
+n = df_params['n'] #drainable porosity [-]
+b = df_params['b'] #characteristic depth  [m]
+p = df_params['p'] #average precipitation rate [m/s]
+try:
+    pet = df_params['pet']
+    Srange = df_params['Srange']
+    tr = df_params['tr'] #mean storm duration [s]
+    tb = df_params['tb'] #mean interstorm duration [s]
+    ds = df_params['ds'] #mean storm depth [m]
+    T_h = 20*df_params['Th'] #total hydrological time [s]
+except KeyError:
+    df_params_1d = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)[task_id]
+    pet = df_params_1d['pet']
+    Srange = df_params_1d['Srange']
+    tr = df_params_1d['tr'] #mean storm duration [s]
+    tb = df_params_1d['tb'] #mean interstorm duration [s]
+    ds = df_params_1d['ds'] #mean storm depth [m]
+    T_h = df_params_1d['Nt']*(tr+tb) #total hydrological time [s]
+
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
 #initialize grid
-dx = grid.dx
-mg = RasterModelGrid(grid.shape, xy_spacing=dx)
+mg = RasterModelGrid(grid.shape, xy_spacing=grid.dx)
 mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
                               left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
 z = mg.add_zeros('node', 'topographic__elevation')
