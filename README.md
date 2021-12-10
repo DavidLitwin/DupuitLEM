@@ -22,7 +22,9 @@ Dependencies:
 Citations:
 
 *Citation for GroundwaterDupuitPercolator:*
+
 Litwin, D., Tucker, G., Barnhart, K., & Harman, C. (2020). GroundwaterDupuitPercolator: A Landlab component for groundwater flow. Journal of Open Source Software, 5(46), 1935. https://doi.org/10.21105/joss.01935
 
 *Citation for DupuitLEM:*
+
 Litwin, D. G., Barnhart, K. R., Tucker, G. E., & Harman, C. J. (2021). DupuitLEM: groundwater landscape evolution with landlab. Zenodo. https://doi.org/10.5281/zenodo.4727916
