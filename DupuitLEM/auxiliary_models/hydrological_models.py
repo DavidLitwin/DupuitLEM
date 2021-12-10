@@ -718,7 +718,6 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         # precip/recharge spatially-averaged properties
         areas = self._grid.cell_area_at_node[cores]
         obn = self._grid.open_boundary_nodes
-        area_tot = np.sum(areas)
         self.cum_precip = 0.0
         self.cum_recharge = 0.0
         self.cum_exfiltration = 0.0

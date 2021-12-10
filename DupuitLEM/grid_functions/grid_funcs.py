@@ -9,7 +9,6 @@ Date: 16 March 2020
 
 import numpy as np
 from landlab.grid.mappers import map_mean_of_link_nodes_to_link
-from landlab import LinkStatus
 
 
 def bind_avg_hydraulic_conductivity(ks, k0, dk):
