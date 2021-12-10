@@ -1,28 +1,28 @@
 # DupuitLEM
 
-DupuitLEM is a set of interchangeable models built with landlab components to
-explore the effects of groundwater on landscape evolution and the hydrological
-properties of the resulting landscapes. All models account for hillslope
-diffusion  and fluvial incision that results from groundwater return flow and
-precipitation on saturated areas.
+DupuitLEM is a set of interchangeable models built with [landlab](https://github.com/landlab/landlab) components to explore the effects of groundwater on landscape evolution and the
+hydrological properties of the resulting landscapes. All models consider fluvial
+incision driven by runoff from groundwater return flow and precipitation on
+saturated areas, hillslope diffusion, and baselevel change.
 
-There are two types of core models:
-1. `StreamPowerModel`: Use the landlab component `FastscapeEroder` to determine the
-amount of fluvial incision that will occur.
-2. `ShearStressModel`: Use an internal method based upon average shear stress to
-determine the amount of incision that will occur. This model uses an Euler step
-method that is explicit in time, making it unstable and not advisable to use at
-this time.
-
-Core models take instantiated components to update landscape properties. For
-hillslope diffusion and streampower erosion, this is simply a landlab component.
-For uplift and regolith production, a `RegolithModel` is used. A `HydrologicalModel`
-is used to update discharge or shear stress fields.  
+The core model class is the `StreamPowerModel`. The core model takes
+instantiated components to update the geomorphic and hydrological states. For
+hillslope diffusion and streampower erosion, landlab components are supplied.
+A `HydrologicalModel` is used to update the hydrological state and determine
+discharge for the fluvial erosion model. Uplift an regolith production are handled
+together by a `RegolithModel`, as both processes affect the boundary conditions
+of the hydrological model.
 
 Scripts are then used to instantiate the model and its components, and ultimately
 run them on an HPC or local computer.
 
 Dependencies:
 - landlab > 2.0
-- numpy
-- pandas
+
+Citations:
+
+*Citation for GroundwaterDupuitPercolator:*
+Litwin, D., Tucker, G., Barnhart, K., & Harman, C. (2020). GroundwaterDupuitPercolator: A Landlab component for groundwater flow. Journal of Open Source Software, 5(46), 1935. https://doi.org/10.21105/joss.01935
+
+*Citation for DupuitLEM:*
+Litwin, D. G., Barnhart, K. R., Tucker, G. E., & Harman, C. J. (2021). DupuitLEM: groundwater landscape evolution with landlab. Zenodo. https://doi.org/10.5281/zenodo.4727916

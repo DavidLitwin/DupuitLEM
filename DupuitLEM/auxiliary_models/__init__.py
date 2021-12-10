@@ -1,7 +1,4 @@
 from .hydrological_models import (
-    HydrologyIntegrateShearStress,
-    HydrologyEventShearStress,
-    HydrologySteadyShearStress,
     HydrologyEventStreamPower,
     HydrologySteadyStreamPower,
     HydrologyEventVadoseStreamPower,

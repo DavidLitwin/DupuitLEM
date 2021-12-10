@@ -1,5 +1,5 @@
 """
-ShearStressModel class of DupuitLEM. Core model for use.
+StreamPowerModel class of DupuitLEM. Core model for use.
 
 Author: David Litwin
 
@@ -169,7 +169,7 @@ class StreamPowerModel:
 
             while remaining_time > 0.0:
                 substep_dt = min(remaining_time, dt_m_max)
-                # run linear diffusion, erosion
+                # run diffusion, erosion
                 self.dm.run_one_step(substep_dt)
                 self.sp.run_one_step(substep_dt)
 
@@ -180,7 +180,7 @@ class StreamPowerModel:
                 self.num_substeps += 1
 
         else:
-            # run linear diffusion, erosion
+            # run diffusion, erosion
             self.dm.run_one_step(dt_m)
             self.sp.run_one_step(dt_m)
 
