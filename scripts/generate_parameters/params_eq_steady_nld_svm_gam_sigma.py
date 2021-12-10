@@ -5,13 +5,17 @@ Generate parameters for StreamPowerModel with
 -- TaylorNonLinearDiffuser
 -- RegolithConstantThickness
 
-Use a 1D hillslope model to determine a recharge_efficiency 'RE' when varying
-gamma and sigma.
+This script generates the uses a 1D hillslope model to determine a
+recharge_efficiency 'RE' when varying gamma and sigma, and then assumes that
+this recharge rate will be applied to a steady recharge DupuitLEM model. This
+allows us to compare the steady and stochastic models that are close to equivalent.
 
-Recharge efficiency is the ratio of total recharge to total precipitation,
-averaged over space and time. This accounts for time-varying recharge with
-precipitation rate, unsat storage and ET, as well as space-varying
-recharge with water table depth.
+alpha = hg / lg
+gamma = (b ksat hg) / (p lg^2)
+Hi = (ksat hg^2) / (p lg^2)
+sigma = (b n) / (p (tr + tb))
+rho = tr / (tr + tb)
+ai = p / pet
 
 6 Dec 2021
 """

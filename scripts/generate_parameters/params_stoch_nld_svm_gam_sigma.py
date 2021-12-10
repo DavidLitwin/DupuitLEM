@@ -1,9 +1,18 @@
 """
 Generate parameters for StreamPowerModel with
--- HydrologySteadyStreamPower
+-- HydrologyEventVadoseStreamPower
 -- FastscapeEroder
 -- TaylorNonLinearDiffuser
 -- RegolithConstantThickness
+
+Vary gamma and sigma.
+
+alpha = hg / lg
+gamma = (b ksat hg) / (p lg^2)
+Hi = (ksat hg^2) / (p lg^2)
+sigma = (b n) / (p (tr + tb))
+rho = tr / (tr + tb)
+ai = p / pet
 
 6 Dec 2021
 """
