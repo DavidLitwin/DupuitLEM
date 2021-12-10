@@ -96,8 +96,13 @@ plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
 plt.close()
 
 ########## Run hydrological model
-df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
-df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
+try:
+    df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
+    df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
+except FileNotFoundError:
+    df_params = pickle.load(open('./parameters.p','rb'))
+    df_params = df_params.iloc[ID]
+    df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
 
 Ks = df_params['ksat'] # hydraulic conductivity [m/s]
 p = df_params['p'] # recharge rate [m/s]
@@ -252,5 +257,5 @@ output_fields = shared_out+raster_out if isinstance(mg, RasterModelGrid) else sh
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
-pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
+df_output.to_csv('../post_proc/%s/output_ID_%d.csv'%(base_output_path, ID))
 r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))

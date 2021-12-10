@@ -6,7 +6,6 @@ update for new stochastic models
 
 import os
 import glob
-import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -454,7 +453,7 @@ output_fields = [
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
-pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
-pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
+df_output.to_csv('../post_proc/%s/output_ID_%d.csv'%(base_output_path, ID))
+df.to_csv('../post_proc/%s/q_s_dt_ID_%d.csv'%(base_output_path, ID))
 df_z_change.to_csv('../post_proc/%s/z_change_%d.csv'%(base_output_path, ID))
 r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))

@@ -53,21 +53,25 @@ plt.close()
 
 ########## Run hydrological model
 # load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
-df_params = pickle.load(open('./parameters.p','rb'))
-params = df_params.iloc[ID]
-pickle.dump(params, open('../post_proc/%s/params_ID_%d.p'%(base_output_path,ID),'wb'))
+try:
+    df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
+    df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
+except FileNotFoundError:
+    df_params = pickle.load(open('./parameters.p','rb'))
+    df_params = df_params.iloc[ID]
+    df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
 
-Ks = df_params['ksat'][ID] #hydraulic conductivity [m/s]
-n = df_params['n'][ID] #drainable porosity [-]
-b = df_params['b'][ID] #characteristic depth  [m]
-p = df_params['p'][ID] #average precipitation rate [m/s]
-tr = df_params['tr'][ID] #mean storm duration [s]
-tb = df_params['tb'][ID] #mean interstorm duration [s]
-ds = df_params['ds'][ID] #mean storm depth [m]
-K = df_params['K'][ID]
+Ks = df_params['ksat'] #hydraulic conductivity [m/s]
+n = df_params['n'] #drainable porosity [-]
+b = df_params['b'] #characteristic depth  [m]
+p = df_params['p'] #average precipitation rate [m/s]
+tr = df_params['tr'] #mean storm duration [s]
+tb = df_params['tb'] #mean interstorm duration [s]
+ds = df_params['ds'] #mean storm depth [m]
+T_h = 50*df_params['Th'] #total hydrological time [s]
+K = df_params['K']
 Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
-E0 = df_params['E0'][ID]
-T_h = 50*df_params['Th'][ID] #total hydrological time [s]
+E0 = df_params['E0']
 
 #initialize grid
 dx = grid.dx
@@ -242,7 +246,7 @@ Q_event_sum = np.zeros(Q_all.shape[1])
 for i in range(1,len(Q_all)):
     if intensity[i] > 0.0:
         Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*df_params['p'][ID])
+qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*p)
 qstar_mean[np.isnan(qstar_mean)] = 0.0
 
 # mean and variance of water table
@@ -253,7 +257,7 @@ wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
 
 # water table and saturation at end of storm and interstorm
-thresh = 1e-10 #np.mean(mg.cell_area_at_node[grid.core_nodes])*df_params['p'][ID]
+thresh = 1e-10 #np.mean(mg.cell_area_at_node[grid.core_nodes])*p
 sat_all = (Q_all > thresh)
 wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
@@ -349,12 +353,12 @@ except:
 
 ####### calculate elevation change
 try:
-    output_interval = df_params['output_interval'][ID]
+    output_interval = df_params['output_interval']
 except KeyError:
     print('output_interval not in params table. Using default.')
-    output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)[ID]
+    output_interval = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
 
-dt = output_interval*df_params['dtg'][ID]
+dt = output_interval*df_params['dtg']
 
 z_change = np.zeros((len(files),6))
 relief_change = np.zeros((len(files), 2))
@@ -387,9 +391,9 @@ for i in range(1,len(files)):
 
 df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
 r_change = pd.DataFrame()
-r_change['r_nd'] = relief_change[:,0]/df_params['hg'][ID]
-r_change['drdt_nd'] = relief_change[:,1]*(df_params['tg'][ID]/df_params['hg'][ID])
-r_change['t_nd'] = np.arange(len(files))*(dt/df_params['tg'][ID])
+r_change['r_nd'] = relief_change[:,0]/df_params['hg']
+r_change['drdt_nd'] = relief_change[:,1]*(df_params['tg'] /df_params['hg'] )
+r_change['t_nd'] = np.arange(len(files))*(dt/df_params['tg'] )
 
 
 ####### save things
@@ -425,7 +429,7 @@ output_fields = [
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
-pickle.dump(df_output, open('../post_proc/%s/output_ID_%d.p'%(base_output_path, ID), 'wb'))
-pickle.dump(df, open('../post_proc/%s/q_s_dt_ID_%d.p'%(base_output_path, ID), 'wb'))
+df_output.to_csv('../post_proc/%s/output_ID_%d.csv'%(base_output_path, ID))
+df.to_csv('../post_proc/%s/q_s_dt_ID_%d.csv'%(base_output_path, ID))
 df_z_change.to_csv('../post_proc/%s/z_change_%d.csv'%(base_output_path, ID))
 r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
