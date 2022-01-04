@@ -767,7 +767,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
                 max(self.interstorm_dts[i], 1e-15)
             )
             _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = q.copy()
+            q2 = q.copy()
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
