@@ -99,7 +99,7 @@ hg = 2.25
 lg = 15 # geomorphic length scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
 n = 0.1 # drainable porosity [-]
-p = 1.0/(365*24*3600) # steady recharge rate
+p = 1.0/(365*24*3600) # average precip rate
 
 # for recharge estimation
 lam = 10

@@ -89,14 +89,15 @@ rho = 0.03
 hg = 2.25
 lg = 15 # geomorphic length scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
+v0 = 2.0*lg # contour width (also grid spacing) [m]
 n = 0.1 # drainable porosity [-]
-p = 1.0/(365*24*3600) # steady recharge rate
+p = 1.0/(365*24*3600) # average precip rate
 
 Srange = 0.2 # range of relative saturation
 Nz = 500 # number of bins in vadose model
 
 params = []
-for sigma, gam in product(sigma_all, rho_all):
+for sigma, rho in product(sigma_all, rho_all):
     params.append(generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai))
 
 df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'sigma', 'rho', 'ai'])

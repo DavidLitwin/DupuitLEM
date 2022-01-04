@@ -88,8 +88,9 @@ rho = 0.03
 hg = 2.25
 lg = 15 # geomorphic length scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
+v0 = 2.0*lg # contour width (also grid spacing) [m]
 n = 0.1 # drainable porosity [-]
-p = 1.0/(365*24*3600) # steady recharge rate
+p = 1.0/(365*24*3600) # average precip rate
 
 Srange = 0.2 # range of relative saturation
 Nz = 500 # number of bins in vadose model
