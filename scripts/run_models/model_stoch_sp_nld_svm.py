@@ -168,7 +168,7 @@ svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
                         available_relative_saturation=Srange,
                         profile_depth=b,
                         porosity=n,
-                        num_bins=Nz,
+                        num_bins=int(Nz),
 )
 hm = HydrologyEventVadoseStreamPower(grid,
                                     precip_generator=pdr,

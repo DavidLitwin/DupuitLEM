@@ -89,6 +89,7 @@ Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
 Srange = 0.2 # range of relative saturation
 Nz = 500 # number of bins in vadose model
+Nx = 125 # number of grid cells width and height
 
 params = []
 for sigma, rho in product(sigma_all, rho_all):
@@ -97,6 +98,7 @@ for sigma, rho in product(sigma_all, rho_all):
 df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'sigma', 'rho', 'ai'])
 df_params['Sc'] = sc
 df_params['Nz'] = Nz
+df_params['Nx'] = Nx
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
