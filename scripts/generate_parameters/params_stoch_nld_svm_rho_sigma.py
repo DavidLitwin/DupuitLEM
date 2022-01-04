@@ -74,7 +74,6 @@ ai = 0.5
 sc = 0.5
 hi = 5.0
 gam = 2.0
-rho = 0.03
 hg = 2.25
 lg = 15 # geomorphic length scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
