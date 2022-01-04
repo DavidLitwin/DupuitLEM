@@ -20,18 +20,7 @@ ai = p / pet
 import os
 import numpy as np
 from itertools import product
-import pandas as pd
-
-from landlab import RasterModelGrid
-from landlab.components import (
-    GroundwaterDupuitPercolator,
-    PrecipitationDistribution,
-    )
-
-from DupuitLEM.auxiliary_models import (
-    HydrologyEventVadoseStreamPower,
-    SchenkVadoseModel,
-    )
+import pandas
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -93,6 +82,11 @@ v0 = 2.0*lg # contour width (also grid spacing) [m]
 n = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # average precip rate
 
+Tg_nd = 2000 # total duration in units of tg [-]
+dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
+ksf_base = 500 # morphologic scaling factor
+Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
+
 Srange = 0.2 # range of relative saturation
 Nz = 500 # number of bins in vadose model
 
@@ -102,6 +96,7 @@ for sigma, rho in product(sigma_all, rho_all):
 
 df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'sigma', 'rho', 'ai'])
 df_params['Sc'] = sc
+df_params['Nz'] = Nz
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
@@ -113,4 +108,4 @@ df_params['dtg'] = df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['output_interval'] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
 
-df_params.to_csv('parameters.csv', index=True)
+df_params.loc[ID].to_csv('parameters.csv', index=True)
