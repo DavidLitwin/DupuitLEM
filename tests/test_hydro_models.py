@@ -100,8 +100,8 @@ def test_stoch_sp_raster():
 
     hm.run_step()
 
-    assert_almost_equal(hm.q_eff[4], 0.00017614)
-    assert_almost_equal(hm.q_an[4], 0.00017614 / 10.0)
+    assert_almost_equal(hm.q_eff[4], 0.000352283)
+    assert_almost_equal(hm.q_an[4], 0.000352283 / 10.0)
 
 
 def test_stoch_sp_hex():
@@ -137,9 +137,9 @@ def test_stoch_sp_hex():
 
     hm.run_step()
 
-    assert_almost_equal(hm.q_eff[4], 0.00017614 * np.sqrt(3) / 2)
+    assert_almost_equal(hm.q_eff[4], 0.000352283 * np.sqrt(3) / 2)
     assert_almost_equal(
-        hm.q_an[4], 0.00017614 * np.sqrt(3) / 2 / np.sqrt(np.sqrt(3) / 2 * 100)
+        hm.q_an[4], 0.000352283 * np.sqrt(3) / 2 / np.sqrt(np.sqrt(3) / 2 * 100)
     )
 
 
@@ -239,8 +239,8 @@ def test_stoch_sp_threshold_raster_null():
 
     hm.run_step()
 
-    assert_almost_equal(hm.q_eff[4], 0.00017614)
-    assert_almost_equal(hm.q_an[4], 0.00017614 / 10.0)
+    assert_almost_equal(hm.q_eff[4], 0.000352283)
+    assert_almost_equal(hm.q_an[4], 0.000352283 / 10.0)
 
 
 def test_stoch_sp_threshold_hex():
@@ -278,9 +278,9 @@ def test_stoch_sp_threshold_hex():
 
     hm.run_step()
 
-    assert_almost_equal(hm.q_eff[4], 0.00017614 * np.sqrt(3) / 2)
+    assert_almost_equal(hm.q_eff[4], 0.000352283 * np.sqrt(3) / 2)
     assert_almost_equal(
-        hm.q_an[4], 0.00017614 * np.sqrt(3) / 2 / np.sqrt(np.sqrt(3) / 2 * 100)
+        hm.q_an[4], 0.000352283 * np.sqrt(3) / 2 / np.sqrt(np.sqrt(3) / 2 * 100)
     )
 
 
@@ -369,11 +369,10 @@ def test_stoch_sp_threshold_above_threshold():
 
     storm_dt = 1.4429106411  # storm duration
     storm_q = 0.0244046740  # accumulated q before threshold effect subtracted
-    interstorm_q = 0.0  # interstorm q is zero in this case
+    # interstorm_q = 0.0  # interstorm q is zero in this case
     assert_almost_equal(
         hm.q_eff[4],
-        0.5
-        * (max(interstorm_q - hm.Q0[4], 0) + max(storm_q - hm.Q0[4], 0))
+        max(storm_q - hm.Q0[4], 0)
         * storm_dt
         / hm.T_h,
     )
