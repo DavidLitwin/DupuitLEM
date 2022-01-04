@@ -52,11 +52,13 @@ from landlab.components import (
     GroundwaterDupuitPercolator,
     TaylorNonLinearDiffuser,
     FastscapeEroder,
+    PrecipitationDistribution,
     )
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
-    HydrologySteadyStreamPower,
+    HydrologyEventVadoseStreamPower,
     RegolithConstantThickness,
+    SchenkVadoseModel,
     )
 
 #slurm info
@@ -85,6 +87,7 @@ D = df_params['D']
 U = df_params['U']
 hg = df_params['hg']
 Sc = df_params['Sc']
+Nz = df_params['Nz']
 
 Th = df_params['Th']
 Tg = df_params['Tg']
