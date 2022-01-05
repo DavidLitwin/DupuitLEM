@@ -257,5 +257,6 @@ output_fields = shared_out+raster_out if isinstance(mg, RasterModelGrid) else sh
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
 
+df_output = pd.DataFrame.from_dict(df_output, orient='index', columns=[ID])
 df_output.to_csv('../post_proc/%s/output_ID_%d.csv'%(base_output_path, ID))
 r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
