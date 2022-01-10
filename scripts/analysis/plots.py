@@ -42,7 +42,7 @@ from landlab.io.netcdf import from_netcdf
 
 # directories
 save_directory = 'C:/Users/dgbli/Documents/Papers/Ch1_groundwater_landscape_evolution/figs'
-directory = 'C:/Users/dgbli/Documents/Research Data/HPC output/DupuitLEMResults/post_proc'
+directory = 'C:/Users/dgbli/Documents/Research Data/HPC output/DupuitLEMResults/post_proc/paper1_archive'
 
 #%% NoHyd: scaling with varying hg and lg
 
@@ -102,8 +102,8 @@ for i, ax in subplots.items():
     else:
         ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
 
-plt.savefig('%s/hs_hg_lg_simple_lem.png'%save_directory, dpi=300)
-
+# plt.savefig('%s/hs_hg_lg_simple_lem.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/hs_hg_lg_simple_lem.eps', dpi=300)
 
 mean_rel_diff_all= []
 abs_diff_all = []
@@ -175,8 +175,8 @@ for i, ax in subplots.items():
     else:
         ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
         
-plt.savefig('%s/hs_hg_lg_simple_lem_XS.png'%save_directory, dpi=300)
-
+# plt.savefig('%s/hs_hg_lg_simple_lem_XS.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/hs_hg_lg_simple_lem_XS.pdf', dpi=300)
 
 #%% DupuitLEM Hi=5: scaling with varying hg and lg
 
@@ -237,8 +237,8 @@ for i, ax in subplots.items():
     else:
         ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
         
-plt.savefig('%s/hs_hg_lg_steady_sp.png'%save_directory, dpi=300)
-
+# plt.savefig('%s/hs_hg_lg_steady_sp.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/hs_hg_lg_steady_sp.pdf', dpi=300)
 
 # constant alpha: [0,4,6]
 # bottom row: [0,3,5]
@@ -334,7 +334,8 @@ for i, ax in subplots.items():
 
         ax.indicate_inset_zoom(axins)
 # plt.tight_layout()
-plt.savefig('%s/hs_hg_lg_steady_sp_XS.png'%save_directory, dpi=300)
+# plt.savefig('%s/hs_hg_lg_steady_sp_XS.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/hs_hg_lg_steady_sp_XS.pdf', dpi=300)
 
 #%% DupuitLEM Hi=0.01: scaling with varying hg and lg
 
@@ -396,7 +397,8 @@ for i, ax in subplots.items():
     else:
         ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
         
-plt.savefig('%s/hs_hg_lg_steady_sp_low_lam.png'%save_directory, dpi=300)
+# plt.savefig('%s/hs_hg_lg_steady_sp_low_lam.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/hs_hg_lg_steady_sp_low_lam.pdf', dpi=300)
 
 # bottom row: [0,3,5]
 # vertical coulumn: [0,1,2]
@@ -475,8 +477,8 @@ for i, ax in subplots.items():
         ax.set_ylabel(r'$h_g=%.2f$ m'%hg)
         
 
-plt.savefig('%s/hs_hg_lg_steady_sp_low_lam_XS.png'%save_directory, dpi=300)
-
+# plt.savefig('%s/hs_hg_lg_steady_sp_low_lam_XS.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/hs_hg_lg_steady_sp_low_lam_XS.pdf', dpi=300)
 
 #%% DupuitLEM: vary Hi for large values of Hi
 
@@ -512,7 +514,8 @@ for i, ax in enumerate(axs):
     ax.set_xlabel(r'$x/\ell_g$')
 axs[0].set_ylabel(r'$y/\ell_g$')
 fig.tight_layout()
-plt.savefig('%s/steady_sp_high_hi.png'%save_directory, dpi=300)
+# plt.savefig('%s/steady_sp_high_hi.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/steady_sp_high_hi.pdf', dpi=300)
 
 mean_rel1 = np.mean(elev_star_all[2])
 mean_rel2 = np.mean(elev_star_all[3])
@@ -552,8 +555,8 @@ for i, ax in enumerate(axs):
     ax.set_xlabel(r'$x/\ell_g$')
 axs[0].set_ylabel(r'$z/h_g$')  
 fig.tight_layout()
-plt.savefig('%s/steady_sp_high_hi_XS.png'%save_directory, dpi=300)
-
+# plt.savefig('%s/steady_sp_high_hi_XS.png'%save_directory, dpi=300)
+plt.savefig('pdf_figs/steady_sp_high_hi_XS.pdf', dpi=300)
 
 #%% DupuitLEM: vary gamma and Hi (formerly lambda), load results
 
@@ -618,7 +621,8 @@ for i in plot_runs:
 # axs[-1, 0].set_ylabel(r'$y/\ell_g$')
 # axs[-1, 0].set_xlabel(r'$x/\ell_g$')
 plt.subplots_adjust(left=0.15, bottom=0.15, right=None, top=None, wspace=0.15, hspace=0.15)
-plt.savefig('%s/hillshade_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/hillshade_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/hillshade_%s.png'%base_output_path, dpi=300)
 
 
 #%% DupuitLEM: vary gamma and Hi (formerly lambda), cross sections
@@ -661,8 +665,8 @@ for i in plot_runs:
 # axs[-1, 0].set_ylabel(r'$z/h_g$')
 # axs[-1, 0].set_xlabel(r'$x/\ell_g$')
 plt.tight_layout()
-plt.savefig('%s/cross_section_%s.png'%(save_directory, base_output_path), dpi=300)
-
+# plt.savefig('%s/cross_section_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/cross_section_%s.pdf'%base_output_path, dpi=300)
 
 #%% DupuitLEM: vary gamma and Hi (formerly lambda), map view qstar
 
@@ -715,7 +719,8 @@ cbar_ax = fig.add_axes([0.85, 0.15, 0.02, 0.7]) #Left, Bottom, Width, Height
 fig.colorbar(im, cax=cbar_ax, label=r"$Q^*$")
 # axs[-1, 0].set_ylabel(r'$y/\ell_g$')
 # axs[-1, 0].set_xlabel(r'$x/\ell_g$')
-plt.savefig('%s/qstar_%s.png'%(save_directory, base_output_path), dpi=600)
+# plt.savefig('%s/qstar_%s.png'%(save_directory, base_output_path), dpi=600)
+plt.savefig('pdf_figs/qstar_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: vary gamma and Hi (formerly lambda), CDF of Q*
 
@@ -752,7 +757,8 @@ plt.subplots_adjust(wspace=0.35, hspace=0.2)
 axs[-1, 0].set_ylabel('CDF')
 axs[-1, 0].set_xlabel('$Q^*$')
 # axs[-1, 0].legend(frameon=False, loc=4)
-plt.savefig('%s/qstar_cdf_%s.png'%(save_directory, base_output_path), dpi=600)
+# plt.savefig('%s/qstar_cdf_%s.png'%(save_directory, base_output_path), dpi=600)
+plt.savefig('pdf_figs/qstar_cdf_%s.pdf'%base_output_path, dpi=300)
 
 #%% DupuitLEM: vary gamma and Hi, Q* and curvature probabilities
 
@@ -803,8 +809,8 @@ ax.add_artist(legend0)
 
 
 plt.tight_layout()
-plt.savefig('%s/qstar_cond_%s.png'%(save_directory, base_output_path), dpi=600)
-
+# plt.savefig('%s/qstar_cond_%s.png'%(save_directory, base_output_path), dpi=600)
+plt.savefig('pdf_figs/qstar_cond_%s.pdf'%base_output_path, dpi=300)
 
 #%% NoHyd: slope-area and steepness-curvature
 
@@ -863,8 +869,8 @@ axs[1].set_xlabel(r"$\sqrt{a'} |\nabla' z'|$")
 axs[1].set_ylabel(r"$\nabla'^{2} z'$")
 axs[1].legend(frameon=False)
 plt.tight_layout()
-plt.savefig('%s/steep_curv_slope_area_%s.png'%(save_directory, base_output_path), dpi=300)
-
+# plt.savefig('%s/steep_curv_slope_area_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/steep_curv_slope_area_%s.pdf'%base_output_path, dpi=300)
 
 #%% DupuitLEM: map view steepness
 
@@ -920,7 +926,8 @@ cbar = fig.colorbar(im, cax=cbar_ax)
 cbar.set_label(label=r"$\sqrt{a'} |\nabla' z'|$", size=14)
 axs[-1, 0].set_ylabel(r'$y/\ell_g$', fontsize=12)
 axs[-1, 0].set_xlabel(r'$x/\ell_g$', fontsize=12)
-plt.savefig('%s/steepness_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/steepness_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/steepness_%s.pdf'%base_output_path, dpi=300)
 
 #%% DupuitLEM: map view curvature
 
@@ -975,7 +982,8 @@ for i in plot_runs:
 plt.subplots_adjust(wspace=0.4, hspace=0.15, right=0.85)
 axs[-1, 0].set_ylabel(r'$y/\ell_g$', fontsize=12)
 axs[-1, 0].set_xlabel(r'$x/\ell_g$', fontsize=12)
-plt.savefig('%s/curvature_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/curvature_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/curvature_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: map view topographic index
 
@@ -1033,7 +1041,8 @@ cbar.set_label(label=r"$a'/(|\nabla' z'| \cos^2 \theta)$", size=14)
 axs[-1, 0].set_ylabel(r'$y/\ell_g$', fontsize=12)
 axs[-1, 0].set_xlabel(r'$x/\ell_g$', fontsize=12)
 plt.savefig('%s/TI_%s.png'%(save_directory, base_output_path), dpi=300)
- 
+plt.savefig('pdf_figs/TI_%s.pdf'%base_output_path, dpi=300)
+plt.savefig('pdf_figs/TI_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: aggregate view slope area
 
@@ -1088,7 +1097,8 @@ ax_cb = plt.axes(rect_cb)
 cbar = fig.colorbar(sc, cax=ax_cb, orientation="vertical")
 cbar.solids.set_edgecolor("face")
 cbar.set_label(label=r'$Q^*$', size=14)
-plt.savefig('%s/slope_area_qstar_%s.png'%(save_directory, base_output_path), dpi=300) 
+# plt.savefig('%s/slope_area_qstar_%s.png'%(save_directory, base_output_path), dpi=300) 
+plt.savefig('pdf_figs/slope_area_qstar_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: aggregate view steepness curvature
 
@@ -1148,7 +1158,8 @@ cbar = fig.colorbar(sc, cax=ax_cb, orientation="vertical")
 cbar.set_label(label=r'$Q^*$', size=14)
 cbar.solids.set_edgecolor("face")
 axs[0,0].legend(facecolor='w', edgecolor='w', fontsize=8, loc=(0.05,0.7))
-plt.savefig('%s/curv_steep_qstar_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/curv_steep_qstar_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/curv_steep_qstar_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: aggregate view TI curvature
 
@@ -1202,7 +1213,8 @@ ax_cb = plt.axes(rect_cb)
 cbar = fig.colorbar(sc, cax=ax_cb, label=r'$Q^*$', orientation="vertical")
 cbar.solids.set_edgecolor("face")
 # plt.tight_layout()
-plt.savefig('%s/curv_twi_qstar_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/curv_twi_qstar_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/curv_twi_qstar_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: aggregate view TI Q*
 
@@ -1259,8 +1271,8 @@ cbar = fig.colorbar(cm.ScalarMappable(norm=TwoSlopeNorm(0.0, vmin=-1.1, vmax=5),
 cbar.solids.set_edgecolor("face")
 cbar.set_label(label=r"$\nabla'^{2} z'$", size=14)
 # plt.tight_layout()
-plt.savefig('%s/twi_qstar_curv_%s.png'%(save_directory, base_output_path), dpi=300)
-
+# plt.savefig('%s/twi_qstar_curv_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/twi_qstar_curv_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: geomorphic balance
 
@@ -1314,10 +1326,11 @@ for i in plot_runs:
 
 plt.subplots_adjust(wspace=0.35, hspace=0.2)
 axs[-1, 0].legend(facecolor='w', edgecolor='w', loc=8, fontsize=7)
-axs[-1, 0].set_xlabel('RHS')
-axs[-1, 0].set_ylabel('$Q^*$')
+axs[-1, 0].set_xlabel('RHS', fontsize=8)
+axs[-1, 0].set_ylabel('$Q^*$', fontsize=8)
 fig.suptitle('Geomorphic Balance', fontsize=14, y=0.94)
-plt.savefig('%s/geomorphic_balance_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/geomorphic_balance_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/geomorphic_balance_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: hydrologic balance
 
@@ -1387,10 +1400,11 @@ for i in plot_runs:
 
 plt.subplots_adjust(wspace=0.35, hspace=0.2)
 fig.suptitle('Hydrologic Balance', fontsize=14, y=0.94)
-axs[-1, 0].set_xlabel('RHS')
-axs[-1, 0].set_ylabel('$Q^*$')
+axs[-1, 0].set_xlabel('RHS', fontsize=8)
+axs[-1, 0].set_ylabel('$Q^*$', fontsize=8)
 axs[-1, 0].legend(facecolor='w', edgecolor='w', loc=8, fontsize=7)
-plt.savefig('%s/hydrologic_balance_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/hydrologic_balance_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/hydrologic_balance_%s.png'%base_output_path, dpi=300)
 
 #%% DupuitLEM: hydromorphic balance 3D manifold
 
@@ -1440,7 +1454,7 @@ def add_manifold_plot(base_output_path, i, ax, steep_range, ti_range):
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_zticklabels([])
-    ax.view_init(elev=5., azim=190)
+    ax.view_init(elev=5., azim=250)
     # ax.view_init(elev=30., azim=230)
     return ax, sc
 
@@ -1451,6 +1465,8 @@ ti = np.geomspace(5,1e7, 100)
 add_manifold_plot('steady_sp_3_18', 29, ax, steep, ti)
 # ax.set_title(r"$\gamma=5.0$")
 plt.savefig('%s/manifold_%s_%d_1.png'%(save_directory,'steady_sp_3_18', 29), dpi=300)
+# plt.savefig('pdf_figs/manifold_%s_%d_1.pdf'%('steady_sp_3_18', 29), dpi=300)
+
 
 fig = plt.figure(figsize=(4,4))
 ax = fig.add_subplot(1, 1, 1, projection='3d')
@@ -1460,6 +1476,7 @@ ax, sc = add_manifold_plot('steady_sp_3_18', 24, ax, steep, ti)
 # fig.colorbar(sc, label=r'$Q^*$')
 # ax.set_title(r"$\gamma=0.5$")
 plt.savefig('%s/manifold_%s_%d_1.png'%(save_directory, 'steady_sp_3_18', 24), dpi=300)
+# plt.savefig('pdf_figs/manifold_%s_%d_1.pdf'%('steady_sp_3_18', 24), dpi=300)
 
 fig = plt.figure(figsize=(4,4))
 ax = fig.add_subplot(1, 1, 1, projection='3d')
@@ -1472,6 +1489,7 @@ ax, sc = add_manifold_plot('simple_lem_5_5', 0, ax, steep, ti)
 # ax.set_ylabel(r"log($a'/(|\nabla' z'| \cos^2 \theta)$)")
 # ax.set_zlabel(r"$\nabla'^{2} z'$")
 plt.savefig('%s/manifold_%s_%d_1.png'%(save_directory, 'simple_lem_5_5', 0), dpi=300)
+# plt.savefig('pdf_figs/manifold_%s_%d_1.pdf'%('simple_lem_5_5', 0), dpi=300)
 
 #%% DupuitLEM: load data for hillslope length
 
@@ -1549,7 +1567,8 @@ ax.add_artist(legend0)
 
 
 plt.tight_layout()
-plt.savefig('%s/length_scales_%s.png'%(save_directory, base_output_path), dpi=300)
+# plt.savefig('%s/length_scales_%s.png'%(save_directory, base_output_path), dpi=300)
+plt.savefig('pdf_figs/length_scales_%s.pdf'%(base_output_path), dpi=300)
 
 #%% steady state relief condition
 
@@ -1581,3 +1600,14 @@ ax[0].set_yscale('log')
 ax[1].set_yscale('log')
 plt.tight_layout()
 plt.savefig('%s/steady_state_cond_%s.png'%(save_directory, base_output_path), dpi=300)
+
+
+#%%
+
+a = np.array([[0,1]])
+plt.figure(figsize=(1.0, 2.0))
+img = plt.imshow(a, cmap="plasma")
+plt.gca().set_visible(False)
+cax = plt.axes([0.1, 0.1, 0.15, 0.8])
+plt.colorbar(orientation="vertical", cax=cax, label='$Q^*$')
+plt.savefig("pdf_figs/colorbar.pdf", dpi=300)
