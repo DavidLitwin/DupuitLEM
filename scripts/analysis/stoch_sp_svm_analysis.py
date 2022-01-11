@@ -6,6 +6,7 @@ update for new stochastic models
 
 import os
 import glob
+import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -49,8 +50,13 @@ plt.close()
 
 ########## Run hydrological model
 # load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
-df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
-df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
+try:
+    df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
+    df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
+except FileNotFoundError:
+    df_params = pickle.load(open('./parameters.p','rb'))
+    df_params = df_params.iloc[ID]
+    df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
 
 Ks = df_params['ksat'] #hydraulic conductivity [m/s]
 n = df_params['n'] #drainable porosity [-]
