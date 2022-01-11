@@ -192,7 +192,7 @@ Nx_lem = 125
 Tg_nd = 2000 # total duration in units of tg [-]
 dtg_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
-Th_nd = 50 # hydrologic time in units of (tr+tb) [-]
+Th_nd = 5 # hydrologic time in units of von neumann timescale [-]
 output_interval = 1000
 
 fields = ['D', 'U', 'hg', 'lg', 'tg', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'tr', 'tb', 'ds', 'pet', 'Srange']
@@ -206,7 +206,7 @@ df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params[
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
-df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time [s]
+df_params['Th'] = Th_nd*(df_params['n']*df_params['v0']**2)/(4*df_params['ksat']*df_params['b']) #von neumann cond time [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 df_params['output_interval'] = output_interval
 

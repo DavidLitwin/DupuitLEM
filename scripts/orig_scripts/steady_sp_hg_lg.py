@@ -83,7 +83,7 @@ df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params[
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
-df_params['Th'] = Th_nd*(df_params['n']*0.8*df_params['lg'])/(4*df_params['ksat']*df_params['b']) # hydrologic simulation time [s]
+df_params['Th'] = Th_nd*(df_params['n']*df_params['v0']**2)/(4*df_params['ksat']*df_params['b']) #von neumann cond time [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 pickle.dump(df_params, open('parameters.p','wb'))
 
