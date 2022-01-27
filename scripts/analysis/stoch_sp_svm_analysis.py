@@ -178,7 +178,7 @@ TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 ######## Runoff generation
 df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
-df_output['cum_exfiltration'] = hm.cum_exfiltration
+df_output['cum_runoff'] = hm.cum_runoff
 
 """ratio of total recharge to total precipitation, averaged over space and time.
 this accounts for time varying recharge with precipitation rate, unsat
