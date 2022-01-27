@@ -227,7 +227,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             self.gdp.recharge = intensity
             self.gdp.run_with_adaptive_time_step_solver(storm_dt)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q1 = q.copy()
+            q1 = q.copy()
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
@@ -235,14 +235,14 @@ class HydrologyEventStreamPower(HydrologicalModel):
             # run interevent, accumulate flow
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
-            # _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = q.copy()
+            _, q = self.fa.accumulate_flow(update_flow_director=False)
+            q2 = q.copy()
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += q * storm_dt
+            q_total_vol += (q1 * storm_dt + q2 * interstorm_dt)
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = np.divide(
@@ -325,7 +325,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
                 max(self.interstorm_dts[i], 1e-15)
             )
             _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = q.copy()
+            q2 = q.copy()
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
@@ -339,7 +339,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             ]
 
             # volume of runoff contributed during timestep
-            q_total_vol += q1 * self.storm_dts[i]
+            q_total_vol += (q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i])
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = np.divide(
@@ -452,15 +452,15 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
             # run interevent, accumulate flow
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
-            # _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = np.maximum(q - self.Q0, 0.0)
+            _, q = self.fa.accumulate_flow(update_flow_director=False)
+            q2 = np.maximum(q - self.Q0, 0.0)
             # print('interstorm q:%f, q2:%f'%(q[4], q2[4]))
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += q1 * storm_dt
+            q_total_vol += (q1 * storm_dt + q2 * interstorm_dt)
             # print('storm dt:%f'%storm_dt)
 
         self.q_eff[:] = q_total_vol / self.T_h
@@ -556,7 +556,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
                 max(self.interstorm_dts[i], 1e-15)
             )
             _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = np.maximum(q - self.Q0, 0.0)
+            q2 = np.maximum(q - self.Q0, 0.0)
             # print('interstorm q:%f, q2:%f'%(q[4], q2[4]))
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
@@ -571,7 +571,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
             ]
 
             # volume of runoff contributed during timestep
-            q_total_vol += q1 * self.storm_dts[i]
+            q_total_vol += (q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i])
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = np.divide(
@@ -639,7 +639,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.gdp.recharge = self.r
             self.gdp.run_with_adaptive_time_step_solver(storm_dt)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q1 = q.copy()
+            q1 = q.copy()
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
@@ -649,14 +649,14 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.svm.run_interevent(interstorm_dt)
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
-            # _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = q.copy()
+            _, q = self.fa.accumulate_flow(update_flow_director=False)
+            q2 = q.copy()
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += q * storm_dt
+            q_total_vol += (q1 * storm_dt + q2 * interstorm_dt)
 
         # set effective runoff rates
         self.q_eff[:] = q_total_vol / self.T_h
@@ -792,7 +792,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += q1 * self.storm_dts[i]
+            q_total_vol += (q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i])
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = np.divide(
@@ -934,15 +934,15 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             self.svm.run_interevent(interstorm_dt)
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
-            # _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = np.maximum(q - self.Q0, 0.0)
+            _, q = self.fa.accumulate_flow(update_flow_director=False)
+            q2 = np.maximum(q - self.Q0, 0.0)
             # print('interstorm q:%f, q2:%f'%(q[4], q2[4]))
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += q1 * storm_dt
+            q_total_vol += (q1 * storm_dt + q2 * interstorm_dt)
             # print('storm dt:%f'%storm_dt)
 
         self.q_eff[:] = q_total_vol / self.T_h
@@ -1080,7 +1080,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
                 max(self.interstorm_dts[i], 1e-15)
             )
             _, q = self.fa.accumulate_flow(update_flow_director=False)
-            # q2 = np.maximum(q - self.Q0, 0.0)
+            q2 = np.maximum(q - self.Q0, 0.0)
             # print('interstorm q:%f, q2:%f'%(q[4], q2[4]))
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
@@ -1106,7 +1106,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             )
 
             # volume of runoff contributed during timestep
-            q_total_vol += q1 * self.storm_dts[i]
+            q_total_vol += (q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i])
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = np.divide(
