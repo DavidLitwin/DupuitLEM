@@ -72,6 +72,9 @@ T_h = 50*df_params['Th'] #total hydrological time [s]
 K = df_params['K']
 Ksp = K/p #see governing equation. If the discharge field is (Q/sqrt(A)) then streampower coeff is K/p
 E0 = df_params['E0']
+hg = df_params['hg']
+
+sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
 #initialize grid
 dx = grid.dx
@@ -257,8 +260,7 @@ wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
 
 # water table and saturation at end of storm and interstorm
-thresh = 1e-10 #np.mean(mg.cell_area_at_node[grid.core_nodes])*p
-sat_all = (Q_all > thresh)
+sat_all = (elev_all-wt_all) < sat_cond*hg
 wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
 wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
 sat_end_interstorm = mg.add_zeros('node', 'sat_mean_end_interstorm')
