@@ -759,7 +759,7 @@ def test_stoch_sp_vadose_threshold_below_threshold():
     assert_almost_equal(hm.q_eff[4], 0.0)
 
 
-def test_stoch_sp_threshold_above_threshold():
+def test_stoch_sp_vadose_threshold_above_threshold():
     """
     Test the stochastic event model with stream power threshold in which
     the one core node is set up to exceed erosion threshold for the value
