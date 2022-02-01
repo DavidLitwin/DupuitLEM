@@ -7,7 +7,7 @@ This script runs the StreamPowerModel with:
 
 ------
 Parameters must be supplied in CSV file, 'parameters.csv'. The CSV file must
-have a header with the number corresponding to the 'SLURM_ARRAY_TASK_ID' and 
+have a header with the number corresponding to the 'SLURM_ARRAY_TASK_ID' and
 must contain at least the following columns:
 
 ksat: Saturated hydraulic conductivity (m/s)
@@ -28,6 +28,7 @@ Nx: number of nodes in x and y dimension (if grid not supplied)
 
 Optional:
 RE: recharge efficiency (-) If supplied, recharge rate is p*RE.
+E0: streampower incision threshold.
 
 -------
 Starting grid can be supplied as NETCDF4 created with landlab, 'grid.nc' with
@@ -89,6 +90,10 @@ try:
 except KeyError:
     print("no recharge efficiency 'RE' provided. Using RE = 1.0")
     RE = 1.0
+try:
+    E0 = df_params['E0']
+except KeyError:
+    E0 = 0.0
 
 output = {}
 output["output_interval"] = df_params['output_interval']
@@ -163,6 +168,7 @@ sp = FastscapeEroder(grid,
         m_sp=1,
         n_sp=1,
         discharge_field="surface_water_area_norm__discharge",
+        threshold_sp=E0,
 )
 rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 

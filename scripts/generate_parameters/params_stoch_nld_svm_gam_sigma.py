@@ -13,6 +13,7 @@ Hi = (ksat hg^2) / (p lg^2)
 sigma = (b n) / (p (tr + tb))
 rho = tr / (tr + tb)
 ai = p / pet
+theta = E0 tg / hg
 
 6 Dec 2021
 """
@@ -41,6 +42,9 @@ def b_fun(hg, gam, hi):
 def ksat_fun(p, hg, lg, hi):
     return (lg**2*p*hi)/hg**2
 
+def E0_fun(theta, hg, tg):
+    return theta*(hg/tg)
+
 def ds_fun(hg, n, gam, sigma, hi):
     return (hg*n*gam)/(hi*sigma)
 
@@ -50,7 +54,7 @@ def tr_fun(hg, p, n, gam, sigma, hi, rho):
 def tb_fun(hg, p, n, gam, sigma, hi, rho):
     return (hg*n*gam)*(1-rho)/(p*sigma*hi)
 
-def generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai):
+def generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai, theta):
 
     alpha = hg/lg
     K = K_fun(v0, lg, tg)
@@ -58,12 +62,13 @@ def generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai):
     U = U_fun(hg, tg)
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
+    E0 = E0_fun(theta, hg, tg)
     ds = ds_fun(hg, n, gam, sigma, hi)
     tr = tr_fun(hg, p, n, gam, sigma, hi, rho)
     tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
     pet = ai*p
 
-    return K, D, U, ksat, p, pet, b, n, v0, hg, lg, tg, ds, tr, tb, alpha, gam, hi, sigma, rho, ai
+    return K, D, U, ksat, p, pet, b, n, v0, hg, lg, tg, E0, ds, tr, tb, alpha, gam, hi, sigma, rho, ai, theta
 
 
 # params for both hyd1d recharge estimation and lem
@@ -72,6 +77,7 @@ gam_all = np.array([1.0, 2.0, 4.0, 8.0, 16.0])
 
 ai = 0.5
 sc = 0.5
+theta = 0.0
 hi = 0.5
 rho = 0.03
 hg = 2.25
@@ -92,9 +98,9 @@ Nx = 125 # number of grid cells width and height
 
 params = []
 for sigma, gam in product(sigma_all, gam_all):
-    params.append(generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai))
+    params.append(generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai, theta))
 
-df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'sigma', 'rho', 'ai'])
+df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'E0', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'sigma', 'rho', 'ai', 'theta'])
 df_params['Sc'] = sc
 df_params['Nz'] = Nz
 df_params['Nx'] = Nx

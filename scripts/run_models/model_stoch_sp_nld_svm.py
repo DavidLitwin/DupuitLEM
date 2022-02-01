@@ -30,6 +30,9 @@ output_interval: how frequently grid will be saved (timesteps)
 v0: grid spacing (m) (if grid not supplied)
 Nx: number of nodes in x and y dimension (if grid not supplied)
 
+Optional:
+E0: streampower incision coefficient
+
 -------
 Starting grid can be supplied as NETCDF4 created with landlab, 'grid.nc' with
 fields:
@@ -93,6 +96,11 @@ Th = df_params['Th']
 Tg = df_params['Tg']
 ksf = df_params['ksf']
 dtg_max = df_params['dtg_max']
+
+try:
+    E0 = df_params['E0']
+except KeyError:
+    E0 = 0.0
 
 output = {}
 output["output_interval"] = df_params['output_interval']
@@ -170,11 +178,20 @@ svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
                         porosity=n,
                         num_bins=int(Nz),
 )
-hm = HydrologyEventVadoseStreamPower(grid,
-                                    precip_generator=pdr,
-                                    groundwater_model=gdp,
-                                    vadose_model=svm,
-)
+if E0 > 0.0:
+    hm = HydrologyEventVadoseThresholdStreamPower(grid,
+                                        precip_generator=pdr,
+                                        groundwater_model=gdp,
+                                        vadose_model=svm,
+                                        sp_threshold=E0,
+                                        sp_coefficient=Ksp
+    )
+else:
+    hm = HydrologyEventVadoseStreamPower(grid,
+                                        precip_generator=pdr,
+                                        groundwater_model=gdp,
+                                        vadose_model=svm,
+    )
 sp = FastscapeEroder(grid,
                     K_sp=Ksp,
                     m_sp=1,
