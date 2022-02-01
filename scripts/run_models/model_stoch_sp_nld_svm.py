@@ -60,6 +60,7 @@ from landlab.components import (
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
     HydrologyEventVadoseStreamPower,
+    HydrologyEventVadoseThresholdStreamPower,
     RegolithConstantThickness,
     SchenkVadoseModel,
     )
