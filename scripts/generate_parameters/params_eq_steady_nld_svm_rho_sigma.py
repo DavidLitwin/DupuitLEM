@@ -98,8 +98,8 @@ rho_all = np.array([0.05, 0.1, 0.2, 0.4, 0.8])
 
 ai = 0.5
 sc = 0.5
-theta = 0.0
-hi = 0.5
+theta = 2.0
+hi = 5.0
 gam = 2.0
 hg = 2.25
 lg = 15 # geomorphic length scale [m]
