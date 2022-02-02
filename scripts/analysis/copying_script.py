@@ -5,7 +5,7 @@ import shutil
 
 input_name = input('Source run name:')
 output_name = input('Output run name:')
-N = input('Number of runs:')
+N = int(input('Number of runs:'))
 
 home = '~/data_charman1/DupuitLEMResults'
 
