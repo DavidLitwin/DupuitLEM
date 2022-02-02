@@ -46,6 +46,7 @@ at node.
 """
 
 import os
+import glob
 import numpy as np
 import pandas
 
@@ -115,7 +116,10 @@ output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 try:
-    mg = from_netcdf('grid.nc')
+    paths = glob.glob('*.nc')
+    if len(paths) > 1:
+        print("more than one grid available. Using last in list")
+    mg = from_netcdf(paths[-1])
     z = mg.at_node['topographic__elevation']
     zb = mg.at_node['aquifer_base__elevation']
     zwt = mg.at_node['water_table__elevation']
