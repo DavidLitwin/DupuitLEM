@@ -123,7 +123,6 @@ try:
     z = mg.at_node['topographic__elevation']
     zb = mg.at_node['aquifer_base__elevation']
     zwt = mg.at_node['water_table__elevation']
-    print("Using supplied initial grid")
 
     grid = RasterModelGrid(mg.shape, xy_spacing=mg.dx)
     grid.set_status_at_node_on_edges(
@@ -138,6 +137,8 @@ try:
     base[:] = zb.copy()
     wt = grid.add_zeros('node', 'water_table__elevation')
     wt[:] = zwt.copy()
+
+    print("Using supplied initial grid")
 
 except:
     print("Initial grid not present or could not be read. Initializing new grid.")
