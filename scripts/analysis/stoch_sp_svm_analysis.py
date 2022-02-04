@@ -265,20 +265,11 @@ df_output['RR'] = qe_tot/r_tot #runoff ratio
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
-qstar_mean = mg.add_zeros('node', 'qstar_mean_no_interevent')
 
 # recharge
 recharge = hm.r_all[1:,:]
 recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
 recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
-
-# mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
-Q_event_sum = np.zeros(Q_all.shape[1])
-for i in range(1,len(Q_all)):
-    if intensity[i] > 0.0:
-        Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*p)
-qstar_mean[np.isnan(qstar_mean)] = 0.0
 
 # mean and variance of water table
 wt_all = hm.wt_all[1:,:]
@@ -446,7 +437,7 @@ output_fields = [
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',
-        'at_node:qstar_mean_no_interevent',
+        'at_node:surface_water_effective__discharge',
         'at_node:recharge_rate_mean_storm',
         'at_node:wtrel_mean_end_storm',
         'at_node:wtrel_mean_end_interstorm',
