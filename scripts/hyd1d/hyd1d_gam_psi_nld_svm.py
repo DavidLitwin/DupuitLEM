@@ -189,7 +189,7 @@ hm.run_step_record_state()
 ############ Analysis ############
 df_output = {}
 
-######## Runoff generation
+######### Runoff generation
 # find times with rain. Note in df qs and S are at the end of the timestep.
 # i is at the beginning of the timestep. Assumes timeseries starts with rain.
 # df = pd.read_csv('./gdp_flux_state_%d.csv'%ID, sep=',',header=None, names=['dt','r', 'qs', 'S', 'qs_nodes'])
@@ -207,19 +207,14 @@ storage and ET, as well as spatially variable recharge with water table depth.
 """
 df_output['recharge_efficiency'] = hm.cum_recharge / hm.cum_precip
 
-# effective Qstar
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
-qstar_mean = grid.add_zeros('node', 'qstar_mean_no_interevent')
 
-# mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
-Q_event_sum = np.zeros(Q_all.shape[1])
-for i in range(1,len(Q_all)):
-    if intensity[i] > 0.0:
-        Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(grid.at_node['drainage_area']*df_params['p'][ID])
-qstar_mean[np.isnan(qstar_mean)] = 0.0
+# recharge
+recharge = hm.r_all[1:,:]
+recharge_event = grid.add_zeros('node', 'recharge_rate_mean_storm')
+recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
 
 # mean and variance of water table
 wt_all = hm.wt_all[1:,:]
@@ -298,7 +293,7 @@ output_fields = [
         "at_node:saturation_probability",
         "at_node:saturation_entropy",
         "at_node:sat_unsat_union_probability",
-        "at_node:qstar_mean_no_interevent",
+        "at_node:recharge_rate_mean_storm",
         ]
 
 #print("analysis finished")
