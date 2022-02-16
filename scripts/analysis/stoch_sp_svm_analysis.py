@@ -314,7 +314,8 @@ sat_prob = mg.add_zeros('node', 'saturation_probability')
 sat_entropy = mg.add_zeros('node', 'saturation_entropy')
 sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
 sat_entropy[:] = calc_entropy(sat_prob)
-df_output['entropy_sat_variable'] = np.sum(sat_entropy[sat_variable])
+sat_entropy[np.isnan(sat_entropy)] = 0.0
+df_output['sat_entropy'] = np.sum(sat_entropy[mg.core_nodes])
 
 # second method: interstorm-storm unsat-sat probability
 sat_unsat_prob = mg.add_zeros('node', 'sat_unsat_union_probability')
