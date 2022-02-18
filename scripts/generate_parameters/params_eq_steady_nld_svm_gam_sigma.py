@@ -110,8 +110,8 @@ p = 1.0/(365*24*3600) # average precip rate
 # for recharge estimation
 lam = 10
 Srange = 0.2 # range of relative saturation
-Nz = 500 # number of bins in vadose model
-Nt = 2000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
+Nz = 5000 # number of bins in vadose model
+Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
 for sigma, gam in product(sigma_all, gam_all):
@@ -195,9 +195,9 @@ RE = hm.cum_recharge / hm.cum_precip # recharge efficiency
 v0_nd = 2.0 # contour width (also grid spacing)
 Nx_lem = 125
 
-Tg_nd = 2000 # total duration in units of tg [-]
+Tg_nd = 1500 # total duration in units of tg [-]
 dtg_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
-ksf_base = 500 # morphologic scaling factor
+ksf_base = 2000 # morphologic scaling factor
 Th_nd = 5 # hydrologic time in units of von neumann timescale [-]
 output_interval = 1000
 

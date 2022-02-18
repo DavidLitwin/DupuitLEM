@@ -93,7 +93,7 @@ ksf_base = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
 Srange = 0.2 # range of relative saturation
-Nz = 500 # number of bins in vadose model
+Nz = 5000 # number of bins in vadose model
 Nx = 125 # number of grid cells width and height
 
 params = []
