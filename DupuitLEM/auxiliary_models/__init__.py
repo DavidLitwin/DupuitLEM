@@ -3,6 +3,7 @@ from .hydrological_models import (
     HydrologySteadyStreamPower,
     HydrologyEventVadoseStreamPower,
     HydrologyEventThresholdStreamPower,
+    HydrologyEventVadoseThresholdStreamPower,
 )
 from .regolith_models import (
     RegolithConstantThickness,

@@ -118,8 +118,8 @@ gdp = GroundwaterDupuitPercolator(mg,
           hydraulic_conductivity=Ks,
           regularization_f=0.01,
           recharge_rate=p,
-          courant_coefficient=0.01, #*Ks/1e-5,
-          vn_coefficient = 0.01, #*Ks/1e-5,
+          courant_coefficient=0.1, #*Ks/1e-5,
+          vn_coefficient = 0.1, #*Ks/1e-5,
 )
 
 hm = HydrologySteadyStreamPower(
@@ -250,7 +250,7 @@ shared_out = [
         'at_node:gw_flux_out_max',
         'at_node:gw_flux_in_max',
         'at_link:groundwater__specific_discharge',
-        'at_node:average_surface_water__specific_discharge',
+        'at_node:surface_water__discharge',
         ]
 
 output_fields = shared_out+raster_out if isinstance(mg, RasterModelGrid) else shared_out + hex_out

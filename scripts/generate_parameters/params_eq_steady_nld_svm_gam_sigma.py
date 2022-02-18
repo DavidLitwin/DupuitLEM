@@ -16,6 +16,7 @@ Hi = (ksat hg^2) / (p lg^2)
 sigma = (b n) / (p (tr + tb))
 rho = tr / (tr + tb)
 ai = p / pet
+theta = E0 tg / hg
 
 6 Dec 2021
 """
@@ -56,6 +57,9 @@ def b_fun(hg, gam, hi):
 def ksat_fun(p, hg, lg, hi):
     return (lg**2*p*hi)/hg**2
 
+def E0_fun(theta, hg, tg):
+    return theta*(hg/tg)
+
 # additional for recharge estimation:
 def ds_fun(hg, n, gam, sigma, hi):
     return (hg*n*gam)/(hi*sigma)
@@ -73,19 +77,20 @@ def calc_z(x, Sc, U, D):
     return -Sc**2/(2*U) * (t1 - t2)
 
 #generate dimensioned parameters
-def generate_params_hyd1d(hg, lg, tg, p, n, Sc, gam, hi, lam, sigma, rho, ai):
+def generate_params_hyd1d(hg, lg, tg, p, n, Sc, gam, hi, lam, sigma, rho, ai, theta):
 
     Lh = lam*lg
     D = D_fun(lg, tg)
     U = U_fun(hg, tg)
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
+    E0 = E0_fun(theta, hg, tg)
     ds = ds_fun(hg, n, gam, sigma, hi)
     tr = tr_fun(hg, p, n, gam, sigma, hi, rho)
     tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
     pet = ai*p
 
-    return D, U, hg, lg, tg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, gam, hi, lam, sigma, rho, ai
+    return D, U, hg, lg, tg, E0, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, gam, hi, lam, sigma, rho, ai, theta
 
 # params for both hyd1d recharge estimation and lem
 sigma_all = np.array([8, 16, 32, 64, 128])
@@ -93,7 +98,8 @@ gam_all = np.array([1.0, 2.0, 4.0, 8.0, 16.0])
 
 ai = 0.5
 sc = 0.5
-hi = 0.5
+theta = 2.0
+hi = 5.0
 rho = 0.03
 hg = 2.25
 lg = 15 # geomorphic length scale [m]
@@ -109,9 +115,9 @@ Nt = 2000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
 for sigma, gam in product(sigma_all, gam_all):
-    params.append(generate_params_hyd1d(hg, lg, tg, p, n, sc, gam, hi, lam, sigma, rho, ai))
+    params.append(generate_params_hyd1d(hg, lg, tg, p, n, sc, gam, hi, lam, sigma, rho, ai, theta))
 
-df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg', 'Lh', 'Sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
+df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta'])
 df_params_1d['alpha'] = df_params_1d['hg']/df_params_1d['lg']
 df_params_1d['Srange'] = Srange
 df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt; df_params_1d['Nz'] = Nz
@@ -195,7 +201,7 @@ ksf_base = 500 # morphologic scaling factor
 Th_nd = 5 # hydrologic time in units of von neumann timescale [-]
 output_interval = 1000
 
-fields = ['D', 'U', 'hg', 'lg', 'tg', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'tr', 'tb', 'ds', 'pet', 'Srange']
+fields = ['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'tr', 'tb', 'ds', 'pet', 'Srange']
 df_params = df_params_1d.loc[ID,fields]
 df_params['RE'] = RE
 df_params['v0'] = v0_nd*df_params['lg']

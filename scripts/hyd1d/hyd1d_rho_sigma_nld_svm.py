@@ -49,11 +49,10 @@ def calc_z(x, Sc, U, D):
     return -Sc**2/(2*U) * (t1 - t2)
 
 #generate dimensioned parameters
-def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
+def generate_parameters(U, lg, hg, p, n, Sc, gam, hi, lam, sigma, rho, ai):
 
     Lh = lam*lg
-    alpha = kappa/lam
-    hg = alpha*lg
+    alpha = hg/lg
     D = U*lg**2/hg
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
@@ -62,31 +61,32 @@ def generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai):
     tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
     pet = ai*p
 
-    return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, kappa, gam, hi, lam, sigma, rho, ai
+    return D, U, hg, lg, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, alpha, gam, hi, lam, sigma, rho, ai
 
-kappa_all = np.array([0.1, 0.2, 0.4, 0.8, 1.6, 3.2]) # kappa = alpha*lam = hg/lg^2 * Lh
-gam_all = np.geomspace(0.25,16,13)
-Sc_all = np.array([1000.0, 1.0, 0.5])
+sigma_all = np.geomspace(8,128,13)
+rho_all = np.geomspace(0.03, 0.96, 13)
 
 hi = 5.0
-sigma = 32
-rho = 0.03
-ai = 0.0
-lg = 15 # geomorphic length scale [m]
+gam = 4.0
+ai = 0.5
 lam = 10
+lg = 15 # geomorphic length scale [m]
+hg = 2.25
+#kappa = 1.5 # kappa = alpha*lam = hg/lg^2 * Lh
+Sc = 0.5
 n = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # steady recharge rate
 U = 1e-4 # m/yr
 Srange = 0.2 # range of relative saturation
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 Nz = 500 # number of bins in vadose model
-Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
+Nt = 8000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
-for kappa, gam, Sc in product(kappa_all, gam_all, Sc_all):
-    params.append(generate_parameters(U, lg, p, n, Sc, kappa, gam, hi, lam, sigma, rho, ai))
+for sigma, rho in product(sigma_all, rho_all):
+    params.append(generate_parameters(U, lg, hg, p, n, Sc, gam, hi, lam, sigma, rho, ai))
 
-df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'kappa', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
+df_params = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'Lh', 'sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'alpha', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai'])
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['Srange'] = Srange
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
@@ -192,7 +192,7 @@ df_output = {}
 
 df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
-df_output['cum_exfiltration'] = hm.cum_exfiltration
+df_output['cum_runoff'] = hm.cum_runoff
 
 """ratio of total recharge to total precipitation, averaged over space and time.
 this accounts for time varying recharge with precipitation rate, unsat
@@ -200,19 +200,15 @@ storage and ET, as well as spatially variable recharge with water table depth.
 """
 df_output['recharge_efficiency'] = hm.cum_recharge / hm.cum_precip
 
-# effective Qstar
+
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
-qstar_mean = grid.add_zeros('node', 'qstar_mean_no_interevent')
 
-# mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
-Q_event_sum = np.zeros(Q_all.shape[1])
-for i in range(1,len(Q_all)):
-    if intensity[i] > 0.0:
-        Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(grid.at_node['drainage_area']*df_params['p'][ID])
-qstar_mean[np.isnan(qstar_mean)] = 0.0
+# recharge
+recharge = hm.r_all[1:,:]
+recharge_event = grid.add_zeros('node', 'recharge_rate_mean_storm')
+recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
 
 # mean and variance of water table
 wt_all = hm.wt_all[1:,:]
@@ -291,7 +287,7 @@ output_fields = [
         "at_node:saturation_probability",
         "at_node:saturation_entropy",
         "at_node:sat_unsat_union_probability",
-        "at_node:qstar_mean_no_interevent",
+        "at_node:recharge_rate_mean_storm",
         ]
 
 #print("analysis finished")

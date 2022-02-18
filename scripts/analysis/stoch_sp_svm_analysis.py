@@ -9,6 +9,7 @@ import glob
 import pickle
 import numpy as np
 import pandas as pd
+import richdem as rd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
@@ -175,10 +176,33 @@ steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
 TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
 TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
+# richdem topo analysis
+z = mg.at_node['topographic__elevation']
+z[mg.boundary_nodes] = np.nan
+zrd = rd.rdarray(z.reshape(mg.shape), no_data=-9999)
+zrd.geotransform = [0.0, mg.dx, 0.0, 0.0, 0.0, mg.dx]
+
+profile_curvature = rd.TerrainAttribute(zrd, attrib='profile_curvature')
+planform_curvature = rd.TerrainAttribute(zrd, attrib='planform_curvature')
+curvature = rd.TerrainAttribute(zrd, attrib='curvature')
+slope = rd.TerrainAttribute(zrd, attrib='slope_riserun')
+
+slp = mg.add_zeros('node', "slope_rd")
+slp[:] = slope.reshape(z.shape)
+
+pro = mg.add_zeros('node', "profile_curvature_rd")
+pro[:] = -profile_curvature.reshape(z.shape) #flip sign of profile curv
+
+plan = mg.add_zeros('node', "planform_curvature_rd")
+plan[:] = planform_curvature.reshape(z.shape)
+
+curv = mg.add_zeros('node', "total_curvature_rd")
+curv[:] = curvature.reshape(z.shape)
+
 ######## Runoff generation
 df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
-df_output['cum_exfiltration'] = hm.cum_exfiltration
+df_output['cum_runoff'] = hm.cum_runoff
 
 """ratio of total recharge to total precipitation, averaged over space and time.
 this accounts for time varying recharge with precipitation rate, unsat
@@ -251,9 +275,9 @@ qe = df['qs'] - df['qb']
 
 # integrate to find total values. trapezoidal for the properties that
 # change dynamically, and simple rectangular for i bc we know rain varies in this way.
-qe_tot = np.trapz(qe, df['t'])
-qb_tot = np.trapz(qb, df['t'])
-qs_tot = np.trapz(df['qs'], df['t'])
+qe_tot = np.sum(df['dt'] * qe)
+qb_tot = np.sum(df['dt'] * qb)
+qs_tot = np.sum(df['dt'] * df['qs'])
 r_tot = np.sum(df['dt'] * df['r'])
 
 df_output['BFI'] = qb_tot/qs_tot #baseflow index
@@ -265,20 +289,11 @@ df_output['RR'] = qe_tot/r_tot #runoff ratio
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
-qstar_mean = mg.add_zeros('node', 'qstar_mean_no_interevent')
 
 # recharge
 recharge = hm.r_all[1:,:]
 recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
 recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
-
-# mean Q based on the geomorphic definition - only Q during storm events does geomorphic work
-Q_event_sum = np.zeros(Q_all.shape[1])
-for i in range(1,len(Q_all)):
-    if intensity[i] > 0.0:
-        Q_event_sum += 0.5*(Q_all[i,:]+Q_all[i-1,:])*dt[i]
-qstar_mean[:] = (Q_event_sum/np.sum(dt[1:]))/(mg.at_node['drainage_area']*p)
-qstar_mean[np.isnan(qstar_mean)] = 0.0
 
 # mean and variance of water table
 wt_all = hm.wt_all[1:,:]
@@ -323,7 +338,8 @@ sat_prob = mg.add_zeros('node', 'saturation_probability')
 sat_entropy = mg.add_zeros('node', 'saturation_entropy')
 sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
 sat_entropy[:] = calc_entropy(sat_prob)
-df_output['entropy_sat_variable'] = np.sum(sat_entropy[sat_variable])
+sat_entropy[np.isnan(sat_entropy)] = 0.0
+df_output['sat_entropy'] = np.sum(sat_entropy[mg.core_nodes])
 
 # second method: interstorm-storm unsat-sat probability
 sat_unsat_prob = mg.add_zeros('node', 'sat_unsat_union_probability')
@@ -446,7 +462,11 @@ output_fields = [
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',
-        'at_node:qstar_mean_no_interevent',
+        'at_node:slope_rd',
+        'at_node:profile_curvature_rd',
+        'at_node:planform_curvature_rd',
+        'at_node:total_curvature_rd',
+        'at_node:surface_water_effective__discharge',
         'at_node:recharge_rate_mean_storm',
         'at_node:wtrel_mean_end_storm',
         'at_node:wtrel_mean_end_interstorm',
@@ -454,6 +474,7 @@ output_fields = [
         'at_node:sat_mean_end_interstorm',
         'at_node:Q_mean_end_storm',
         'at_node:Q_mean_end_interstorm',
+        'at_node:surface_water_effective__discharge',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)

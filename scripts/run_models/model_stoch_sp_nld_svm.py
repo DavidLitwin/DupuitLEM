@@ -30,6 +30,9 @@ output_interval: how frequently grid will be saved (timesteps)
 v0: grid spacing (m) (if grid not supplied)
 Nx: number of nodes in x and y dimension (if grid not supplied)
 
+Optional:
+E0: streampower incision coefficient
+
 -------
 Starting grid can be supplied as NETCDF4 created with landlab, 'grid.nc' with
 fields:
@@ -43,6 +46,7 @@ at node.
 """
 
 import os
+import glob
 import numpy as np
 import pandas
 
@@ -57,6 +61,7 @@ from landlab.components import (
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
     HydrologyEventVadoseStreamPower,
+    HydrologyEventVadoseThresholdStreamPower,
     RegolithConstantThickness,
     SchenkVadoseModel,
     )
@@ -94,6 +99,11 @@ Tg = df_params['Tg']
 ksf = df_params['ksf']
 dtg_max = df_params['dtg_max']
 
+try:
+    E0 = df_params['E0']
+except KeyError:
+    E0 = 0.0
+
 output = {}
 output["output_interval"] = df_params['output_interval']
 output["output_fields"] = [
@@ -106,11 +116,13 @@ output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
 try:
-    mg = from_netcdf('grid.nc')
+    paths = glob.glob('*.nc')
+    if len(paths) > 1:
+        print("more than one grid available. Using last in list")
+    mg = from_netcdf(paths[-1])
     z = mg.at_node['topographic__elevation']
     zb = mg.at_node['aquifer_base__elevation']
     zwt = mg.at_node['water_table__elevation']
-    print("Using supplied initial grid")
 
     grid = RasterModelGrid(mg.shape, xy_spacing=mg.dx)
     grid.set_status_at_node_on_edges(
@@ -125,6 +137,8 @@ try:
     base[:] = zb.copy()
     wt = grid.add_zeros('node', 'water_table__elevation')
     wt[:] = zwt.copy()
+
+    print("Using supplied initial grid")
 
 except:
     print("Initial grid not present or could not be read. Initializing new grid.")
@@ -170,11 +184,20 @@ svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
                         porosity=n,
                         num_bins=int(Nz),
 )
-hm = HydrologyEventVadoseStreamPower(grid,
-                                    precip_generator=pdr,
-                                    groundwater_model=gdp,
-                                    vadose_model=svm,
-)
+if E0 > 0.0:
+    hm = HydrologyEventVadoseThresholdStreamPower(grid,
+                                        precip_generator=pdr,
+                                        groundwater_model=gdp,
+                                        vadose_model=svm,
+                                        sp_threshold=E0,
+                                        sp_coefficient=Ksp
+    )
+else:
+    hm = HydrologyEventVadoseStreamPower(grid,
+                                        precip_generator=pdr,
+                                        groundwater_model=gdp,
+                                        vadose_model=svm,
+    )
 sp = FastscapeEroder(grid,
                     K_sp=Ksp,
                     m_sp=1,
