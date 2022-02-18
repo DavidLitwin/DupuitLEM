@@ -93,12 +93,12 @@ def generate_params_hyd1d(hg, lg, tg, p, n, Sc, gam, hi, lam, sigma, rho, ai, th
     return D, U, hg, lg, tg, E0, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, gam, hi, lam, sigma, rho, ai, theta
 
 # params for both hyd1d recharge estimation and lem
-sigma_all = np.array([8, 16, 32, 64, 128])
-gam_all = np.array([1.0, 2.0, 4.0, 8.0, 16.0])
+sigma_all = np.geomspace(8.0, 128.0, 12)
+gam_all = np.geomspace(2.0, 16.0, 12)
 
 ai = 0.5
 sc = 0.5
-theta = 2.0
+theta = 0.0
 hi = 5.0
 rho = 0.03
 hg = 2.25
