@@ -474,7 +474,6 @@ output_fields = [
         'at_node:sat_mean_end_interstorm',
         'at_node:Q_mean_end_storm',
         'at_node:Q_mean_end_interstorm',
-        'at_node:surface_water_effective__discharge',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
