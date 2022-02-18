@@ -110,7 +110,7 @@ p = 1.0/(365*24*3600) # average precip rate
 # for recharge estimation
 lam = 10
 Srange = 0.2 # range of relative saturation
-Nz = 5000 # number of bins in vadose model
+Nz = 500 # number of bins in vadose model
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
