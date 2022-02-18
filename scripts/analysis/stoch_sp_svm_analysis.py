@@ -9,6 +9,7 @@ import glob
 import pickle
 import numpy as np
 import pandas as pd
+import richdem as rd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
@@ -175,6 +176,29 @@ steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
 TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
 TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
+# richdem topo analysis
+z = mg.at_node['topographic__elevation']
+z[mg.boundary_nodes] = np.nan
+zrd = rd.rdarray(z.reshape(mg.shape), no_data=-9999)
+zrd.geotransform = [0.0, mg.dx, 0.0, 0.0, 0.0, mg.dx]
+
+profile_curvature = rd.TerrainAttribute(zrd, attrib='profile_curvature')
+planform_curvature = rd.TerrainAttribute(zrd, attrib='planform_curvature')
+curvature = rd.TerrainAttribute(zrd, attrib='curvature')
+slope = rd.TerrainAttribute(zrd, attrib='slope_riserun')
+
+slp = mg.add_zeros('node', "slope_rd")
+slp[:] = slope.reshape(z.shape)
+
+pro = mg.add_zeros('node', "profile_curvature_rd")
+pro[:] = -profile_curvature.reshape(z.shape) #flip sign of profile curv
+
+plan = mg.add_zeros('node', "planform_curvature_rd")
+plan[:] = planform_curvature.reshape(z.shape)
+
+curv = mg.add_zeros('node', "total_curvature_rd")
+curv[:] = curvature.reshape(z.shape)
+
 ######## Runoff generation
 df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
@@ -251,9 +275,9 @@ qe = df['qs'] - df['qb']
 
 # integrate to find total values. trapezoidal for the properties that
 # change dynamically, and simple rectangular for i bc we know rain varies in this way.
-qe_tot = np.trapz(qe, df['t'])
-qb_tot = np.trapz(qb, df['t'])
-qs_tot = np.trapz(df['qs'], df['t'])
+qe_tot = np.sum(df['dt'] * qe)
+qb_tot = np.sum(df['dt'] * qb)
+qs_tot = np.sum(df['dt'] * df['qs'])
 r_tot = np.sum(df['dt'] * df['r'])
 
 df_output['BFI'] = qb_tot/qs_tot #baseflow index
@@ -438,6 +462,10 @@ output_fields = [
         'at_node:drainage_area',
         'at_node:curvature',
         'at_node:steepness',
+        'at_node:slope_rd',
+        'at_node:profile_curvature_rd',
+        'at_node:planform_curvature_rd',
+        'at_node:total_curvature_rd',
         'at_node:surface_water_effective__discharge',
         'at_node:recharge_rate_mean_storm',
         'at_node:wtrel_mean_end_storm',
