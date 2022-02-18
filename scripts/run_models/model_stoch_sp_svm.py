@@ -1,6 +1,6 @@
 """
 This script runs the StreamPowerModel with:
--- HydrologySteadyStreamPower
+-- HydrologyEventVadoseStreamPower
 -- FastscapeEroder
 -- TaylorNonLinearDiffuser
 -- RegolithConstantThickness
@@ -12,6 +12,10 @@ must contain at least the following columns:
 
 ksat: Saturated hydraulic conductivity (m/s)
 p: steady precip rate (m/s)
+pet: potential evapotranspiration rate (m/s)
+tr: mean storm duration (s)
+tb: mean interstorm duration (s)
+ds: mean storm depth (m)
 b: regolith thickness (m)
 n: drainable porosity (-)
 K: streampower incision coefficient (1/s)
@@ -27,8 +31,7 @@ v0: grid spacing (m) (if grid not supplied)
 Nx: number of nodes in x and y dimension (if grid not supplied)
 
 Optional:
-RE: recharge efficiency (-) If supplied, recharge rate is p*RE.
-E0: streampower incision threshold.
+E0: streampower incision coefficient
 
 -------
 Starting grid can be supplied as NETCDF4 created with landlab, 'grid.nc' with
@@ -53,11 +56,14 @@ from landlab.components import (
     GroundwaterDupuitPercolator,
     TaylorNonLinearDiffuser,
     FastscapeEroder,
+    PrecipitationDistribution,
     )
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
-    HydrologySteadyStreamPower,
+    HydrologyEventVadoseStreamPower,
+    HydrologyEventVadoseThresholdStreamPower,
     RegolithConstantThickness,
+    SchenkVadoseModel,
     )
 
 #slurm info
@@ -66,35 +72,40 @@ ID = int(task_id)
 
 try:
     df_params = pandas.read_csv('parameters.csv', index_col=0)[task_id]
-    # df = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)
 except FileNotFoundError:
     print("Supply a parameter file, 'parameters.csv' with column title equal to TASK_ID")
 
 # pull values for this run
 ksat = df_params['ksat']
 p = df_params['p']
+pet = df_params['pet']
+Srange = df_params['Srange']
 b = df_params['b']
 n = df_params['n']
+tr = df_params['tr']
+tb = df_params['tb']
+ds = df_params['ds']
 
 K = df_params['K']
 Ksp = K/p # precip rate from Q* goes in K
 D = df_params['D']
 U = df_params['U']
 hg = df_params['hg']
-Sc = df_params['Sc']
+Nz = df_params['Nz']
 
 Th = df_params['Th']
 Tg = df_params['Tg']
 ksf = df_params['ksf']
-try:
-    RE = df_params['RE']
-except KeyError:
-    print("no recharge efficiency 'RE' provided. Using RE = 1.0")
-    RE = 1.0
+dtg_max = df_params['dtg_max']
+
 try:
     E0 = df_params['E0']
 except KeyError:
     E0 = 0.0
+try:
+    Sc = df_params['Sc']
+except KeyError:
+    Sc = 0.0
 
 output = {}
 output["output_interval"] = df_params['output_interval']
@@ -103,7 +114,7 @@ output["output_fields"] = [
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
         ]
-output["base_output_path"] = './data/steady_sp_nld_'
+output["base_output_path"] = './data/stoch_sp_svm_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
@@ -115,7 +126,6 @@ try:
     z = mg.at_node['topographic__elevation']
     zb = mg.at_node['aquifer_base__elevation']
     zwt = mg.at_node['water_table__elevation']
-    print("Using supplied initial grid")
 
     grid = RasterModelGrid(mg.shape, xy_spacing=mg.dx)
     grid.set_status_at_node_on_edges(
@@ -130,6 +140,8 @@ try:
     base[:] = zb.copy()
     wt = grid.add_zeros('node', 'water_table__elevation')
     wt[:] = zwt.copy()
+
+    print("Using supplied initial grid")
 
 except:
     print("Initial grid not present or could not be read. Initializing new grid.")
@@ -149,42 +161,66 @@ except:
     wt = grid.add_zeros('node', 'water_table__elevation')
     wt[:] = elev.copy()
 
-#initialize components
+#initialize landlab components
 gdp = GroundwaterDupuitPercolator(grid,
-        porosity=n,
-        hydraulic_conductivity=ksat,
-        regularization_f=0.01,
-        recharge_rate=p*RE,
-        courant_coefficient=0.1,
-        vn_coefficient = 0.1,
+                                porosity=n,
+                                hydraulic_conductivity=ksat,
+                                regularization_f=0.01,
+                                recharge_rate=0.0,
+                                courant_coefficient=0.9,
+                                vn_coefficient = 0.9,
 )
-ld = TaylorNonLinearDiffuser(grid, linear_diffusivity=D, slope_crit=Sc, dynamic_dt=True)
-
-hm = HydrologySteadyStreamPower(
-        grid,
-        groundwater_model=gdp,
-        hydrological_timestep=Th,
+pdr = PrecipitationDistribution(grid,
+                                mean_storm_duration=tr,
+                                mean_interstorm_duration=tb,
+                                mean_storm_depth=ds,
+                                total_t=Th,
 )
+pdr.seed_generator(seedval=1235)
+if Sc > 0:
+    ld = TaylorNonLinearDiffuser(grid, linear_diffusivity=D, slope_crit=Sc, dynamic_dt=True)
+else:
+    ld = LinearDiffuser(grid, linear_diffusivity=D)
 
-# surface_water_area_norm__discharge (Q/sqrt(A)) = Q* p v0 sqrt(a)
+#initialize other models
+svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
+                        available_relative_saturation=Srange,
+                        profile_depth=b,
+                        porosity=n,
+                        num_bins=int(Nz),
+)
+if E0 > 0.0:
+    hm = HydrologyEventVadoseThresholdStreamPower(grid,
+                                        precip_generator=pdr,
+                                        groundwater_model=gdp,
+                                        vadose_model=svm,
+                                        sp_threshold=E0,
+                                        sp_coefficient=Ksp
+    )
+else:
+    hm = HydrologyEventVadoseStreamPower(grid,
+                                        precip_generator=pdr,
+                                        groundwater_model=gdp,
+                                        vadose_model=svm,
+    )
 sp = FastscapeEroder(grid,
-        K_sp=Ksp,
-        m_sp=1,
-        n_sp=1,
-        discharge_field="surface_water_area_norm__discharge",
-        threshold_sp=E0,
+                    K_sp=Ksp,
+                    m_sp=1,
+                    n_sp=1,
+                    discharge_field="surface_water_area_norm__discharge",
 )
 rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
 
 mdl = StreamPowerModel(grid,
-        hydrology_model=hm,
-        diffusion_model=ld,
-        erosion_model=sp,
-        regolith_model=rm,
-        morphologic_scaling_factor=ksf,
-        total_morphological_time=Tg,
-        verbose=True,
-        output_dict=output,
+                        hydrology_model=hm,
+                        diffusion_model=ld,
+                        erosion_model=sp,
+                        regolith_model=rm,
+                        morphologic_scaling_factor=ksf,
+                        maximum_morphological_dt=dtg_max,
+                        total_morphological_time=Tg,
+                        verbose=False,
+                        output_dict=output,
 )
 
 mdl.run_model()
