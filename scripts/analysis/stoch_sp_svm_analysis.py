@@ -184,7 +184,7 @@ zrd.geotransform = [0.0, mg.dx, 0.0, 0.0, 0.0, mg.dx]
 
 profile_curvature = rd.TerrainAttribute(zrd, attrib='profile_curvature')
 planform_curvature = rd.TerrainAttribute(zrd, attrib='planform_curvature')
-curvature = rd.TerrainAttribute(zrd, attrib='curvature')
+tot_curvature = rd.TerrainAttribute(zrd, attrib='curvature')
 slope = rd.TerrainAttribute(zrd, attrib='slope_riserun')
 
 slp = mg.add_zeros('node', "slope_rd")
@@ -197,7 +197,7 @@ plan = mg.add_zeros('node', "planform_curvature_rd")
 plan[:] = planform_curvature.reshape(z.shape)
 
 curv = mg.add_zeros('node', "total_curvature_rd")
-curv[:] = curvature.reshape(z.shape)
+curv[:] = tot_curvature.reshape(z.shape)
 
 ######## Runoff generation
 df_output['cum_precip'] = hm.cum_precip
