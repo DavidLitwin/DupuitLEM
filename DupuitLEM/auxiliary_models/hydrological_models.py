@@ -201,6 +201,42 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.interstorm_dts = interstorm_dts
         self.intensities = intensities
 
+    def initialize_record_state(self):
+        """Initialize fields that will be recorded after storms and interstorms"""
+
+        Ns = 2 * len(self.storm_dts) + 1
+        N = len(self.q_eff)
+        self.time = np.zeros(Ns)
+        self.intensity = np.zeros(Ns)
+        self.Q_all = np.zeros((Ns, N))        # all discharge
+        self.wt_all = np.zeros((Ns, N))        # water table elevation
+        self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
+        self.qs_all = np.zeros((Ns, N))        # all surface water specific discharge
+
+        self.max_substeps_storm = 0
+        self.max_substeps_interstorm = 0
+
+    def _record_event(self, i):
+        """Record event"""
+
+        self.time[i * 2 + 1] = self.time[i * 2] + self.storm_dts[i]
+        self.intensity[i * 2] = self.intensities[i]
+        self.Q_all[i * 2 + 1, :] = self._grid.at_node["surface_water__discharge"]
+        self.wt_all[i * 2 + 1, :] = self._grid.at_node["water_table__elevation"]
+        self.qs_all[i * 2 + 1, :] = self._grid.at_node[
+            "average_surface_water__specific_discharge"
+        ]
+
+    def _record_interevent(self, i):
+        """Record interevent"""
+
+        self.time[i * 2 + 2] = self.time[i * 2 + 1] + self.interstorm_dts[i]
+        self.Q_all[i * 2 + 2, :] = self._grid.at_node["surface_water__discharge"]
+        self.wt_all[i * 2 + 2, :] = self._grid.at_node["water_table__elevation"]
+        self.qs_all[i * 2 + 2, :] = self._grid.at_node[
+            "average_surface_water__specific_discharge"
+        ]
+
     def run_step(self):
         """"
         Run hydrological model for series of event-interevent pairs, calculate
@@ -285,26 +321,14 @@ class HydrologyEventStreamPower(HydrologicalModel):
         # update flow directions
         self.fd.run_one_step()
 
-        # fields to record:
-        Ns = 2 * len(self.storm_dts) + 1
-        N = len(self.q_eff)
-        self.time = np.zeros(Ns)
-        self.intensity = np.zeros(Ns)
-        # all discharge
-        self.Q_all = np.zeros((Ns, N))
-        # water table elevation
-        self.wt_all = np.zeros((Ns, N))
-        self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
-        # all surface water specific discharge
-        self.qs_all = np.zeros((Ns, N))
-
-        self.max_substeps_storm = 0
-        self.max_substeps_interstorm = 0
+        if record_state:
+            self._initialize_record_state()
+        else:
+            self._record_event = lambda i: None
+            self._record_interevent = lambda i: None
 
         q_total_vol = np.zeros_like(self.q_eff)
-        # q2 = np.zeros_like(self.q_eff)
         for i in range(len(self.storm_dts)):
-            # q0 = q2.copy()  # save prev end of interstorm flow rate
 
             # run event, accumulate flow
             self.gdp.recharge = self.intensities[i]
@@ -316,13 +340,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             )
 
             # record event
-            self.time[i * 2 + 1] = self.time[i * 2] + self.storm_dts[i]
-            self.intensity[i * 2] = self.intensities[i]
-            self.Q_all[i * 2 + 1, :] = self._grid.at_node["surface_water__discharge"]
-            self.wt_all[i * 2 + 1, :] = self._grid.at_node["water_table__elevation"]
-            self.qs_all[i * 2 + 1, :] = self._grid.at_node[
-                "average_surface_water__specific_discharge"
-            ]
+            self._record_event(i)
 
             # run interevent, accumulate flow
             self.gdp.recharge = 0.0
@@ -336,12 +354,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             )
 
             # record interevent
-            self.time[i * 2 + 2] = self.time[i * 2 + 1] + self.interstorm_dts[i]
-            self.Q_all[i * 2 + 2, :] = self._grid.at_node["surface_water__discharge"]
-            self.wt_all[i * 2 + 2, :] = self._grid.at_node["water_table__elevation"]
-            self.qs_all[i * 2 + 2, :] = self._grid.at_node[
-                "average_surface_water__specific_discharge"
-            ]
+            self._record_interevent(i)
 
             # volume of runoff contributed during timestep
             q_total_vol += q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i]
