@@ -58,10 +58,7 @@ class SchenkVadoseModel:
         self.bin_capacity = (self.b / self.Nz) * self.n * self.Sa
 
     def generate_state_from_analytical(
-        self,
-        mean_storm_depth,
-        mean_storm_duration,
-        mean_interstorm_duration,
+        self, mean_storm_depth, mean_storm_duration, mean_interstorm_duration,
     ):
 
         """

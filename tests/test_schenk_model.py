@@ -150,8 +150,8 @@ def test_run_interevent_2():
 
     assert_equal(sm.sat_profile, [0.0, 0.0, 0.0, 0.0, 0.0])
     assert_equal(sm.extraction_at_depth, [-4.0, -4.0, -4.0, -4.0, -3.0])
-    
-    
+
+
 def test_recharge_event_1():
     """test_run_event_2 but now calculate the recharge for float and arrays
     of water table depths. Recharge at surface should be same as in first bin."""
@@ -163,10 +163,11 @@ def test_recharge_event_1():
     # sm.depths: [ 1.,  2.,  3.,  4.,  5.]
     # sm.sat_profile: [1.0, 1.0, 1.0, 0.0, 1.0]
     # sm.recharge_at_depth: [1.0, 1.0, 0.0, 0.0, 0.0]
-    
+
     R = sm.calc_recharge_rate(np.array([0.0, 0.5, 1.5, 2.5, 3.5, 4.5]), 5.0)
     assert_equal(R, [0.2, 0.2, 0.2, 0.0, 0.0, 0.0])
-    
+
+
 def test_recharge_event_2():
     """test_run_event_3 but now calculate the recharge for float and arrays
     of water table depths. Ensure depths beyond profile don't receive recharge."""
@@ -174,15 +175,15 @@ def test_recharge_event_2():
     sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
     sm.sat_profile[:] = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
     sm.run_event(2.0)
-    
+
     # sm.depths: [ 1.,  2.,  3.,  4.,  5.]
     # sm.sat_profile:  [1.0, 1.0, 1.0, 1.0, 1.0]
     # sm.recharge_at_depth: [2.0, 2.0, 2.0, 2.0, 2.0]
-    
+
     R = sm.calc_recharge_rate(np.array([0.0, 3.5, 4.5, 5.0, 10.0]), 5.0)
     assert_equal(R, [0.4, 0.4, 0.4, 0.4, 0.0])
-    
-    
+
+
 def test_extraction_event_1():
     """Similar to test_run_interevent_1 but check extraction given water table
     depth. """
@@ -198,9 +199,9 @@ def test_extraction_event_1():
 
     # sm.sat_profile: [0, 0, 0, 1, 0]
     # sm.extraction_at_depth [-2.0, -1.0, 0.0, 0.0, 0.0]
-    
+
     E = sm.calc_extraction_rate(np.array([0.0, 0.5, 1.5, 2.5, 3.5, 4.5]), 6.0)
-    assert_equal(E, [-2/6, -2/6, -1/6, 0.0, 0.0, 0.0])  
+    assert_equal(E, [-2 / 6, -2 / 6, -1 / 6, 0.0, 0.0, 0.0])
 
 
 def test_extraction_event_2():
@@ -218,7 +219,6 @@ def test_extraction_event_2():
 
     # sm.sat_profile: [0.0, 0.0, 0.0, 0.0, 0.0]
     # sm.extraction_at_depth: [-4.0, -4.0, -4.0, -4.0, -3.0]
-    
+
     E = sm.calc_extraction_rate(np.array([0.0, 3.5, 4.5, 5.0, 10.0]), 4.0)
-    assert_equal(E, [-1, -1, -3/4, -3/4, 0.0])  
-  
+    assert_equal(E, [-1, -1, -3 / 4, -3 / 4, 0.0])
