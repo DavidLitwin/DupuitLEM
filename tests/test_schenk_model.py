@@ -32,8 +32,20 @@ def test_generate_storm():
     assert_equal([dr, tr, tb], [sm2.Dr, sm2.Tr, sm2.Tb])
 
 
-def test_run_event():
-    """"trivial case of an event. An event with depth 2 fills the top 2 bins
+def test_run_event_0():
+    """"Trivial case of an event. Event depth is less than half bin volume so
+    sat profile and recharge at depth are unchanged."""
+
+    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm.sat_profile[:] = np.array([1.0, 1.0, 0.0, 0.0, 0.0])
+    sm.run_event(0.49 * sm.bin_capacity)
+
+    assert_equal(sm.sat_profile, [1.0, 1.0, 0.0, 0.0, 0.0])  # binary
+    assert_equal(sm.recharge_at_depth, [0.0, 0.0, 0.0, 0.0, 0.0])
+
+
+def test_run_event_1():
+    """"simple case of an event. An event with depth 2 fills the top 2 bins
     when bins have unit depth and can be filled 100% with water. Recharge is
     calculated on a 'floor' basis."""
 
@@ -84,8 +96,26 @@ def test_run_event_4():
     assert_equal(sm.recharge_at_depth, [4.0, 4.0, 3.0, 2.0, 2.0])
 
 
-def test_run_interevent():
-    """ Trivial case of an interevent. With unit PET rate, the top two
+def test_run_interevent_0():
+    """ Trivial case of an interevent. PET over interval is less than
+    half bin capacity so sat profile remains unchanged and no extraction
+    is recorded."""
+
+    sm = SchenkVadoseModel(
+        num_bins=5,
+        available_relative_saturation=1.0,
+        porosity=1.0,
+        potential_evapotranspiration_rate=1.0,
+    )
+    sm.sat_profile[:] = np.array([1, 1, 1, 0, 0])
+    sm.run_interevent(0.49)
+
+    assert_equal(sm.sat_profile, [1, 1, 1, 0, 0])
+    assert_equal(sm.extraction_at_depth, [0.0, 0.0, 0.0, 0.0, 0.0])
+
+
+def test_run_interevent_1():
+    """ Simple case of an interevent. With unit PET rate, the top two
     bins are drained after 2 units of time when bins have unit depth and
     can be filled 100% with water. Note recharge_at_depth is not reset.
     As with recharge, extraction is determined on a 'floor' basis."""
@@ -120,3 +150,75 @@ def test_run_interevent_2():
 
     assert_equal(sm.sat_profile, [0.0, 0.0, 0.0, 0.0, 0.0])
     assert_equal(sm.extraction_at_depth, [-4.0, -4.0, -4.0, -4.0, -3.0])
+    
+    
+def test_recharge_event_1():
+    """test_run_event_2 but now calculate the recharge for float and arrays
+    of water table depths. Recharge at surface should be same as in first bin."""
+
+    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm.sat_profile[:] = np.array([0.0, 1.0, 0.0, 0.0, 1.0])
+    sm.run_event(2.0)
+
+    # sm.depths: [ 1.,  2.,  3.,  4.,  5.]
+    # sm.sat_profile: [1.0, 1.0, 1.0, 0.0, 1.0]
+    # sm.recharge_at_depth: [1.0, 1.0, 0.0, 0.0, 0.0]
+    
+    R = sm.calc_recharge_rate(np.array([0.0, 0.5, 1.5, 2.5, 3.5, 4.5]), 5.0)
+    assert_equal(R, [0.2, 0.2, 0.2, 0.0, 0.0, 0.0])
+    
+def test_recharge_event_2():
+    """test_run_event_3 but now calculate the recharge for float and arrays
+    of water table depths. Ensure depths beyond profile don't receive recharge."""
+
+    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm.sat_profile[:] = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+    sm.run_event(2.0)
+    
+    # sm.depths: [ 1.,  2.,  3.,  4.,  5.]
+    # sm.sat_profile:  [1.0, 1.0, 1.0, 1.0, 1.0]
+    # sm.recharge_at_depth: [2.0, 2.0, 2.0, 2.0, 2.0]
+    
+    R = sm.calc_recharge_rate(np.array([0.0, 3.5, 4.5, 5.0, 10.0]), 5.0)
+    assert_equal(R, [0.4, 0.4, 0.4, 0.4, 0.0])
+    
+    
+def test_extraction_event_1():
+    """Similar to test_run_interevent_1 but check extraction given water table
+    depth. """
+
+    sm = SchenkVadoseModel(
+        num_bins=5,
+        available_relative_saturation=1.0,
+        porosity=1.0,
+        potential_evapotranspiration_rate=0.5,
+    )
+    sm.sat_profile[:] = np.array([1, 1, 1, 1, 0])
+    sm.run_interevent(6.0)
+
+    # sm.sat_profile: [0, 0, 0, 1, 0]
+    # sm.extraction_at_depth [-2.0, -1.0, 0.0, 0.0, 0.0]
+    
+    E = sm.calc_extraction_rate(np.array([0.0, 0.5, 1.5, 2.5, 3.5, 4.5]), 6.0)
+    assert_equal(E, [-2/6, -2/6, -1/6, 0.0, 0.0, 0.0])  
+
+
+def test_extraction_event_2():
+    """Similar to test_run_interevent_2 but check extraction given water table
+    depth. Ensure depths beyond profile don't have water extracted."""
+
+    sm = SchenkVadoseModel(
+        num_bins=5,
+        available_relative_saturation=1.0,
+        porosity=1.0,
+        potential_evapotranspiration_rate=1.0,
+    )
+    sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
+    sm.run_interevent(4.0)
+
+    # sm.sat_profile: [0.0, 0.0, 0.0, 0.0, 0.0]
+    # sm.extraction_at_depth: [-4.0, -4.0, -4.0, -4.0, -3.0]
+    
+    E = sm.calc_extraction_rate(np.array([0.0, 3.5, 4.5, 5.0, 10.0]), 4.0)
+    assert_equal(E, [-1, -1, -3/4, -3/4, 0.0])  
+  
