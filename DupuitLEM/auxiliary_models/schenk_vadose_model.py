@@ -59,9 +59,9 @@ class SchenkVadoseModel:
 
     def generate_state_from_analytical(
         self,
-        mean_storm_depth=0.02,
-        mean_storm_duration=1e3,
-        mean_interstorm_duration=1e5,
+        mean_storm_depth,
+        mean_storm_duration,
+        mean_interstorm_duration,
     ):
 
         """
@@ -118,7 +118,12 @@ class SchenkVadoseModel:
         self.Tb = np.random.exponential(mean_interstorm_duration)
 
     def run_event(self, storm_depth):
-        """Run storm event, updating saturation profile and recharge at depth."""
+        """Run storm event, updating saturation profile and recharge at depth.
+
+        Parameters
+        ----------
+        storm_dt: float. Storm depth.
+        """
 
         # clear sat diff
         self.sat_diff[:] = 0
@@ -139,22 +144,30 @@ class SchenkVadoseModel:
     def calc_recharge_rate(self, wt_from_surface, storm_dt):
         """calculate the recharge rate during storm event given the depth of water
         table from surface. Returns the recharge rate for each water table
-        depth provided.
+        depth provided. If supplied wt depth is greater than profile depth,
+        recharge rate is zero.
 
         Parameters
         ----------
-        wt_from_surface: float or array of floats. Positive values from 0 to
-            maximum aquifer depth. Usually this is also profile depth.
+        wt_from_surface: array of floats. Positive values from 0 to
+            maximum aquifer depth, which is usually this is also profile depth.
         storm_dt: float. Storm duration.
         """
 
         wt_digitized = np.digitize(wt_from_surface, self.depths, right=True)
         wt_digitized[wt_digitized == len(self.depths)] = len(self.depths) - 1
 
-        return self.recharge_at_depth[wt_digitized] / storm_dt
+        out = self.recharge_at_depth[wt_digitized] / storm_dt
+        out[wt_from_surface > self.b] = 0.0
+
+        return out
 
     def run_interevent(self, interstorm_dt):
-        """Run storm interevent, updating saturation profile."""
+        """Run storm interevent, updating saturation profile.
+
+        Parameters
+        ----------
+        interstorm_dt: float. Duration without precipitation."""
 
         # clear sat diff
         self.sat_diff[:] = 0
@@ -175,19 +188,23 @@ class SchenkVadoseModel:
     def calc_extraction_rate(self, wt_from_surface, interstorm_dt):
         """calculate the extraction rate given the depth of water table from
         surface. Returns the (negative) extraction rate for each water
-        table depth provided.
+        table depth provided. If supplied depth is greater than profile depth,
+        extraction rate is zero.
 
         Parameters
         ----------
-        wt_from_surface: float or array of floats. Positive values from 0 to
-        maximum aquifer depth. Usually this is also profile depth.
+        wt_from_surface: array of floats. Positive values from 0 to
+            maximum aquifer depth, which is usually this is also profile depth.
         interstorm_dt: float. Interstorm duration.
         """
 
         wt_digitized = np.digitize(wt_from_surface, self.depths, right=True)
         wt_digitized[wt_digitized == len(self.depths)] = len(self.depths) - 1
 
-        return self.extraction_at_depth[wt_digitized] / interstorm_dt
+        out = self.extraction_at_depth[wt_digitized] / interstorm_dt
+        out[wt_from_surface > self.b] = 0.0
+
+        return out
 
     def run_one_step(
         self,
