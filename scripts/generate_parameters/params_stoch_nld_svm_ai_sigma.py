@@ -73,12 +73,12 @@ def generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai, theta):
 
 # params for both hyd1d recharge estimation and lem
 sigma_all = np.geomspace(8.0, 128.0, 5)
-gam_all = np.geomspace(1.0, 16.0, 5)
+ai_all = np.geomspace(0.25, 2.0, 7)
 
-ai = 0.5
 sc = 0.5
 theta = 0.0
 hi = 5.0
+gam = 4.0
 rho = 0.03
 hg = 2.25
 lg = 15 # geomorphic length scale [m]
@@ -97,7 +97,7 @@ Nz = 500 # number of bins in vadose model
 Nx = 125 # number of grid cells width and height
 
 params = []
-for sigma, gam in product(sigma_all, gam_all):
+for sigma, ai in product(sigma_all, ai_all):
     params.append(generate_parameters(p, n, v0, hg, lg, tg, gam, hi, sigma, rho, ai, theta))
 
 df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'n', 'v0', 'hg', 'lg', 'tg', 'E0', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'sigma', 'rho', 'ai', 'theta'])
