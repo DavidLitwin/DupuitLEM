@@ -20,35 +20,31 @@ import numpy as np
 
 
 class SchenkVadoseModel:
-    """If run independently, then use storm properties. If using with
-    HydrologyEventVadoseStreamPower, generate precipitation with
-    PrecipitationDistribution and then set Dr, Tr, and Tb. """
-
     def __init__(
         self,
         potential_evapotranspiration_rate=2e-7,
+        porosity=0.1,
         available_relative_saturation=0.2,
         profile_depth=5,
-        porosity=0.1,
         num_bins=500,
-        num_timesteps=100,
-        mean_storm_depth=0.02,
-        mean_storm_duration=1e3,
-        mean_interstorm_duration=1e5,
-        random_seed=None,
     ):
+        """
+        Initialize SchenkVadoseModel.
 
-        self.d = mean_storm_depth  # mm
-        self.tr = mean_storm_duration  # day
-        self.tb = mean_interstorm_duration  # day
+        Parameters
+        ----------
+        potential_evapotranspiration_rate: float (L/T).
+        porosity: float (-). Porosity of material.
+        available_relative_saturation: float (-). The proportion of porosity
+            that will fill and drain. Range 0 to 1.
+        profile_depth: float (L). Depth of vadose zone to be considered.
+        num_bins: int (-). Number of saturation bins in which to divide profile.
+        """
         self.pet = potential_evapotranspiration_rate  # mm/day
+        self.n = porosity
         self.Sa = available_relative_saturation
         self.b = profile_depth  # mm
-        self.n = porosity
-        self.Nt = num_timesteps
         self.Nz = num_bins
-        if random_seed:
-            np.random.seed(random_seed)
 
         self.depths = np.linspace(
             self.b / self.Nz, self.b, self.Nz
@@ -61,12 +57,24 @@ class SchenkVadoseModel:
         self.extraction_at_depth = np.zeros_like(self.depths)
         self.bin_capacity = (self.b / self.Nz) * self.n * self.Sa
 
-    def generate_state_from_analytical(self):
-        """Set the saturation profile by generating random values from
-        the analytical solution for saturation state."""
+    def generate_state_from_analytical(
+        self, mean_storm_depth, mean_storm_duration, mean_interstorm_duration,
+    ):
 
-        a = (self.depths * self.Sa * self.n) / self.d
-        b = (self.depths * self.Sa * self.n) / (self.pet / (1 / (self.tr + self.tb)))
+        """
+        Set the saturation profile by generating random values from
+        the analytical solution for saturation state.
+
+        Parameters
+        ----------
+        mean_storm_depth: float (L). Mean storm depth.
+        mean_storm_duration: float (T). Mean storm duration.
+        mean_interstorm_duration: float (T). Mean interstorm duration.
+        """
+
+        Trb = mean_storm_duration + mean_interstorm_duration
+        a = (self.depths * self.Sa * self.n) / mean_storm_depth
+        b = (self.depths * self.Sa * self.n) / (self.pet / (1 / Trb))
 
         self.analytical_sat_prob = np.zeros_like(self.depths)
         c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (
@@ -81,16 +89,38 @@ class SchenkVadoseModel:
         r = np.random.rand(len(self.depths))
         self.sat_profile = 1 * (r < self.analytical_sat_prob)
 
-    def generate_storm(self):
-        """Generate one storm depth, duration, and insterstorm duration from
-        exponential distributions."""
+    def generate_storm(
+        self,
+        mean_storm_depth,
+        mean_storm_duration,
+        mean_interstorm_duration,
+        random_seed=None,
+    ):
 
-        self.Dr = np.random.exponential(self.d)
-        self.Tr = np.random.exponential(self.tr)
-        self.Tb = np.random.exponential(self.tb)
+        """Generate one storm depth, duration, and insterstorm duration from
+        exponential distributions.
+
+        Parameters
+        ----------
+        mean_storm_depth: float (L). Mean storm depth.
+        mean_storm_duration: float (T). Mean storm duration.
+        mean_interstorm_duration: float (T). Mean interstorm duration.
+        """
+
+        if random_seed:
+            np.random.seed(random_seed)
+
+        self.Dr = np.random.exponential(mean_storm_depth)
+        self.Tr = np.random.exponential(mean_storm_duration)
+        self.Tb = np.random.exponential(mean_interstorm_duration)
 
     def run_event(self, storm_depth):
-        """Run storm event, updating saturation profile and recharge at depth."""
+        """Run storm event, updating saturation profile and recharge at depth.
+
+        Parameters
+        ----------
+        storm_dt: float. Storm depth.
+        """
 
         # clear sat diff
         self.sat_diff[:] = 0
@@ -108,11 +138,36 @@ class SchenkVadoseModel:
             n_to_fill - np.cumsum(self.sat_diff)
         ) * self.bin_capacity
 
-    def run_interevent(self, interstorm_dt):
-        """Run storm interevent, updating saturation profile."""
+    def calc_recharge_rate(self, wt_from_surface, storm_dt):
+        """calculate the recharge rate during storm event given the depth of water
+        table from surface. Returns the recharge rate for each water table
+        depth provided. If supplied wt depth is greater than profile depth,
+        recharge rate is zero.
 
-        # clear extraction profile
-        self.extraction_at_depth[:] = 0
+        Parameters
+        ----------
+        wt_from_surface: array of floats. Positive values from 0 to
+            maximum aquifer depth, which is usually this is also profile depth.
+        storm_dt: float. Storm duration.
+        """
+
+        wt_digitized = np.digitize(wt_from_surface, self.depths, right=True)
+        wt_digitized[wt_digitized == len(self.depths)] = len(self.depths) - 1
+
+        out = self.recharge_at_depth[wt_digitized] / storm_dt
+        out[wt_from_surface > self.b] = 0.0
+
+        return out
+
+    def run_interevent(self, interstorm_dt):
+        """Run storm interevent, updating saturation profile.
+
+        Parameters
+        ----------
+        interstorm_dt: float. Duration without precipitation."""
+
+        # clear sat diff
+        self.sat_diff[:] = 0
 
         # number of bins ET will drain
         n_to_drain = round(self.pet * interstorm_dt / self.bin_capacity)
@@ -120,19 +175,90 @@ class SchenkVadoseModel:
         # change bin status
         inds_to_drain = np.where(self.sat_profile == 1)[0][0:n_to_drain]
         self.sat_profile[inds_to_drain] = 0
-        self.extraction_at_depth[inds_to_drain] = self.bin_capacity
 
-    def run_one_step(self):
+        # calculate extraction
+        self.sat_diff[inds_to_drain] = -1
+        self.extraction_at_depth[:] = (
+            -n_to_drain - np.cumsum(self.sat_diff)
+        ) * self.bin_capacity
+
+    def calc_extraction_rate(self, wt_from_surface, interstorm_dt):
+        """calculate the extraction rate given the depth of water table from
+        surface. Returns the (negative) extraction rate for each water
+        table depth provided. If supplied depth is greater than profile depth,
+        extraction rate is zero.
+
+        Parameters
+        ----------
+        wt_from_surface: array of floats. Positive values from 0 to
+            maximum aquifer depth, which is usually this is also profile depth.
+        interstorm_dt: float. Interstorm duration.
+        """
+
+        wt_digitized = np.digitize(wt_from_surface, self.depths, right=True)
+        wt_digitized[wt_digitized == len(self.depths)] = len(self.depths) - 1
+
+        out = self.extraction_at_depth[wt_digitized] / interstorm_dt
+        out[wt_from_surface > self.b] = 0.0
+
+        return out
+
+    def run_one_step(
+        self,
+        mean_storm_depth,
+        mean_storm_duration,
+        mean_interstorm_duration,
+        random_seed=None,
+    ):
+
         """Run step: generate exponential storm depth duration, interstorm
-        duration, run event, and run interevent."""
+        duration, run event, and run interevent.
 
-        self.generate_storm()
+        Parameters
+        ----------
+        mean_storm_depth: float (L). Mean storm depth.
+        mean_storm_duration: float (T). Mean storm duration.
+        mean_interstorm_duration: float (T). Mean interstorm duration.
+        random_seed: int (-) numpy random seed for reproduceability.
+        """
+
+        if random_seed:
+            np.random.seed(random_seed)
+
+        self.generate_storm(
+            mean_storm_depth, mean_storm_duration, mean_interstorm_duration,
+        )
         self.run_event(self.Dr)
         self.run_interevent(self.Tb)
 
-    def run_model(self):
+    def run_model(
+        self,
+        num_timesteps=100,
+        mean_storm_depth=0.02,
+        mean_storm_duration=1e3,
+        mean_interstorm_duration=1e5,
+        random_seed=None,
+    ):
+
         """Run model: run step Nt times, calculate average recharge depth and
-        recharge frequency at each depth in the profile."""
+        recharge frequency at each depth in the profile.
+
+        Parameters
+        ----------
+        num_timesteps: int (-) number of storm interstorm pairs to run.
+        mean_storm_depth: float (L). Mean storm depth.
+        mean_storm_duration: float (T). Mean storm duration.
+        mean_interstorm_duration: float (T). Mean interstorm duration.
+        random_seed: int (-) numpy random seed for reproduceability.
+
+        """
+
+        self.d = (mean_storm_depth,)
+        self.tr = (mean_storm_duration,)
+        self.tb = (mean_interstorm_duration,)
+        self.Nt = num_timesteps
+        if random_seed:
+            np.random.seed(random_seed)
 
         self.cum_recharge = np.zeros_like(self.depths)
         self.cum_extraction = np.zeros_like(self.depths)
@@ -143,7 +269,7 @@ class SchenkVadoseModel:
 
         for i in range(self.Nt):
 
-            self.run_one_step()
+            self.run_one_step(self.d, self.tr, self.tb)
 
             self.cum_recharge += self.recharge_at_depth
             self.cum_extraction += self.extraction_at_depth
