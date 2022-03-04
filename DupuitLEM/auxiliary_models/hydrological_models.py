@@ -745,6 +745,8 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.qs_all = np.zeros((Ns, N))
         # all recharge
         self.r_all = np.zeros((Ns, N))
+        # all extraction
+        self.e_all = np.zeros((Ns, N))
 
         # vadose profile properties
         self.cum_recharge_profile = np.zeros_like(self.svm.depths)
@@ -756,6 +758,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.cum_precip = 0.0
         self.cum_recharge = 0.0
         self.cum_runoff = 0.0
+        self.cum_extraction = 0.0
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -813,6 +816,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
             # record interevent
             self.time[i * 2 + 2] = self.time[i * 2 + 1] + self.interstorm_dts[i]
+            self.e_all[i * 2 + 2, :] = self._grid.at_node["extraction_rate"]
             self.Q_all[i * 2 + 2, :] = self._grid.at_node["surface_water__discharge"]
             self.wt_all[i * 2 + 2, :] = self._grid.at_node["water_table__elevation"]
             self.qs_all[i * 2 + 2, :] = self._grid.at_node[
@@ -826,6 +830,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             # record precip/recharge spatially-averaged characteristics
             self.cum_precip += np.sum(self.intensities[i] * areas) * self.storm_dts[i]
             self.cum_recharge += np.sum(self.r[cores] * areas) * self.storm_dts[i]
+            self.cum_extraction += np.sum(self.e[cores] * areas) * self.interstorm_dts[i]
             self.cum_runoff += np.sum(
                 q1[obn] * self.storm_dts[i] + q2[obn] * self.interstorm_dts[i]
             )

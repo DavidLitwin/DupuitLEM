@@ -203,12 +203,16 @@ curv[:] = tot_curvature.reshape(z.shape)
 df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
 df_output['cum_runoff'] = hm.cum_runoff
+df_output['cum_extraction'] = hm.cum_extraction
 
 """ratio of total recharge to total precipitation, averaged over space and time.
 this accounts for time varying recharge with precipitation rate, unsat
 storage and ET, as well as spatially variable recharge with water table depth.
 """
 df_output['recharge_efficiency'] = hm.cum_recharge / hm.cum_precip
+df_output['AET/P'] = ((hm.cum_precip - hm.cum_recharge) + (-hm.cum_extraction))/hm.cum_precip
+df_output['(P-Q)/P'] = (hm.cum_precip - hm.cum_runoff)/hm.cum_precip
+df_output['Q/P'] = hm.cum_runoff/hm.cum_precip
 
 #load the full storage discharge dataset that was just generated
 df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','r', 'qs', 'S', 'qs_cells'])
@@ -253,7 +257,8 @@ except:
     print("error fitting recession")
 
 # find times with recharge. Note in df qs and S are at the end of the timestep.
-# i is at the beginning of the timestep.
+# i is at the beginning of the timestep. *** note now that recharge includes
+# periods of negative recharge where extraction occurs.
 df['t'] = np.cumsum(df['dt'])
 is_r = df['r'] > 0.0
 pre_r = np.where(np.diff(is_r*1)>0.0)[0] #last data point before recharge
@@ -275,13 +280,16 @@ qe = df['qs'] - df['qb']
 
 # integrate to find total values. trapezoidal for the properties that
 # change dynamically, and simple rectangular for i bc we know rain varies in this way.
-qe_tot = np.sum(df['dt'] * qe)
-qb_tot = np.sum(df['dt'] * qb)
-qs_tot = np.sum(df['dt'] * df['qs'])
-r_tot = np.sum(df['dt'] * df['r'])
+df_output['qe_tot'] = np.sum(df['dt'] * qe)
+df_output['qb_tot'] = np.sum(df['dt'] * qb)
+df_output['qs_tot'] = np.sum(df['dt'] * df['qs'])
+df_output['r_tot'] = np.sum(df['dt'] * df['r']) # recharge - extraction
 
-df_output['BFI'] = qb_tot/qs_tot #baseflow index
-df_output['RR'] = qe_tot/r_tot #runoff ratio
+# L'vovich partitioning: wetting on precipitation
+df_output['W/P'] = (df_output['cum_precip'] - df_output['qe_tot'])/df_output['cum_precip']
+df_output['Qb/W'] = df_output['qb_tot']/(df_output['cum_precip'] - df_output['qe_tot'])
+df_output['Qb/Q'] = df_output['qb_tot']/df_output['qs_tot'] #baseflow index
+# df_output['RR'] = qe_tot/r_tot #runoff ratio
 
 ###### spatial runoff related quantities
 
