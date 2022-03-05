@@ -303,6 +303,10 @@ recharge = hm.r_all[1:,:]
 recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
 recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
 
+# extraction
+extraction_interevent = mg.add_zeros('node', 'extraction_rate_mean_interstorm')
+extraction_interevent[:] = np.mean(hm.e_all[range(2,hm.e_all.shape[0],2),:], axis=0)
+
 # mean and variance of water table
 wt_all = hm.wt_all[1:,:]
 base_all = np.ones(wt_all.shape)*mg.at_node['aquifer_base__elevation']
@@ -476,6 +480,7 @@ output_fields = [
         'at_node:total_curvature_rd',
         'at_node:surface_water_effective__discharge',
         'at_node:recharge_rate_mean_storm',
+        'at_node:extraction_rate_mean_interstorm',
         'at_node:wtrel_mean_end_storm',
         'at_node:wtrel_mean_end_interstorm',
         'at_node:sat_mean_end_storm',
