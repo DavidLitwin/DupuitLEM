@@ -55,6 +55,7 @@ from landlab.io.netcdf import from_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     TaylorNonLinearDiffuser,
+    LinearDiffuser,
     FastscapeEroder,
     PrecipitationDistribution,
     )
