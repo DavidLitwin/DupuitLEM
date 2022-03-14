@@ -760,6 +760,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.cum_recharge = 0.0
         self.cum_runoff = 0.0
         self.cum_extraction = 0.0
+        self.cum_gw_export = 0.0
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -784,6 +785,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
+            qgw1 = self.gdp.calc_gw_flux_out()
 
             # record event
             self.time[i * 2 + 1] = self.time[i * 2] + self.storm_dts[i]
@@ -815,6 +817,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
+            qgw2 = self.gdp.calc_gw_flux_out()
 
             # record interevent
             self.time[i * 2 + 2] = self.time[i * 2 + 1] + self.interstorm_dts[i]
@@ -838,6 +841,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.cum_runoff += np.sum(
                 q1[obn] * self.storm_dts[i] + q2[obn] * self.interstorm_dts[i]
             )
+            self.cum_gw_export += np.sum(qgw1 * self.storm_dts[i] + qgw2 * self.interstorm_dts[i])
 
             # volume of runoff contributed during timestep
             q_total_vol += q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i]

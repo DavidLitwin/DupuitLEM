@@ -204,14 +204,14 @@ df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
 df_output['cum_runoff'] = hm.cum_runoff
 df_output['cum_extraction'] = hm.cum_extraction
+df_output['cum_gw_export'] = hm.cum_gw_export
 
 """ratio of total recharge to total precipitation, averaged over space and time.
 this accounts for time varying recharge with precipitation rate, unsat
 storage and ET, as well as spatially variable recharge with water table depth.
 """
 df_output['recharge_efficiency'] = hm.cum_recharge / hm.cum_precip
-df_output['AET/P'] = ((hm.cum_precip - hm.cum_recharge) + (-hm.cum_extraction))/hm.cum_precip
-df_output['(P-Q)/P'] = (hm.cum_precip - hm.cum_runoff)/hm.cum_precip
+df_output['(P-Q-Qgw)/P'] = (hm.cum_precip - hm.cum_runoff - hm.cum_gw_export)/hm.cum_precip
 df_output['Q/P'] = hm.cum_runoff/hm.cum_precip
 
 #load the full storage discharge dataset that was just generated
