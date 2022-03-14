@@ -253,9 +253,9 @@ class SchenkVadoseModel:
 
         """
 
-        self.d = (mean_storm_depth,)
-        self.tr = (mean_storm_duration,)
-        self.tb = (mean_interstorm_duration,)
+        self.d = mean_storm_depth
+        self.tr = mean_storm_duration
+        self.tb = mean_interstorm_duration
         self.Nt = num_timesteps
         if random_seed:
             np.random.seed(random_seed)
