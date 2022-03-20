@@ -77,7 +77,7 @@ ai_all = np.geomspace(0.25, 2.0, 7)
 
 sc = 0.5
 theta = 0.0
-hi = 5.0
+hi = 0.5
 gam = 4.0
 rho = 0.03
 hg = 2.25
