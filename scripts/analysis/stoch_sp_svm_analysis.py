@@ -299,9 +299,8 @@ dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
 
 # recharge
-recharge = hm.r_all[1:,:]
 recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
-recharge_event[:] = np.mean(recharge[intensity>0,:], axis=0)
+recharge_event[:] = np.mean(hm.r_all[intensity>0,:], axis=0)
 
 # extraction
 extraction_interevent = mg.add_zeros('node', 'extraction_rate_mean_interstorm')
