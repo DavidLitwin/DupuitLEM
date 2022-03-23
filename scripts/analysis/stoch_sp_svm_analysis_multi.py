@@ -304,7 +304,7 @@ intensity = hm.intensity[:-1]
 
 # recharge
 recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
-recharge_event[:] = np.mean(hm.r_all[intensity>0,:], axis=0)
+recharge_event[:] = np.mean(hm.r_all[range(0,hm.r_all.shape[0],2),:], axis=0)
 
 # extraction
 extraction_interevent = mg.add_zeros('node', 'extraction_rate_mean_interstorm')
