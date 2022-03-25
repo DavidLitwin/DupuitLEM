@@ -92,7 +92,7 @@ dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
-Srange = 0.2 # range of relative saturation
+Sawc = 0.15 # plant available water content
 Nz = 500 # number of bins in vadose model
 Nx = 125 # number of grid cells width and height
 
@@ -107,7 +107,7 @@ df_params['Nx'] = Nx
 df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
-df_params['Srange'] = Srange
+df_params['Sawc'] = Sawc
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['ksf'] = ksf_base/df_params['beta'] # morphologic scaling factor
 df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]

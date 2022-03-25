@@ -23,8 +23,7 @@ class SchenkVadoseModel:
     def __init__(
         self,
         potential_evapotranspiration_rate=2e-7,
-        porosity=0.1,
-        available_relative_saturation=0.2,
+        available_water_content=0.15,
         profile_depth=5,
         num_bins=500,
     ):
@@ -34,15 +33,17 @@ class SchenkVadoseModel:
         Parameters
         ----------
         potential_evapotranspiration_rate: float (L/T).
-        porosity: float (-). Porosity of material.
-        available_relative_saturation: float (-). The proportion of porosity
-            that will fill and drain. Range 0 to 1.
-        profile_depth: float (L). Depth of vadose zone to be considered.
-        num_bins: int (-). Number of saturation bins in which to divide profile.
+            Default=2x10^-7 m/s.
+        available_water_content: float (-).
+            Plant available water content, as a proportion of total volume.
+            Range 0 to 1. Default=0.15.
+        profile_depth: float (L).
+            Depth of vadose zone to be considered. Defaul=5 m.
+        num_bins: int (-).
+            Number of saturation bins in which to divide profile. Default=500.
         """
         self.pet = potential_evapotranspiration_rate  # mm/day
-        self.n = porosity
-        self.Sa = available_relative_saturation
+        self.Sawc = available_water_content
         self.b = profile_depth  # mm
         self.Nz = num_bins
 
@@ -55,7 +56,7 @@ class SchenkVadoseModel:
         self.sat_diff = np.zeros_like(self.depths)
         self.recharge_at_depth = np.zeros_like(self.depths)
         self.extraction_at_depth = np.zeros_like(self.depths)
-        self.bin_capacity = (self.b / self.Nz) * self.n * self.Sa
+        self.bin_capacity = (self.b / self.Nz) * self.Sawc
 
     def generate_state_from_analytical(
         self, mean_storm_depth, mean_storm_duration, mean_interstorm_duration,
@@ -73,8 +74,8 @@ class SchenkVadoseModel:
         """
 
         Trb = mean_storm_duration + mean_interstorm_duration
-        a = (self.depths * self.Sa * self.n) / mean_storm_depth
-        b = (self.depths * self.Sa * self.n) / (self.pet / (1 / Trb))
+        a = (self.depths * self.Sawc) / mean_storm_depth
+        b = (self.depths * self.Sawc) / (self.pet / (1 / Trb))
 
         self.analytical_sat_prob = np.zeros_like(self.depths)
         c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (

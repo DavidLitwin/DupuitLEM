@@ -109,7 +109,7 @@ p = 1.0/(365*24*3600) # average precip rate
 
 # for recharge estimation
 lam = 10
-Srange = 0.2 # range of relative saturation
+Sawc = 0.15 # plant available water content
 Nz = 500 # number of bins in vadose model
 Nt = 2000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
@@ -119,7 +119,7 @@ for sigma, rho in product(sigma_all, rho_all):
 
 df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta'])
 df_params_1d['alpha'] = df_params_1d['hg']/df_params_1d['lg']
-df_params_1d['Srange'] = Srange
+df_params_1d['Sawc'] = Sawc
 df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt; df_params_1d['Nz'] = Nz
 df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 
@@ -128,7 +128,7 @@ df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 # paraeters
 ks = df_params_1d['ksat'][ID]
 pet = df_params_1d['pet'][ID]
-Srange = df_params_1d['Srange'][ID]
+Sawc = df_params_1d['Sawc'][ID]
 b = df_params_1d['b'][ID]
 ds = df_params_1d['ds'][ID]
 tr = df_params_1d['tr'][ID]
@@ -168,9 +168,8 @@ pdr = PrecipitationDistribution(grid,
 pdr.seed_generator(seedval=1235)
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
-                 available_relative_saturation=Srange,
+                available_water_content=Sawc,
                  profile_depth=b,
-                 porosity=n,
                  num_bins=Nz,
                  )
 hm = HydrologyEventVadoseStreamPower(
@@ -201,7 +200,7 @@ ksf_base = 500 # morphologic scaling factor
 Th_nd = 5 # hydrologic time in units of vn timescale [-]
 output_interval = 1000
 
-fields = ['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'tr', 'tb', 'ds', 'pet', 'Srange']
+fields = ['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'tr', 'tb', 'ds', 'pet', 'Sawc']
 df_params = df_params_1d.loc[ID,fields]
 df_params['RE'] = RE
 df_params['v0'] = v0_nd*df_params['lg']

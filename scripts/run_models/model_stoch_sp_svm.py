@@ -18,6 +18,7 @@ tb: mean interstorm duration (s)
 ds: mean storm depth (m)
 b: regolith thickness (m)
 n: drainable porosity (-)
+Sawc: plant available water content (-)
 K: streampower incision coefficient (1/s)
 D: hillslope diffusivity (m2/s)
 U: uplift rate (m/s)
@@ -80,7 +81,7 @@ except FileNotFoundError:
 ksat = df_params['ksat']
 p = df_params['p']
 pet = df_params['pet']
-Srange = df_params['Srange']
+Sawc = df_params['Sawc']
 b = df_params['b']
 n = df_params['n']
 tr = df_params['tr']
@@ -185,9 +186,8 @@ else:
 
 #initialize other models
 svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
-                        available_relative_saturation=Srange,
+                        available_water_content=Sawc,
                         profile_depth=b,
-                        porosity=n,
                         num_bins=int(Nz),
 )
 if E0 > 0.0:

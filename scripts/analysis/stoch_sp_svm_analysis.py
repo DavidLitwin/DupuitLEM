@@ -68,7 +68,7 @@ dtg = df_params['dtg']
 hg = df_params['hg']
 try:
     pet = df_params['pet']
-    Srange = df_params['Srange']
+    Sawc = df_params['Sawc']
     tr = df_params['tr'] #mean storm duration [s]
     tb = df_params['tb'] #mean interstorm duration [s]
     ds = df_params['ds'] #mean storm depth [m]
@@ -76,7 +76,7 @@ try:
 except KeyError:
     df_params_1d = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)[task_id]
     pet = df_params_1d['pet']
-    Srange = df_params_1d['Srange']
+    Sawc = df_params['Sawc']
     tr = df_params_1d['tr'] #mean storm duration [s]
     tb = df_params_1d['tb'] #mean interstorm duration [s]
     ds = df_params_1d['ds'] #mean storm depth [m]
@@ -133,9 +133,8 @@ pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
 pdr.seed_generator(seedval=2)
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
-                 available_relative_saturation=Srange,
+                 available_water_content=Sawc,
                  profile_depth=b,
-                 porosity=n,
                  num_bins=500,
                  )
 hm = HydrologyEventVadoseStreamPower(
