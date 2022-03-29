@@ -13,7 +13,7 @@ must contain at least the following columns:
 ksat: Saturated hydraulic conductivity (m/s)
 p: steady precip rate (m/s)
 b: regolith thickness (m)
-n: drainable porosity (-)
+ne: drainable porosity (-)
 K: streampower incision coefficient (1/s)
 D: hillslope diffusivity (m2/s)
 U: uplift rate (m/s)
@@ -75,7 +75,7 @@ except FileNotFoundError:
 ksat = df_params['ksat']
 p = df_params['p']
 b = df_params['b']
-n = df_params['n']
+ne = df_params['ne']
 
 K = df_params['K']
 Ksp = K/p # precip rate from Q* goes in K
@@ -156,7 +156,7 @@ except:
 
 #initialize components
 gdp = GroundwaterDupuitPercolator(grid,
-        porosity=n,
+        porosity=ne,
         hydraulic_conductivity=ksat,
         regularization_f=0.01,
         recharge_rate=p*RE,

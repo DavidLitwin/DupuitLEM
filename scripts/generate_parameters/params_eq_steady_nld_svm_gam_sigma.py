@@ -2,7 +2,7 @@
 Generate parameters for StreamPowerModel with
 -- HydrologySteadyStreamPower
 -- FastscapeEroder
--- TaylorNonLinearDiffuser
+-- LinearDiffuser or TaylorNonLinearDiffuser
 -- RegolithConstantThickness
 
 This script generates the uses a 1D hillslope model to determine a
@@ -15,8 +15,9 @@ gamma = (b ksat hg) / (p lg^2)
 Hi = (ksat hg^2) / (p lg^2)
 sigma = (b n) / (p (tr + tb))
 rho = tr / (tr + tb)
-ai = p / pet
+ai = (pet tb) / (p (tr + tb))
 theta = E0 tg / hg
+phi = na / ne
 
 6 Dec 2021
 """
@@ -61,14 +62,17 @@ def E0_fun(theta, hg, tg):
     return theta*(hg/tg)
 
 # additional for recharge estimation:
-def ds_fun(hg, n, gam, sigma, hi):
-    return (hg*n*gam)/(hi*sigma)
+def ds_fun(hg, ne, gam, sigma, hi):
+    return (hg*ne*gam)/(hi*sigma)
 
-def tr_fun(hg, p, n, gam, sigma, hi, rho):
-    return (hg*n*gam*rho)/(p*sigma*hi)
+def tr_fun(hg, p, ne, gam, sigma, hi, rho):
+    return (hg*ne*gam*rho)/(p*sigma*hi)
 
-def tb_fun(hg, p, n, gam, sigma, hi, rho):
-    return (hg*n*gam)*(1-rho)/(p*sigma*hi)
+def tb_fun(hg, p, ne, gam, sigma, hi, rho):
+    return (hg*ne*gam)*(1-rho)/(p*sigma*hi)
+
+def pet_fun(p, rho, ai):
+    return (ai*p)/(1-rho)
 
 def calc_z(x, Sc, U, D):
     """Nonlinear diffusion elevation profile"""
@@ -77,7 +81,7 @@ def calc_z(x, Sc, U, D):
     return -Sc**2/(2*U) * (t1 - t2)
 
 #generate dimensioned parameters
-def generate_params_hyd1d(hg, lg, tg, p, n, Sc, gam, hi, lam, sigma, rho, ai, theta):
+def generate_params_hyd1d(hg, lg, tg, p, ne, Sc, gam, hi, lam, sigma, rho, ai, theta, phi):
 
     Lh = lam*lg
     D = D_fun(lg, tg)
@@ -85,12 +89,13 @@ def generate_params_hyd1d(hg, lg, tg, p, n, Sc, gam, hi, lam, sigma, rho, ai, th
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
     E0 = E0_fun(theta, hg, tg)
-    ds = ds_fun(hg, n, gam, sigma, hi)
-    tr = tr_fun(hg, p, n, gam, sigma, hi, rho)
-    tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
-    pet = ai*p
+    ds = ds_fun(hg, ne, gam, sigma, hi)
+    tr = tr_fun(hg, p, ne, gam, sigma, hi, rho)
+    tb = tb_fun(hg, p, ne, gam, sigma, hi, rho)
+    pet = pet_fun(p, rho, ai)
+    na = phi*ne
 
-    return D, U, hg, lg, tg, E0, Lh, Sc, ksat, p, pet, b, ds, tr, tb, n, gam, hi, lam, sigma, rho, ai, theta
+    return D, U, hg, lg, tg, E0, Lh, Sc, ksat, p, pet, b, ds, tr, tb, ne, na, gam, hi, lam, sigma, rho, ai, theta, phi
 
 # params for both hyd1d recharge estimation and lem
 sigma_all = np.geomspace(8.0, 128.0, 9)
@@ -101,25 +106,24 @@ sc = 0.5
 theta = 0.0
 hi = 5.0
 rho = 0.03
+phi = 1.5
 hg = 2.25
 lg = 15 # geomorphic length scale [m]
 tg = 22500*(365*24*3600) # geomorphic timescale [s]
-n = 0.1 # drainable porosity [-]
+ne = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # average precip rate
 
 # for recharge estimation
 lam = 10
-Sawc = 0.15 # plant available water content
 Nz = 500 # number of bins in vadose model
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
 for sigma, gam in product(sigma_all, gam_all):
-    params.append(generate_params_hyd1d(hg, lg, tg, p, n, sc, gam, hi, lam, sigma, rho, ai, theta))
+    params.append(generate_params_hyd1d(hg, lg, tg, p, ne, sc, gam, hi, lam, sigma, rho, ai, theta, phi))
 
-df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta'])
+df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'ne', 'na', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'phi'])
 df_params_1d['alpha'] = df_params_1d['hg']/df_params_1d['lg']
-df_params_1d['Sawc'] = Sawc
 df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt; df_params_1d['Nz'] = Nz
 df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 
@@ -128,7 +132,8 @@ df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 # paraeters
 ks = df_params_1d['ksat'][ID]
 pet = df_params_1d['pet'][ID]
-Sawc = df_params_1d['Sawc'][ID]
+ne = df_params_1d['ne'][ID]
+na = df_params_1d['na'][ID]
 b = df_params_1d['b'][ID]
 ds = df_params_1d['ds'][ID]
 tr = df_params_1d['tr'][ID]
@@ -154,7 +159,7 @@ wt[:] = elev
 
 # initialize landlab and DupuitLEM components
 gdp = GroundwaterDupuitPercolator(grid,
-                                  porosity=n,
+                                  porosity=ne,
                                   hydraulic_conductivity=ks,
                                   recharge_rate=0.0,
                                   vn_coefficient=0.5,
@@ -168,7 +173,7 @@ pdr = PrecipitationDistribution(grid,
 pdr.seed_generator(seedval=1235)
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
-                available_water_content=Sawc,
+                available_water_content=na,
                 profile_depth=b,
                 num_bins=Nz,
                 )
@@ -200,18 +205,18 @@ ksf_base = 2000 # morphologic scaling factor
 Th_nd = 5 # hydrologic time in units of von neumann timescale [-]
 output_interval = 1000
 
-fields = ['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'b', 'n', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'tr', 'tb', 'ds', 'pet', 'Sawc']
+fields = ['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'b', 'ne', 'na', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'tr', 'tb', 'ds', 'pet']
 df_params = df_params_1d.loc[ID,fields]
 df_params['RE'] = RE
 df_params['v0'] = v0_nd*df_params['lg']
 df_params['Nx'] = Nx_lem
 df_params['K'] = K_fun(df_params.v0, df_params.lg, df_params.tg)
 df_params['alpha'] = df_params['hg']/df_params['lg']
-df_params['td'] = (df_params['lg']*df_params['n'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
+df_params['td'] = (df_params['lg']*df_params['ne'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['hc'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['dtg'] = dtg_nd*df_params['tg'] # geomorphic timestep [s]
-df_params['Th'] = Th_nd*(df_params['n']*df_params['v0']**2)/(4*df_params['ksat']*df_params['b']) #von neumann cond time [s]
+df_params['Th'] = Th_nd*(df_params['ne']*df_params['v0']**2)/(4*df_params['ksat']*df_params['b']) #von neumann cond time [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 df_params['output_interval'] = output_interval
 

@@ -60,7 +60,7 @@ except FileNotFoundError:
     df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
 
 Ks = df_params['ksat'] #hydraulic conductivity [m/s]
-n = df_params['n'] #drainable porosity [-]
+ne = df_params['ne'] #drainable porosity [-]
 b = df_params['b'] #characteristic depth  [m]
 p = df_params['p'] #average precipitation rate [m/s]
 tg = df_params['tg']
@@ -68,7 +68,7 @@ dtg = df_params['dtg']
 hg = df_params['hg']
 try:
     pet = df_params['pet']
-    Sawc = df_params['Sawc']
+    na = df_params['na'] #plant available volumetric water content
     tr = df_params['tr'] #mean storm duration [s]
     tb = df_params['tb'] #mean interstorm duration [s]
     ds = df_params['ds'] #mean storm depth [m]
@@ -76,7 +76,7 @@ try:
 except KeyError:
     df_params_1d = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)[task_id]
     pet = df_params_1d['pet']
-    Sawc = df_params['Sawc']
+    na = df_params['na']
     tr = df_params_1d['tr'] #mean storm duration [s]
     tb = df_params_1d['tb'] #mean interstorm duration [s]
     ds = df_params_1d['ds'] #mean storm depth [m]
@@ -100,7 +100,7 @@ def write_SQ(grid, r, dt, file=f):
     cores = grid.core_nodes
     h = grid.at_node["aquifer__thickness"]
     area = grid.cell_area_at_node
-    storage = np.sum(n*h[cores]*area[cores])
+    storage = np.sum(ne*h[cores]*area[cores])
 
     qs = grid.at_node["surface_water__specific_discharge"]
     qs_tot = np.sum(qs[cores]*area[cores])
@@ -119,7 +119,7 @@ else:
     raise TypeError("grid should be Raster or Hex")
 
 gdp = GroundwaterDupuitPercolator(mg,
-                                  porosity=n,
+                                  porosity=ne,
                                   hydraulic_conductivity=Ks,
                                   regularization_f=0.01,
                                   recharge_rate=0.0,
@@ -133,7 +133,7 @@ pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
 pdr.seed_generator(seedval=2)
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
-                 available_water_content=Sawc,
+                 available_water_content=na,
                  profile_depth=b,
                  num_bins=500,
                  )
@@ -221,7 +221,7 @@ df.reset_index(drop=True, inplace=True)
 # make dimensionless timeseries
 Atot = np.sum(mg.cell_area_at_node[mg.core_nodes])
 df['qs_star'] = df['qs']/(p*Atot)
-df['S_star'] = df['S']/(b*n*Atot)
+df['S_star'] = df['S']/(b*ne*Atot)
 
 ##### recession
 def power_law(x, a, b, c):
