@@ -661,7 +661,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             ## run vadose model, calculate recharge based on depth to wt
             self.svm.run_event(intensity * storm_dt)
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.r[cores] = self.svm.calc_recharge_rate(wt_from_surface, storm_dt)
 
             ## set recharge, run groundwater model, accumulate flow
@@ -679,7 +679,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             interstorm_dt = max(interstorm_dt, 1e-15)  # avoid some nans
             self.svm.run_interevent(interstorm_dt)
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.e[cores] = self.svm.calc_extraction_rate(
                 wt_from_surface, interstorm_dt
             )
@@ -778,7 +778,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             ## run vadose model, calculate recharge based on depth to wt
             self.svm.run_event(self.intensities[i] * self.storm_dts[i])
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.r[cores] = self.svm.calc_recharge_rate(
                 wt_from_surface, self.storm_dts[i]
             )
@@ -811,7 +811,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             )  # avoid some nans
             self.svm.run_interevent(self.interstorm_dts[i])
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.e[cores] = self.svm.calc_extraction_rate(
                 wt_from_surface, self.interstorm_dts[i]
             )
@@ -848,7 +848,9 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             self.cum_runoff += np.sum(
                 q1[obn] * self.storm_dts[i] + q2[obn] * self.interstorm_dts[i]
             )
-            self.cum_gw_export += np.sum(qgw1 * self.storm_dts[i] + qgw2 * self.interstorm_dts[i])
+            self.cum_gw_export += np.sum(
+                qgw1 * self.storm_dts[i] + qgw2 * self.interstorm_dts[i]
+            )
 
             # volume of runoff contributed during timestep
             q_total_vol += q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i]
@@ -969,7 +971,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             ## run vadose model, calculate recharge based on depth to wt
             self.svm.run_event(intensity * storm_dt)
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.r[cores] = self.svm.calc_recharge_rate(wt_from_surface, storm_dt)
 
             ## set recharge, run groundwater model, accumulate flow
@@ -988,7 +990,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             interstorm_dt = max(interstorm_dt, 1e-15)  # avoid some nans
             self.svm.run_interevent(interstorm_dt)
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.e[cores] = self.svm.calc_extraction_rate(
                 wt_from_surface, interstorm_dt
             )
@@ -1106,7 +1108,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             ## run vadose model, calculate recharge based on depth to wt
             self.svm.run_event(self.intensities[i] * self.storm_dts[i])
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.r[cores] = self.svm.calc_recharge_rate(
                 wt_from_surface, self.storm_dts[i]
             )
@@ -1139,7 +1141,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             )  # avoid some nans
             self.svm.run_interevent(self.interstorm_dts[i])
             wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface>self.svm.b] = self.svm.b - 1e-15
+            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.e[cores] = self.svm.calc_extraction_rate(
                 wt_from_surface, self.interstorm_dts[i]
             )

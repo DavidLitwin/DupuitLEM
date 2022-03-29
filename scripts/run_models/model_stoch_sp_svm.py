@@ -17,12 +17,12 @@ tr: mean storm duration (s)
 tb: mean interstorm duration (s)
 ds: mean storm depth (m)
 b: regolith thickness (m)
-n: drainable porosity (-)
+ne: drainable porosity (-)
+na: plant available water content (-)
 K: streampower incision coefficient (1/s)
 D: hillslope diffusivity (m2/s)
 U: uplift rate (m/s)
 hg: geomorphic height scale (m) (only for scaling intial surface roughness)
-Sc: critical hillslope slope (-)
 Th: hydrological simulation time (s)
 Tg: total geomorphic time (s)
 ksf: scaling factor between hydrological time and geomorphic time (-)
@@ -31,7 +31,8 @@ v0: grid spacing (m) (if grid not supplied)
 Nx: number of nodes in x and y dimension (if grid not supplied)
 
 Optional:
-E0: streampower incision coefficient
+E0: streampower incision coefficient (m/s)
+Sc: critical hillslope slope (-)
 
 -------
 Starting grid can be supplied as NETCDF4 created with landlab, 'grid.nc' with
@@ -80,9 +81,9 @@ except FileNotFoundError:
 ksat = df_params['ksat']
 p = df_params['p']
 pet = df_params['pet']
-Srange = df_params['Srange']
 b = df_params['b']
-n = df_params['n']
+ne = df_params['ne']
+na = df_params['na']
 tr = df_params['tr']
 tb = df_params['tb']
 ds = df_params['ds']
@@ -164,7 +165,7 @@ except:
 
 #initialize landlab components
 gdp = GroundwaterDupuitPercolator(grid,
-                                porosity=n,
+                                porosity=ne,
                                 hydraulic_conductivity=ksat,
                                 regularization_f=0.01,
                                 recharge_rate=0.0,
@@ -185,9 +186,8 @@ else:
 
 #initialize other models
 svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
-                        available_relative_saturation=Srange,
+                        available_water_content=na,
                         profile_depth=b,
-                        porosity=n,
                         num_bins=int(Nz),
 )
 if E0 > 0.0:
