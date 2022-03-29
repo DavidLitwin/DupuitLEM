@@ -477,7 +477,6 @@ def test_stoch_sp_vadose_raster_null():
         potential_evapotranspiration_rate=0.0,
         profile_depth=1.0,
         num_bins=int(1e6),
-        porosity=0.2,
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseStreamPower(
@@ -520,7 +519,6 @@ def test_stoch_sp_vadose_hex_null():
         potential_evapotranspiration_rate=0.0,
         profile_depth=1.0,
         num_bins=int(1e6),
-        porosity=0.2,
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseStreamPower(
@@ -569,7 +567,6 @@ def test_stoch_sp_vadose_record_state():
         potential_evapotranspiration_rate=0.0,
         profile_depth=1.0,
         num_bins=int(1e6),
-        porosity=0.2,
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseStreamPower(
@@ -643,7 +640,6 @@ def test_stoch_sp_vadose_threshold_raster_null():
         potential_evapotranspiration_rate=0.0,
         profile_depth=1.0,
         num_bins=int(1e6),
-        porosity=0.2,
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(
@@ -691,7 +687,6 @@ def test_stoch_sp_vadose_threshold_hex_null():
         potential_evapotranspiration_rate=0.0,
         profile_depth=1.0,
         num_bins=int(1e6),
-        porosity=0.2,
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(
@@ -743,7 +738,6 @@ def test_stoch_sp_vadose_threshold_below_threshold():
         potential_evapotranspiration_rate=0.0,
         profile_depth=1.0,
         num_bins=int(1e6),
-        porosity=0.2,
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(
@@ -794,7 +788,6 @@ def test_stoch_sp_vadose_threshold_above_threshold():
         potential_evapotranspiration_rate=0.0,
         profile_depth=1.0,
         num_bins=int(1e6),
-        porosity=0.2,
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(

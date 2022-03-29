@@ -12,12 +12,12 @@ from DupuitLEM.auxiliary_models import SchenkVadoseModel
 
 def test_init_depth_profile():
     """"Check depths and bin capacity. Depths correspond to the bottom
-    of each bin. Bin capacity is porosity * bin depth * difference in relative sat."""
+    of each bin. Bin capacity is bin depth * available_water_content."""
 
     sm = SchenkVadoseModel(num_bins=5)
 
     assert_equal(sm.depths, [1.0, 2.0, 3.0, 4.0, 5.0])
-    assert_almost_equal(sm.bin_capacity, 0.02)
+    assert_almost_equal(sm.bin_capacity, 0.15)
 
 
 def test_generate_storm():
@@ -36,7 +36,7 @@ def test_run_event_0():
     """"Trivial case of an event. Event depth is less than half bin volume so
     sat profile and recharge at depth are unchanged."""
 
-    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
     sm.sat_profile[:] = np.array([1.0, 1.0, 0.0, 0.0, 0.0])
     sm.run_event(0.49 * sm.bin_capacity)
 
@@ -49,7 +49,7 @@ def test_run_event_1():
     when bins have unit depth and can be filled 100% with water. Recharge is
     calculated on a 'floor' basis."""
 
-    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=0.5, porosity=0.5,)
+    sm = SchenkVadoseModel(num_bins=5, available_water_content=0.25)
     sm.run_event(0.5)
 
     assert_equal(sm.sat_profile, [1.0, 1.0, 0.0, 0.0, 0.0])  # binary
@@ -61,7 +61,7 @@ def test_run_event_2():
     some inital nonuniform saturation. Ensure that the topmost available bins
     are filled."""
 
-    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
     sm.sat_profile[:] = np.array([0.0, 1.0, 0.0, 0.0, 1.0])
     sm.run_event(2.0)
 
@@ -75,7 +75,7 @@ def test_run_event_3():
     recharge should reflect the total amount. That is, a water table
     at any depth will recieve recharge."""
 
-    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
     sm.sat_profile[:] = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
     sm.run_event(2.0)
 
@@ -88,7 +88,7 @@ def test_run_event_4():
     event is larger than storage. Ensure all bins are filled and recharge is
     varying correctly with depth."""
 
-    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
     sm.sat_profile[:] = np.array([0.0, 1.0, 0.0, 0.0, 1.0])
     sm.run_event(5.0)
 
@@ -103,8 +103,7 @@ def test_run_interevent_0():
 
     sm = SchenkVadoseModel(
         num_bins=5,
-        available_relative_saturation=1.0,
-        porosity=1.0,
+        available_water_content=1.0,
         potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([1, 1, 1, 0, 0])
@@ -122,8 +121,7 @@ def test_run_interevent_1():
 
     sm = SchenkVadoseModel(
         num_bins=5,
-        available_relative_saturation=0.5,
-        porosity=0.5,
+        available_water_content=0.25,
         potential_evapotranspiration_rate=0.25,
     )
     sm.sat_profile[:] = np.array([1, 1, 1, 0, 0])
@@ -141,8 +139,7 @@ def test_run_interevent_2():
 
     sm = SchenkVadoseModel(
         num_bins=5,
-        available_relative_saturation=1.0,
-        porosity=1.0,
+        available_water_content=1.0,
         potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
@@ -156,7 +153,7 @@ def test_recharge_event_1():
     """test_run_event_2 but now calculate the recharge for float and arrays
     of water table depths. Recharge at surface should be same as in first bin."""
 
-    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
     sm.sat_profile[:] = np.array([0.0, 1.0, 0.0, 0.0, 1.0])
     sm.run_event(2.0)
 
@@ -172,7 +169,7 @@ def test_recharge_event_2():
     """test_run_event_3 but now calculate the recharge for float and arrays
     of water table depths. Ensure depths beyond profile don't receive recharge."""
 
-    sm = SchenkVadoseModel(num_bins=5, available_relative_saturation=1.0, porosity=1.0,)
+    sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
     sm.sat_profile[:] = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
     sm.run_event(2.0)
 
@@ -190,8 +187,7 @@ def test_extraction_event_1():
 
     sm = SchenkVadoseModel(
         num_bins=5,
-        available_relative_saturation=1.0,
-        porosity=1.0,
+        available_water_content=1.0,
         potential_evapotranspiration_rate=0.5,
     )
     sm.sat_profile[:] = np.array([1, 1, 1, 1, 0])
@@ -210,8 +206,7 @@ def test_extraction_event_2():
 
     sm = SchenkVadoseModel(
         num_bins=5,
-        available_relative_saturation=1.0,
-        porosity=1.0,
+        available_water_content=1.0,
         potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 1.0])

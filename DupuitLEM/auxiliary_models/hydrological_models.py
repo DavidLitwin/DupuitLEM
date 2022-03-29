@@ -917,6 +917,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         super().__init__(grid, routing_method, precip_generator, groundwater_model)
         self.svm = vadose_model
         self.r = self._grid.add_zeros("node", "recharge_rate")
+        self.e = self._grid.add_zeros("node", "extraction_rate")
         self._elev = self._grid.at_node["topographic__elevation"]
         self._wt = self._grid.at_node["water_table__elevation"]
 
