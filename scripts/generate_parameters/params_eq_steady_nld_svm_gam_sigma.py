@@ -115,7 +115,7 @@ p = 1.0/(365*24*3600) # average precip rate
 
 # for recharge estimation
 lam = 10
-Nz = 500 # number of bins in vadose model
+bin_capacity_nd = 0.005 # bin capacity as a proportion of mean storm depth
 Nt = 1000; Ny = 3; Nx = 50 # num timesteps, num y nodex, num x nodes
 
 params = []
@@ -124,12 +124,13 @@ for sigma, gam in product(sigma_all, gam_all):
 
 df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'ne', 'na', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'phi'])
 df_params_1d['alpha'] = df_params_1d['hg']/df_params_1d['lg']
-df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt; df_params_1d['Nz'] = Nz
+df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt
+df_params_1d['Nz'] = (df_params_1d['b']*df_params_1d['na'])/(bin_capacity_nd*df_params_1d['ds'])
 df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 
 ### recharge estimation
 
-# paraeters
+# parameters
 ks = df_params_1d['ksat'][ID]
 pet = df_params_1d['pet'][ID]
 ne = df_params_1d['ne'][ID]
@@ -142,6 +143,7 @@ Lh = df_params_1d['Lh'][ID]
 D = df_params_1d['D'][ID]
 U = df_params_1d['U'][ID]
 sc = df_params_1d['Sc'][ID]
+Nz = df_params_1d['Nz'][ID]
 
 # initialize grid
 grid = RasterModelGrid((Ny, Nx), xy_spacing=Lh/Nx)
