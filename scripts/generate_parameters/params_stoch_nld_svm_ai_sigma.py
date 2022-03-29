@@ -67,9 +67,9 @@ def generate_parameters(p, ne, v0, hg, lg, tg, gam, hi, sigma, rho, ai, theta, p
     b = b_fun(hg, gam, hi)
     ksat = ksat_fun(p, hg, lg, hi)
     E0 = E0_fun(theta, hg, tg)
-    ds = ds_fun(hg, n, gam, sigma, hi)
-    tr = tr_fun(hg, p, n, gam, sigma, hi, rho)
-    tb = tb_fun(hg, p, n, gam, sigma, hi, rho)
+    ds = ds_fun(hg, ne, gam, sigma, hi)
+    tr = tr_fun(hg, p, ne, gam, sigma, hi, rho)
+    tb = tb_fun(hg, p, ne, gam, sigma, hi, rho)
     pet = pet_fun(p, rho, ai)
     na = phi*ne
 
@@ -98,7 +98,7 @@ dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
-bin_capacity_nd = 0.005 # bin capacity as a proportion of mean storm depth
+bin_capacity_nd = 0.01 # bin capacity as a proportion of mean storm depth
 Nx = 125 # number of grid cells width and height
 
 params = []

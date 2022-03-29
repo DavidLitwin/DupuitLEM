@@ -98,7 +98,7 @@ dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
 Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
 
-bin_capacity_nd = 0.005 # bin capacity as a proportion of mean storm depth
+bin_capacity_nd = 0.01 # bin capacity as a proportion of mean storm depth
 Nx = 125 # number of grid cells width and height
 
 params = []
