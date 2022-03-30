@@ -330,8 +330,8 @@ Q_end_interstorm[:] = np.mean(Q_all[intensity==0.0,:], axis=0)
 
 # classify zones of saturation
 sat_class = mg.add_zeros('node', 'saturation_class')
-sat_never = np.logical_and(sat_end_storm < 0.01, sat_end_interstorm < 0.01)
-sat_always = np.logical_and(sat_end_interstorm > 0.99, sat_end_storm > 0.99)
+sat_never = np.logical_and(sat_end_storm < 0.05, sat_end_interstorm < 0.05)
+sat_always = np.logical_and(sat_end_interstorm > 0.95, sat_end_storm > 0.95)
 sat_variable = ~np.logical_or(sat_never, sat_always)
 sat_class[sat_never] = 0
 sat_class[sat_variable] = 1
