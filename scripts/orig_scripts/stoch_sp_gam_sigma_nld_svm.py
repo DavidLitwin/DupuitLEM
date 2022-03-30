@@ -172,9 +172,8 @@ nld = TaylorNonLinearDiffuser(grid, linear_diffusivity=D, slope_crit=Sc, dynamic
 #initialize other models
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
-                 available_relative_saturation=Srange,
+                 available_water_content=Srange,
                  profile_depth=b,
-                 porosity=n,
                  num_bins=Nz,
                  )
 hm = HydrologyEventVadoseStreamPower(
