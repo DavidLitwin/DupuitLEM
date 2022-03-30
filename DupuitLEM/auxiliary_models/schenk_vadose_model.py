@@ -45,7 +45,7 @@ class SchenkVadoseModel:
         self.pet = potential_evapotranspiration_rate  # mm/day
         self.Sawc = available_water_content
         self.b = profile_depth  # mm
-        self.Nz = num_bins
+        self.Nz = int(num_bins)
 
         self.depths = np.linspace(
             self.b / self.Nz, self.b, self.Nz

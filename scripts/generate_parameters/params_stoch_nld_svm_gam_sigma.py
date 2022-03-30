@@ -96,7 +96,7 @@ p = 1.0/(365*24*3600) # average precip rate
 Tg_nd = 2000 # total duration in units of tg [-]
 dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
-Th_nd = 20 # hydrologic time in units of (tr+tb) [-]
+Th_nd = 25 # hydrologic time in units of (tr+tb) [-]
 
 bin_capacity_nd = 0.01 # bin capacity as a proportion of mean storm depth
 Nx = 125 # number of grid cells width and height
@@ -107,7 +107,7 @@ for sigma, gam in product(sigma_all, gam_all):
 
 df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'ne', 'na', 'v0', 'hg', 'lg', 'tg', 'E0', 'ds', 'tr', 'tb', 'alpha', 'gam', 'hi', 'sigma', 'rho', 'ai', 'theta', 'phi'])
 df_params['Sc'] = sc
-df_params['Nz'] = (df_params['b']*df_params['na'])/(bin_capacity_nd*df_params['ds'])
+df_params['Nz'] = round((df_params['b']*df_params['na'])/(bin_capacity_nd*df_params['ds']))
 df_params['Nx'] = Nx
 df_params['td'] = (df_params['lg']*df_params['ne'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['beta'] = (df_params['tr']+df_params['tb'])/df_params['td']

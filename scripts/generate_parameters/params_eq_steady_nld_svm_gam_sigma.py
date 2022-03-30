@@ -125,7 +125,7 @@ for sigma, gam in product(sigma_all, gam_all):
 df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg', 'E0', 'Lh', 'Sc', 'ksat', 'p', 'pet', 'b', 'ds', 'tr', 'tb', 'ne', 'na', 'gam', 'hi', 'lam', 'sigma', 'rho', 'ai', 'theta', 'phi'])
 df_params_1d['alpha'] = df_params_1d['hg']/df_params_1d['lg']
 df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt
-df_params_1d['Nz'] = (df_params_1d['b']*df_params_1d['na'])/(bin_capacity_nd*df_params_1d['ds'])
+df_params_1d['Nz'] = round((df_params_1d['b']*df_params_1d['na'])/(bin_capacity_nd*df_params_1d['ds']))
 df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 
 ### recharge estimation
