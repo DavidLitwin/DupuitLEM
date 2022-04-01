@@ -765,6 +765,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.cum_runoff = 0.0
         self.cum_extraction = 0.0
         self.cum_gw_export = 0.0
+        self.cum_pet = 0.0
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
@@ -841,6 +842,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
             # record precip/recharge spatially-averaged characteristics
             self.cum_precip += np.sum(self.intensities[i] * areas) * self.storm_dts[i]
+            self.cum_pet += np.sum(self.svm.pet * areas) * self.interstorm_dts[i]
             self.cum_recharge += np.sum(self.r[cores] * areas) * self.storm_dts[i]
             self.cum_extraction += (
                 np.sum(self.e[cores] * areas) * self.interstorm_dts[i]
