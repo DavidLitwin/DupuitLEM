@@ -204,6 +204,7 @@ df_output['cum_recharge'] = hm.cum_recharge
 df_output['cum_runoff'] = hm.cum_runoff
 df_output['cum_extraction'] = hm.cum_extraction
 df_output['cum_gw_export'] = hm.cum_gw_export
+df_output['cum_pet'] = hm.cum_pet
 
 """ratio of total recharge to total precipitation, averaged over space and time.
 this accounts for time varying recharge with precipitation rate, unsat
