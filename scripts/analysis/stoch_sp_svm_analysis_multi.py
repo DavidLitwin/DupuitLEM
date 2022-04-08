@@ -141,6 +141,7 @@ svm = SchenkVadoseModel(
                  profile_depth=b,
                  num_bins=500,
                  )
+svm.generate_state_from_analytical(ds, tr, tb, random_seed=20220408)
 hm = HydrologyEventVadoseStreamPower(
                                     mg,
                                     precip_generator=pdr,

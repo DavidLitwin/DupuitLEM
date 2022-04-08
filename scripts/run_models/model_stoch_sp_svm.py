@@ -190,6 +190,7 @@ svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
                         profile_depth=b,
                         num_bins=int(Nz),
 )
+svm.generate_state_from_analytical(ds, tr, tb, random_seed=20220408)
 if E0 > 0.0:
     hm = HydrologyEventVadoseThresholdStreamPower(grid,
                                         precip_generator=pdr,

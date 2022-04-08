@@ -59,7 +59,11 @@ class SchenkVadoseModel:
         self.bin_capacity = (self.b / self.Nz) * self.Sawc
 
     def generate_state_from_analytical(
-        self, mean_storm_depth, mean_storm_duration, mean_interstorm_duration,
+        self,
+        mean_storm_depth,
+        mean_storm_duration,
+        mean_interstorm_duration,
+        random_seed=None,
     ):
 
         """
@@ -72,6 +76,8 @@ class SchenkVadoseModel:
         mean_storm_duration: float (T). Mean storm duration.
         mean_interstorm_duration: float (T). Mean interstorm duration.
         """
+        if random_seed:
+            np.random.seed(random_seed)
 
         Trb = mean_storm_duration + mean_interstorm_duration
         a = (self.depths * self.Sawc) / mean_storm_depth
@@ -130,7 +136,7 @@ class SchenkVadoseModel:
         n_to_fill = round(storm_depth / self.bin_capacity)
 
         # change bin status
-        inds_to_fill = np.where(self.sat_profile == 0)[0][0:n_to_fill]
+        inds_to_fill = np.where(self.sat_profile == 0)[0][0:n_to_fill+1]
         self.sat_profile[inds_to_fill] = 1
 
         # calculate recharge
@@ -267,6 +273,7 @@ class SchenkVadoseModel:
         self.bool_extraction = np.zeros_like(self.depths)
         self.cum_storm_dt = 0
         self.cum_interstorm_dt = 0
+        self.cum_precip = 0
 
         for i in range(self.Nt):
 
@@ -275,9 +282,10 @@ class SchenkVadoseModel:
             self.cum_recharge += self.recharge_at_depth
             self.cum_extraction += self.extraction_at_depth
             self.bool_recharge += self.recharge_at_depth > 0.0
-            self.bool_extraction += self.extraction_at_depth > 0.0
+            self.bool_extraction += -self.extraction_at_depth > 0.0
             self.cum_storm_dt += self.Tr
             self.cum_interstorm_dt += self.Tb
+            self.cum_precip += self.d
 
         # define mean recharge depth as depth of events > 0 at that profile depth
         self.mean_recharge_depth = self.cum_recharge / self.bool_recharge
