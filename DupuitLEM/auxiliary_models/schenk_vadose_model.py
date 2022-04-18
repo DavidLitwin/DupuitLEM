@@ -250,7 +250,7 @@ class SchenkVadoseModel:
         n_to_fill = round(storm_depth / self.bin_capacity)
 
         # change bin status
-        inds_to_fill = np.where(self.sat_profile == 0)[0][0 : n_to_fill + 1]
+        inds_to_fill = np.where(self.sat_profile == 0)[0][0:n_to_fill]
         self.sat_profile[inds_to_fill] = 1
 
         # calculate recharge
