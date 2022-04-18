@@ -89,7 +89,7 @@ class HydrologicalModel:
 
 
 class HydrologySteadyStreamPower(HydrologicalModel):
-    """"
+    """ "
     Run hydrological model for steady recharge provided to the
     GroundwaterDupuitPercolator. HydrologySteadyStreamPower is meant to be
     passed to the StreamPowerModel, where erosion rate is calculated.
@@ -152,7 +152,7 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
 class HydrologyEventStreamPower(HydrologicalModel):
 
-    """"
+    """ "
     Run hydrological model for series of event-interevent pairs, calculate
     instantaneous flow rate at the beginning and end of event. Runoff accounts
     for discharge during both events and interevents.
@@ -173,7 +173,11 @@ class HydrologyEventStreamPower(HydrologicalModel):
     """
 
     def __init__(
-        self, grid, routing_method="D8", precip_generator=None, groundwater_model=None,
+        self,
+        grid,
+        routing_method="D8",
+        precip_generator=None,
+        groundwater_model=None,
     ):
 
         super().__init__(grid, routing_method)
@@ -204,7 +208,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.intensities = intensities
 
     def run_step(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Update groundwater state, routes and accumulates flow, update
@@ -259,7 +263,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
         )
 
     def run_step_record_state(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Effective flow rates are calculated during event periods only.
@@ -410,7 +414,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
             self._calc_grad = self._grid.calc_grad_at_link
 
     def run_step(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Update groundwater state, routes and accumulates flow, update
@@ -481,7 +485,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
         )
 
     def run_step_record_state(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Effective flow rates are calculated during event periods only.
@@ -592,7 +596,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
 
 
 class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
-    """"
+    """ "
     This model expands HydrologyEventStreamPower for the case where
     there is vadose zone storage and evapotranspiration. The SchenkVadoseModel
     is used to determine recharge and extraction of water to/from the water
@@ -631,7 +635,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self._wt = self._grid.at_node["water_table__elevation"]
 
     def run_step(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Initially generate exponential precip, fill pits, find flow directions,
@@ -706,7 +710,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         )
 
     def run_step_record_state(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Initially generate exponential precip, fill pits, find flow directions,
@@ -934,7 +938,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             self._calc_grad = self._grid.calc_grad_at_link
 
     def run_step(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Initially generate exponential precip, fill pits, find flow directions,
@@ -1021,7 +1025,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         )
 
     def run_step_record_state(self):
-        """"
+        """ "
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Initially generate exponential precip, fill pits, find flow directions,
