@@ -85,6 +85,10 @@ except KeyError:
     tb = df_params_1d['tb'] #mean interstorm duration [s]
     ds = df_params_1d['ds'] #mean storm depth [m]
     T_h = 2000*(tr+tb) #df_params_1d['Nt']*(tr+tb) #total hydrological time [s]
+try:
+    extraction_tol = df_params['extraction_tol']
+except:
+    extraction_tol = 0.0
 
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
@@ -142,6 +146,8 @@ svm = SchenkVadoseModel(
                  num_bins=500,
                  )
 svm.generate_state_from_analytical(ds, tr, tb, random_seed=20220408)
+if extraction_tol>0:
+    svm.set_max_extraction_depth(ds, tr, tb, threshold=extraction_tol)
 hm = HydrologyEventVadoseStreamPower(
                                     mg,
                                     precip_generator=pdr,
