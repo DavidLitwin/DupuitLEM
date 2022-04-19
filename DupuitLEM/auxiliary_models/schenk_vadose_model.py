@@ -19,6 +19,86 @@ below each soil layer depth and call this the recharge to the water table.
 import numpy as np
 
 
+def recharge_freq(profile_depth, tb, ds, pet, Sawc):
+    """
+    Returns the frequency of recharge relative to the frequency of events
+    occurring at depths in the vadose zone profile.
+
+    Parameters
+    ----------
+    profile_depth : array
+        Depths below surface, stored in svm as self.depths.
+    tb : float
+        Mean interstorm duration.
+    ds : float
+        Mean storm depth.
+    pet : float
+        Potential evapotranspiration rate.
+    Sawc : float
+        Plant available water content, as a proportion of total volume.
+
+    Returns
+    -------
+    freq : array
+        Frequency of recharge relative to frequency of events 1/(tr+tb).
+    """
+    a = (profile_depth * Sawc) / ds
+    b = (profile_depth * Sawc) / (pet * tb)
+
+    freq = np.zeros_like(profile_depth)
+    T1 = np.exp(a - b) / (1 + b) + (1 - a / b) + ((a - b) * np.exp(-b)) / (b * (1 + b))
+    T2 = np.exp(-a + b) * (
+        (1 - b / a)
+        + (b / a) ** 2 * (1 / (1 + b) + ((a - b) * np.exp(-a)) / (b * (1 + b)))
+    )
+
+    freq[a < b] = T1[a < b]
+    freq[a > b] = T2[a > b]
+
+    return freq
+
+
+def extraction_freq(profile_depth, ds, tr, tb, pet, Sawc):
+    """
+    Returns the frequency of uptake of soil water during interstorms relative
+    to the frequency of events occurring at depths in the vadose zone profile.
+
+    Parameters
+    ----------
+    profile_depth : array
+        Depths below surface, stored in svm as self.depths.
+    ds : float
+        Mean storm depth.
+    tr : float
+        Mean storm duration.
+    tb : float
+        Mean interstorm duration.
+    pet : float
+        Potential evapotranspiration rate.
+    Sawc : float
+        Plant available water content, as a proportion of total volume.
+
+    Returns
+    -------
+    freq : array
+        Frequency of extraction relative to frequency of events 1/(tr+tb).
+    """
+    a = (profile_depth * Sawc) / (pet * tb)
+    b = (profile_depth * Sawc) / ds
+
+    freq = np.zeros_like(profile_depth)
+    T1 = np.exp(a - b) / (1 + b) + (1 - a / b) + ((a - b) * np.exp(-b)) / (b * (1 + b))
+    T2 = np.exp(-a + b) * (
+        (1 - b / a)
+        + (b / a) ** 2 * (1 / (1 + b) + ((a - b) * np.exp(-a)) / (b * (1 + b)))
+    )
+
+    freq[a < b] = T1[a < b]
+    freq[a > b] = T2[a > b]
+
+    return freq
+
+
 class SchenkVadoseModel:
     def __init__(
         self,
@@ -42,28 +122,28 @@ class SchenkVadoseModel:
         num_bins: int (-).
             Number of saturation bins in which to divide profile. Default=500.
         """
-        self.pet = potential_evapotranspiration_rate  # mm/day
+        self.pet = potential_evapotranspiration_rate
         self.Sawc = available_water_content
-        self.b = profile_depth  # mm
+        self.b = profile_depth
         self.Nz = int(num_bins)
 
-        self.depths = np.linspace(
-            self.b / self.Nz, self.b, self.Nz
-        )  # bottom elev of each bin
-        self.sat_profile = np.zeros_like(
-            self.depths
-        )  # saturation state (binary) in each bin
+        # bottom elev of each bin
+        self.depths = np.linspace(self.b / self.Nz, self.b, self.Nz)
+        # saturation state (binary) in each bin
+        self.sat_profile = np.zeros_like(self.depths)
+        # saturation state difference (binary) changed each timestep
         self.sat_diff = np.zeros_like(self.depths)
+        # recharge depth when water table is at each depth
         self.recharge_at_depth = np.zeros_like(self.depths)
+        # extraction depth when water table is at each depth
         self.extraction_at_depth = np.zeros_like(self.depths)
+        # water depth capacity in each bin
         self.bin_capacity = (self.b / self.Nz) * self.Sawc
+        # mask to set extraction below a certain depth to zero
+        self.extraction_depth_mask = np.zeros_like(self.depths, dtype=bool)
 
     def generate_state_from_analytical(
-        self,
-        mean_storm_depth,
-        mean_storm_duration,
-        mean_interstorm_duration,
-        random_seed=None,
+        self, mean_storm_depth, mean_interstorm_duration, random_seed=None,
     ):
 
         """
@@ -73,15 +153,13 @@ class SchenkVadoseModel:
         Parameters
         ----------
         mean_storm_depth: float (L). Mean storm depth.
-        mean_storm_duration: float (T). Mean storm duration.
         mean_interstorm_duration: float (T). Mean interstorm duration.
         """
         if random_seed:
             np.random.seed(random_seed)
 
-        Trb = mean_storm_duration + mean_interstorm_duration
         a = (self.depths * self.Sawc) / mean_storm_depth
-        b = (self.depths * self.Sawc) / (self.pet / (1 / Trb))
+        b = (self.depths * self.Sawc) / (self.pet / (1 / mean_interstorm_duration))
 
         self.analytical_sat_prob = np.zeros_like(self.depths)
         c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (
@@ -95,6 +173,42 @@ class SchenkVadoseModel:
 
         r = np.random.rand(len(self.depths))
         self.sat_profile = 1 * (r < self.analytical_sat_prob)
+
+    def set_max_extraction_depth(
+        self,
+        mean_storm_depth,
+        mean_storm_duration,
+        mean_interstorm_duration,
+        threshold=0.001,
+    ):
+
+        """
+        Set the field extraction_depth_mask, which, when used in
+        conjunction with the `run_interevent` method, sets the extraction
+        rate below a certain water table depth equal to zero. It does this
+        using a threshold of extraction frequency from the unsaturated zone.
+        This frequency declines with depth, mimicing the rooting distribution.
+        Setting a maximum depth using this distribution essentially prevents
+        later extraction from the saturated zone at depths where we do not
+        expect there to be roots.
+
+        Parameters
+        ----------
+        mean_storm_depth: float (L). Mean storm depth.
+        mean_storm_duration: float (T). Mean storm duration.
+        mean_interstorm_duration: float (T). Mean interstorm duration.
+        threshold: threshold relative frequency of extraction. Default 0.001.
+        """
+
+        e = extraction_freq(
+            self.depths,
+            mean_storm_depth,
+            mean_storm_duration,
+            mean_interstorm_duration,
+            self.pet,
+            self.Sawc,
+        )
+        self.extraction_depth_mask = e < threshold
 
     def generate_storm(
         self,
@@ -188,6 +302,9 @@ class SchenkVadoseModel:
         self.extraction_at_depth[:] = (
             -n_to_drain - np.cumsum(self.sat_diff)
         ) * self.bin_capacity
+
+        # set extraction to zero where masked
+        self.extraction_at_depth[self.extraction_depth_mask] = 0.0
 
     def calc_extraction_rate(self, wt_from_surface, interstorm_dt):
         """calculate the extraction rate given the depth of water table from

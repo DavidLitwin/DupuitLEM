@@ -126,6 +126,7 @@ df_params_1d = pd.DataFrame(np.array(params),columns=['D', 'U', 'hg', 'lg', 'tg'
 df_params_1d['alpha'] = df_params_1d['hg']/df_params_1d['lg']
 df_params_1d['Nx'] = Nx; df_params_1d['Ny'] = Ny; df_params_1d['Nt'] = Nt
 df_params_1d['Nz'] = round((df_params_1d['b']*df_params_1d['na'])/(bin_capacity_nd*df_params_1d['ds']))
+df_params_1d['extraction_tol'] = 0.001
 df_params_1d.loc[ID].to_csv('df_params_1d_%d.csv'%ID, index=True)
 
 ### recharge estimation
@@ -144,6 +145,7 @@ D = df_params_1d['D'][ID]
 U = df_params_1d['U'][ID]
 sc = df_params_1d['Sc'][ID]
 Nz = df_params_1d['Nz'][ID]
+extraction_tol = df_params_1d['extraction_tol'][ID]
 
 # initialize grid
 grid = RasterModelGrid((Ny, Nx), xy_spacing=Lh/Nx)
@@ -179,6 +181,8 @@ svm = SchenkVadoseModel(
                 profile_depth=b,
                 num_bins=Nz,
                 )
+svm.generate_state_from_analytical(ds, tb, random_seed=20220408)
+svm.set_max_extraction_depth(ds, tr, tb, threshold=extraction_tol)
 hm = HydrologyEventVadoseStreamPower(
                                     grid,
                                     precip_generator=pdr,

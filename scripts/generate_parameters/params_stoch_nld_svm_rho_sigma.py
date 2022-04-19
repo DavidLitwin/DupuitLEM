@@ -118,5 +118,6 @@ df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulatio
 df_params['dtg'] = df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['output_interval'] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
+df_params['extraction_tol'] = 0.001
 
 df_params.loc[ID].to_csv('parameters.csv', index=True)

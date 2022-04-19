@@ -108,6 +108,10 @@ try:
     Sc = df_params['Sc']
 except KeyError:
     Sc = 0.0
+try:
+    extraction_tol = df_params['extraction_tol']
+except:
+    extraction_tol = 0.0
 
 output = {}
 output["output_interval"] = df_params['output_interval']
@@ -190,7 +194,9 @@ svm = SchenkVadoseModel(potential_evapotranspiration_rate=pet,
                         profile_depth=b,
                         num_bins=int(Nz),
 )
-svm.generate_state_from_analytical(ds, tr, tb, random_seed=20220408)
+svm.generate_state_from_analytical(ds, tb, random_seed=20220408)
+if extraction_tol > 0:
+    svm.set_max_extraction_depth(ds, tr, tb, threshold=extraction_tol)
 if E0 > 0.0:
     hm = HydrologyEventVadoseThresholdStreamPower(grid,
                                         precip_generator=pdr,
