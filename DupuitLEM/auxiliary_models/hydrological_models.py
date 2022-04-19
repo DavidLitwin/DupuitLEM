@@ -173,11 +173,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
     """
 
     def __init__(
-        self,
-        grid,
-        routing_method="D8",
-        precip_generator=None,
-        groundwater_model=None,
+        self, grid, routing_method="D8", precip_generator=None, groundwater_model=None,
     ):
 
         super().__init__(grid, routing_method)
