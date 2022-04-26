@@ -52,7 +52,7 @@ plt.close()
 
 ########## Run hydrological model
 # load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
-df_params = pd.read_csv('./%s-%d/parameters.csv'(base_folder, grid_id), index_col=0)[task_id]
+df_params = pd.read_csv('./%s-%d/parameters.csv'%(base_folder, grid_id), index_col=0)[task_id]
 df_params['grid ID'] = grid_id
 df_params.to_csv('./post_proc/%s/%s/params_%d_x_%d.csv'%(base_folder, cross_folder, grid_id, ID), index=True)
 
