@@ -29,7 +29,7 @@ base_folder = os.environ['BASE_OUTPUT_FOLDER']
 cross_folder = os.environ['CROSS_OUTPUT_FOLDER']
 
 ########## Load and basic plot
-grid_id = 14
+grid_id = int(cross_folder.split('_')[-1])
 grid_files = glob.glob('./%s-%d/data/*.nc'%(base_folder, grid_id))
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 iteration = int(files[-1].split('_')[-1][:-3])
