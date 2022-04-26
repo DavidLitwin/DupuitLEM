@@ -78,16 +78,16 @@ except:
 
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
-#initialize grid
+#initialize grid - correct thickness for current parameters
 mg = RasterModelGrid(grid.shape, xy_spacing=grid.dx)
 mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
                               left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
 z = mg.add_zeros('node', 'topographic__elevation')
 z[:] = elev
 zb = mg.add_zeros('node', 'aquifer_base__elevation')
-zb[:] = base
+zb[:] = elev - b
 zwt = mg.add_zeros('node', 'water_table__elevation')
-zwt[:] = wt
+zwt[:] = zb + b * (wt - base)/(elev - base)
 
 f = open('./post_proc/%s/%s/dt_qs_s_%d.csv'%(base_folder, cross_folder, ID), 'w')
 def write_SQ(grid, r, dt, file=f):
@@ -142,6 +142,7 @@ hm = HydrologyEventVadoseStreamPower(
                                     )
 
 #run model
+hm.run_step()
 hm.run_step_record_state()
 f.close()
 
