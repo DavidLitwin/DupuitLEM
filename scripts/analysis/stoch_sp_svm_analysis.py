@@ -103,16 +103,18 @@ f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
 def write_SQ(grid, r, dt, file=f):
     cores = grid.core_nodes
     h = grid.at_node["aquifer__thickness"]
-    area = grid.cell_area_at_node
-    storage = np.sum(ne*h[cores]*area[cores])
-
+    wt = grid.at_node["water_table__elevation"]
+    z = grid.at_node["topographic__elevation"]
+    sat = (z-wt) < sat_cond*hg
     qs = grid.at_node["surface_water__specific_discharge"]
-    qs_tot = np.sum(qs[cores]*area[cores])
-    qs_nodes = np.sum(qs[cores]>1e-10)
+    area = grid.cell_area_at_node
 
+    storage = np.sum(ne*h[cores]*area[cores])
+    qs_tot = np.sum(qs[cores]*area[cores])
+    sat_nodes = np.sum(sat[cores])
     r_tot = np.sum(r[cores]*area[cores])
 
-    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, qs_nodes))
+    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
 
 #initialize components
 if isinstance(mg, RasterModelGrid):
@@ -222,7 +224,7 @@ df_output['(P-Q-Qgw)/P'] = (hm.cum_precip - hm.cum_runoff - hm.cum_gw_export)/hm
 df_output['Q/P'] = hm.cum_runoff/hm.cum_precip
 
 #load the full storage discharge dataset that was just generated
-df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','r', 'qs', 'S', 'qs_cells'])
+df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','r', 'qs', 'S', 'sat_nodes'])
 # remove the first row (test row written by init of gdp)
 df.drop(0, inplace=True)
 df.reset_index(drop=True, inplace=True)
