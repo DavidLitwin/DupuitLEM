@@ -99,23 +99,6 @@ zb[:] = base
 zwt = mg.add_zeros('node', 'water_table__elevation')
 zwt[:] = wt
 
-f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
-def write_SQ(grid, r, dt, file=f):
-    cores = grid.core_nodes
-    h = grid.at_node["aquifer__thickness"]
-    wt = grid.at_node["water_table__elevation"]
-    z = grid.at_node["topographic__elevation"]
-    sat = (z-wt) < sat_cond*hg
-    qs = grid.at_node["surface_water__specific_discharge"]
-    area = grid.cell_area_at_node
-
-    storage = np.sum(ne*h[cores]*area[cores])
-    qs_tot = np.sum(qs[cores]*area[cores])
-    sat_nodes = np.sum(sat[cores])
-    r_tot = np.sum(r[cores]*area[cores])
-
-    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
-
 #initialize components
 if isinstance(mg, RasterModelGrid):
     method = 'D8'
@@ -131,7 +114,7 @@ gdp = GroundwaterDupuitPercolator(mg,
                                   recharge_rate=0.0,
                                   courant_coefficient=0.05,
                                   vn_coefficient = 0.05,
-                                  callback_fun = write_SQ,
+                                  #callback_fun = write_SQ,
                                   )
 pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
     mean_interstorm_duration=tb, mean_storm_depth=ds,
@@ -154,6 +137,26 @@ hm = HydrologyEventVadoseStreamPower(
                                     )
 
 #run model
+hm.run_step()
+
+f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
+def write_SQ(grid, r, dt, file=f):
+    cores = grid.core_nodes
+    h = grid.at_node["aquifer__thickness"]
+    wt = grid.at_node["water_table__elevation"]
+    z = grid.at_node["topographic__elevation"]
+    sat = (z-wt) < sat_cond*hg
+    qs = grid.at_node["surface_water__specific_discharge"]
+    area = grid.cell_area_at_node
+
+    storage = np.sum(ne*h[cores]*area[cores])
+    qs_tot = np.sum(qs[cores]*area[cores])
+    sat_nodes = np.sum(sat[cores])
+    r_tot = np.sum(r[cores]*area[cores])
+
+    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
+gdp.callback_fun = write_SQ
+
 hm.run_step_record_state()
 f.close()
 
