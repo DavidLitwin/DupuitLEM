@@ -180,7 +180,7 @@ def test_run_interevent_4():
                      profile_depth=4.5,
                      num_bins=100)
     svm.generate_state_from_analytical(ds, tb, random_seed=20220408)
-    svm.set_max_extraction_depth(ds, tr, tb)
+    svm.set_max_extraction_depth(ds, tb)
     svm.run_model(
             mean_storm_depth=ds,
             mean_storm_duration=tr,
