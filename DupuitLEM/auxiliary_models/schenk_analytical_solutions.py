@@ -1,8 +1,46 @@
 # -*- coding: utf-8 -*-
 """
-Analytical solutions to the SchenkVadoseModel identified by Ciaran Harman.
+Analytical solutions to the SchenkVadoseModel derived by Ciaran Harman.
 """
 
+
+def saturation_state(profile_depth, tb, ds, pet, Sawc):
+    """
+    Returns the probability of being at field capacity at depths in the vadose
+    zone profile.
+
+    Parameters
+    ----------
+    profile_depth : array
+        Depths below surface, stored in svm as self.depths.
+    tb : float
+        Mean interstorm duration.
+    ds : float
+        Mean storm depth.
+    pet : float
+        Potential evapotranspiration rate.
+    Sawc : float
+        Plant available water content, as a proportion of total volume.
+
+    Returns
+    -------
+    out : array
+        Probability of saturation at depths.
+    """
+    a = (profile_depth * Sawc) / ds
+    b = (profile_depth * Sawc) / (pet * tb)
+
+    out = np.zeros_like(profile_depth)
+    c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (
+        2 * a * (1 + b) ** 2
+    )
+    c2 = 1 + (
+        (a ** 2 * (1 + b) - 2 * (1 + b) ** 2 - a * (-2 + b ** 2)) * np.exp(a - b)
+    ) / (2 * (1 + b) ** 2)
+    out[a > b] = c1[a > b]
+    out[a <= b] = c2[a <= b]
+
+    return out
 
 def recharge_freq(profile_depth, tb, ds, pet, Sawc):
     """
