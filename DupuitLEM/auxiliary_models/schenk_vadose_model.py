@@ -99,8 +99,8 @@ class SchenkVadoseModel:
         Set the field extraction_depth_mask, which, when used in
         conjunction with the `run_interevent` method, sets the root water uptake
         rate for water tables below a certain depth equal to zero. It does this
-        using the analytical pdf of rooting depth to find the location where
-        (1 - threshold) proportion of uptake occurs above this depth. This
+        using the analytical cdf of rooting depth to find the location where
+        the proportion (1 - threshold) of uptake occurs above this depth. This
         threshold generally only affects root water uptake in arid cases
         (pet*tb > ds), where the equilibrium solution to the model suggests
         some root water uptake occurs at infinite depth.
@@ -176,7 +176,7 @@ class SchenkVadoseModel:
         """calculate the recharge rate during storm event given the depth of water
         table from surface. Returns the recharge rate for each water table
         depth provided. If supplied wt depth is greater than profile depth,
-        recharge rate is zero.
+        recharge rate is depth at base of the profile.
 
         Parameters
         ----------

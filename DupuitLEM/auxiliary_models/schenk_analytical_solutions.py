@@ -2,7 +2,7 @@
 """
 Analytical solutions to the SchenkVadoseModel derived by Ciaran Harman.
 """
-
+import numpy as np
 
 def saturation_state(profile_depth, tb, ds, pet, Sawc):
     """
@@ -188,10 +188,11 @@ def extraction_cdf(profile_depth, ds, tb, pet, Sawc):
     a = (profile_depth * Sawc) / ds
     b = (profile_depth * Sawc) / (pet * tb)
     beta = pet * tb
+    alpha = ds
 
     out = np.zeros_like(profile_depth)
-    T1 = (ds - np.exp(z/ds)*ds - beta + np.exp(z/beta)*(z + beta))/(np.exp(z/beta)*beta*(z + beta))
-    T2 = (np.exp(z/beta)*ds*(ds - beta) + np.exp((2*z)/ds)*beta*(z + beta) + np.exp(z*(1/ds + 1/beta))*(-ds**2 + z*(ds - beta) + ds*beta - beta**2))/(np.exp((2*z)/ds)*beta**2*(z + beta))
+    T1 = 1 - (np.exp(-z/beta)*((-1+np.exp(z/alpha))*alpha+beta))/(z+beta)
+    T2 = 1 - (np.exp(z*(-2/alpha+1/beta)) * (alpha*(-alpha+beta) + np.exp(z/alpha)*(alpha**2 - alpha*beta+beta**2+z*(-alpha+beta))))/(beta*(z+beta))
 
     out[a < b] = T1[a < b]
     out[a >= b] = T2[a >= b]

@@ -188,7 +188,7 @@ def test_run_interevent_4():
             num_timesteps=1000
         )
     test_bool = np.zeros_like(svm.depths, dtype=bool)
-    test_bool[10:] = True
+    test_bool[5:] = True
 
     assert_equal(svm.extraction_depth_mask, test_bool)
     assert_equal(svm.cum_extraction<0, ~test_bool)
@@ -222,7 +222,7 @@ def test_recharge_event_2():
     # sm.recharge_at_depth: [2.0, 2.0, 2.0, 2.0, 2.0]
 
     R = sm.calc_recharge_rate(np.array([0.0, 3.5, 4.5, 5.0, 10.0]), 5.0)
-    assert_equal(R, [0.4, 0.4, 0.4, 0.4, 0.0])
+    assert_equal(R, [0.4, 0.4, 0.4, 0.4, 0.4])
 
 
 def test_extraction_event_1():
@@ -260,4 +260,4 @@ def test_extraction_event_2():
     # sm.extraction_at_depth: [-4.0, -4.0, -4.0, -4.0, -3.0]
 
     E = sm.calc_extraction_rate(np.array([0.0, 3.5, 4.5, 5.0, 10.0]), 4.0)
-    assert_equal(E, [-1, -1, -3 / 4, -3 / 4, 0.0])
+    assert_equal(E, [-1, -1, -3 / 4, 0.0, 0.0])
