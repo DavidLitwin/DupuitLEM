@@ -19,6 +19,7 @@ below each soil layer depth and call this the recharge to the water table.
 import numpy as np
 from .schenk_analytical_solutions import extraction_cdf, saturation_state
 
+
 class SchenkVadoseModel:
     def __init__(
         self,
@@ -78,21 +79,19 @@ class SchenkVadoseModel:
         if random_seed:
             np.random.seed(random_seed)
 
-        self.analytical_sat_prob = saturation_state(self.depths,
-                                            mean_interstorm_duration,
-                                            mean_storm_depth,
-                                            self.pet,
-                                            self.Sawc,
-                                            )
+        self.analytical_sat_prob = saturation_state(
+            self.depths,
+            mean_interstorm_duration,
+            mean_storm_depth,
+            self.pet,
+            self.Sawc,
+        )
 
         r = np.random.rand(len(self.depths))
         self.sat_profile = 1 * (r < self.analytical_sat_prob)
 
     def set_max_extraction_depth(
-        self,
-        mean_storm_depth,
-        mean_interstorm_duration,
-        threshold=0.01,
+        self, mean_storm_depth, mean_interstorm_duration, threshold=0.01,
     ):
 
         """
@@ -325,4 +324,6 @@ class SchenkVadoseModel:
             self.cum_storm_dt + self.cum_interstorm_dt
         )
         # plant rooting depth pdf
-        self.plant_rooting_pdf = self.bool_extraction_at_depth / (np.sum(self.bool_extraction_at_depth) * np.diff(self.depths)[0])
+        self.plant_rooting_pdf = self.bool_extraction_at_depth / (
+            np.sum(self.bool_extraction_at_depth) * np.diff(self.depths)[0]
+        )

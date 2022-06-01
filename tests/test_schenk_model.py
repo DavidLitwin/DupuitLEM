@@ -102,9 +102,7 @@ def test_run_interevent_0():
     is recorded."""
 
     sm = SchenkVadoseModel(
-        num_bins=5,
-        available_water_content=1.0,
-        potential_evapotranspiration_rate=1.0,
+        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([1, 1, 1, 0, 0])
     sm.run_interevent(0.49)
@@ -138,15 +136,14 @@ def test_run_interevent_2():
     unit where profile has drainable water."""
 
     sm = SchenkVadoseModel(
-        num_bins=5,
-        available_water_content=1.0,
-        potential_evapotranspiration_rate=1.0,
+        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
     sm.run_interevent(4.0)
 
     assert_equal(sm.sat_profile, [0.0, 0.0, 0.0, 0.0, 0.0])
     assert_equal(sm.extraction_at_depth, [-4.0, -4.0, -4.0, -4.0, -3.0])
+
 
 def test_run_interevent_3():
     """Edge case where interevent PET exceeds available saturation. In this
@@ -155,9 +152,7 @@ def test_run_interevent_3():
     the depth of extraction limit."""
 
     sm = SchenkVadoseModel(
-        num_bins=5,
-        available_water_content=1.0,
-        potential_evapotranspiration_rate=1.0,
+        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=1.0,
     )
     sm.extraction_depth_mask = sm.depths > 3
     sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
@@ -165,6 +160,7 @@ def test_run_interevent_3():
 
     assert_equal(sm.sat_profile, [0.0, 0.0, 0.0, 0.0, 0.0])
     assert_equal(sm.extraction_at_depth, [-4.0, -4.0, -4.0, 0.0, 0.0])
+
 
 def test_run_interevent_4():
     """Make sure that the mask is properly set when using the
@@ -175,23 +171,25 @@ def test_run_interevent_4():
     tb = 430000
     ds = 0.015
     svm = SchenkVadoseModel(
-                     potential_evapotranspiration_rate=1.5e-08,
-                     available_water_content=0.15,
-                     profile_depth=4.5,
-                     num_bins=100)
+        potential_evapotranspiration_rate=1.5e-08,
+        available_water_content=0.15,
+        profile_depth=4.5,
+        num_bins=100,
+    )
     svm.generate_state_from_analytical(ds, tb, random_seed=20220408)
     svm.set_max_extraction_depth(ds, tb)
     svm.run_model(
-            mean_storm_depth=ds,
-            mean_storm_duration=tr,
-            mean_interstorm_duration=tb,
-            num_timesteps=1000
-        )
+        mean_storm_depth=ds,
+        mean_storm_duration=tr,
+        mean_interstorm_duration=tb,
+        num_timesteps=1000,
+    )
     test_bool = np.zeros_like(svm.depths, dtype=bool)
     test_bool[5:] = True
 
     assert_equal(svm.extraction_depth_mask, test_bool)
-    assert_equal(svm.cum_extraction<0, ~test_bool)
+    assert_equal(svm.cum_extraction < 0, ~test_bool)
+
 
 def test_recharge_event_1():
     """test_run_event_2 but now calculate the recharge for float and arrays
@@ -230,9 +228,7 @@ def test_extraction_event_1():
     depth. """
 
     sm = SchenkVadoseModel(
-        num_bins=5,
-        available_water_content=1.0,
-        potential_evapotranspiration_rate=0.5,
+        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=0.5,
     )
     sm.sat_profile[:] = np.array([1, 1, 1, 1, 0])
     sm.run_interevent(6.0)
@@ -249,9 +245,7 @@ def test_extraction_event_2():
     depth. Ensure depths beyond profile don't have water extracted."""
 
     sm = SchenkVadoseModel(
-        num_bins=5,
-        available_water_content=1.0,
-        potential_evapotranspiration_rate=1.0,
+        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
     sm.run_interevent(4.0)

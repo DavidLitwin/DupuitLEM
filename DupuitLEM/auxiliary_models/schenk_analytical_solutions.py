@@ -4,6 +4,7 @@ Analytical solutions to the SchenkVadoseModel derived by Ciaran Harman.
 """
 import numpy as np
 
+
 def saturation_state(profile_depth, tb, ds, pet, Sawc):
     """
     Returns the probability of being at field capacity at depths in the vadose
@@ -31,9 +32,7 @@ def saturation_state(profile_depth, tb, ds, pet, Sawc):
     b = (profile_depth * Sawc) / (pet * tb)
 
     out = np.zeros_like(profile_depth)
-    c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (
-        2 * a * (1 + b) ** 2
-    )
+    c1 = (b * (2 + b) * (a + a * b - b ** 2) * np.exp(-a + b)) / (2 * a * (1 + b) ** 2)
     c2 = 1 + (
         (a ** 2 * (1 + b) - 2 * (1 + b) ** 2 - a * (-2 + b ** 2)) * np.exp(a - b)
     ) / (2 * (1 + b) ** 2)
@@ -41,6 +40,7 @@ def saturation_state(profile_depth, tb, ds, pet, Sawc):
     out[a <= b] = c2[a <= b]
 
     return out
+
 
 def recharge_freq(profile_depth, tb, ds, pet, Sawc):
     """
@@ -150,15 +150,45 @@ def extraction_pdf(profile_depth, ds, tb, pet, Sawc):
     b = (profile_depth * Sawc) / (pet * tb)
 
     out = np.zeros_like(profile_depth)
-    T1 = (b*np.exp(a - b)) / ((b + 1)*z) * (np.exp(-a) / (b + 1) - (1- (b*(b+2))/(a*(b+1)))*(1-np.exp(-a)) )
-    T2 = (a*np.exp(b - a)) / ((b + 1)*z) * (b+1-b/a* (2*b-2*np.exp(-a)+2 - b/a*((b**2/(b+1)*np.exp(-a) + (b+2-b**2/(a*(b+1)))*(1-np.exp(-a))))))
-    T3 = 1/(a+1)**2
+    T1 = (
+        (b * np.exp(a - b))
+        / ((b + 1) * z)
+        * (
+            np.exp(-a) / (b + 1)
+            - (1 - (b * (b + 2)) / (a * (b + 1))) * (1 - np.exp(-a))
+        )
+    )
+    T2 = (
+        (a * np.exp(b - a))
+        / ((b + 1) * z)
+        * (
+            b
+            + 1
+            - b
+            / a
+            * (
+                2 * b
+                - 2 * np.exp(-a)
+                + 2
+                - b
+                / a
+                * (
+                    (
+                        b ** 2 / (b + 1) * np.exp(-a)
+                        + (b + 2 - b ** 2 / (a * (b + 1))) * (1 - np.exp(-a))
+                    )
+                )
+            )
+        )
+    )
+    T3 = 1 / (a + 1) ** 2
 
     out[a < b] = T1[a < b]
     out[a > b] = T2[a > b]
-    out[a==b] = T3[a==b]
+    out[a == b] = T3[a == b]
 
     return out
+
 
 def extraction_cdf(profile_depth, ds, tb, pet, Sawc):
     """
@@ -191,8 +221,17 @@ def extraction_cdf(profile_depth, ds, tb, pet, Sawc):
     alpha = ds
 
     out = np.zeros_like(profile_depth)
-    T1 = 1 - (np.exp(-z/beta)*((-1+np.exp(z/alpha))*alpha+beta))/(z+beta)
-    T2 = 1 - (np.exp(z*(-2/alpha+1/beta)) * (alpha*(-alpha+beta) + np.exp(z/alpha)*(alpha**2 - alpha*beta+beta**2+z*(-alpha+beta))))/(beta*(z+beta))
+    T1 = 1 - (np.exp(-z / beta) * ((-1 + np.exp(z / alpha)) * alpha + beta)) / (
+        z + beta
+    )
+    T2 = 1 - (
+        np.exp(z * (-2 / alpha + 1 / beta))
+        * (
+            alpha * (-alpha + beta)
+            + np.exp(z / alpha)
+            * (alpha ** 2 - alpha * beta + beta ** 2 + z * (-alpha + beta))
+        )
+    ) / (beta * (z + beta))
 
     out[a < b] = T1[a < b]
     out[a >= b] = T2[a >= b]
