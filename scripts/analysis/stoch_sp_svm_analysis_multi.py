@@ -35,9 +35,20 @@ task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
 grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 all_iterations = [int(file.split('_')[-1][:-3]) for file in files]
-iterations = [1000, 2500, 7500, 20000]
+
+####### calculate relief
+relief = np.zeros(len(files))
+for i in range(len(files)):
+    grid = from_netcdf(files[i])
+    elev = grid.at_node['topographic__elevation']
+    relief[i] = np.mean(elev[grid.core_nodes])
+
+rfinal = relief[-1] # final relief
+pr = np.array([0.1, 0.3, 0.6, 0.9]) # proportion of final relief
+rt = pr*rfinal # corresponding relief
+inds = [np.argmin(abs(relief-r)) for r in rt] # index corresponding to that relief
+iterations = all_iterations[inds]
 IT = iterations[task_id]
-inds = [all_iterations.index(val) for val in iterations]
 
 try:
     grid = from_netcdf(files[inds[task_id]])
