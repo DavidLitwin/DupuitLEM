@@ -34,7 +34,7 @@ task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
 ########## Load and basic plot
 grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-all_iterations = [int(file.split('_')[-1][:-3]) for file in files]
+all_iterations = np.array([int(file.split('_')[-1][:-3]) for file in files])
 
 ####### calculate relief
 relief = np.zeros(len(files))
