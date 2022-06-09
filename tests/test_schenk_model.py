@@ -124,6 +124,7 @@ def test_run_interevent_1():
 
     assert_equal(sm.sat_profile, [0.0, 0.0, 1, 0.0, 0.0])
 
+
 def test_run_interevent_2():
     """Edge case where interevent PET exceeds available saturation. In this
     case, the remaining saturation is drained."""
@@ -136,6 +137,7 @@ def test_run_interevent_2():
 
     assert_equal(sm.sat_profile, [0.0, 0.0, 0.0, 0.0, 0.0])
 
+
 def test_run_interevent_3():
     """Edge case where interevent PET exceeds available saturation. In this
     case, the remaining saturation is drained."""
@@ -147,6 +149,7 @@ def test_run_interevent_3():
     sm.run_interevent(4.0)
 
     assert_equal(sm.sat_profile, [0.0, 0.0, 0.0, 0.0, 0.0])
+
 
 def test_recharge_event_1():
     """test_run_event_2 but now calculate the recharge for float and arrays
