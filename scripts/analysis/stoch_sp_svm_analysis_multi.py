@@ -96,10 +96,6 @@ except KeyError:
     tb = df_params_1d['tb'] #mean interstorm duration [s]
     ds = df_params_1d['ds'] #mean storm depth [m]
     T_h = 2000*(tr+tb) #df_params_1d['Nt']*(tr+tb) #total hydrological time [s]
-try:
-    extraction_tol = df_params['extraction_tol']
-except:
-    extraction_tol = 0.0
 
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
@@ -157,8 +153,6 @@ svm = SchenkVadoseModel(
                  num_bins=500,
                  )
 svm.generate_state_from_analytical(ds, tb, random_seed=20220408)
-if extraction_tol>0:
-    svm.set_max_extraction_depth(ds, tb, threshold=extraction_tol)
 hm = HydrologyEventVadoseStreamPower(
                                     mg,
                                     precip_generator=pdr,
@@ -224,7 +218,6 @@ curv[:] = tot_curvature.reshape(z.shape)
 df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
 df_output['cum_runoff'] = hm.cum_runoff
-df_output['cum_extraction'] = hm.cum_extraction
 df_output['cum_gw_export'] = hm.cum_gw_export
 
 """ratio of total recharge to total precipitation, averaged over space and time.
@@ -278,8 +271,7 @@ except:
     print("error fitting recession")
 
 # find times with recharge. Note in df qs and S are at the end of the timestep.
-# i is at the beginning of the timestep. *** note now that recharge includes
-# periods of negative recharge where extraction occurs.
+# i is at the beginning of the timestep. 
 df['t'] = np.cumsum(df['dt'])
 is_r = df['r'] > 0.0
 pre_r = np.where(np.diff(is_r*1)>0.0)[0] #last data point before recharge
@@ -304,7 +296,7 @@ qe = df['qs'] - df['qb']
 df_output['qe_tot'] = np.sum(df['dt'] * qe)
 df_output['qb_tot'] = np.sum(df['dt'] * qb)
 df_output['qs_tot'] = np.sum(df['dt'] * df['qs'])
-df_output['r_tot'] = np.sum(df['dt'] * df['r']) # recharge - extraction
+df_output['r_tot'] = np.sum(df['dt'] * df['r']) # recharge
 
 # L'vovich partitioning: wetting on precipitation
 df_output['W/P'] = (df_output['cum_precip'] - df_output['qe_tot'])/df_output['cum_precip']
@@ -322,10 +314,6 @@ intensity = hm.intensity[:-1]
 # recharge
 recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
 recharge_event[:] = np.mean(hm.r_all[range(0,hm.r_all.shape[0],2),:], axis=0)
-
-# extraction
-extraction_interevent = mg.add_zeros('node', 'extraction_rate_mean_interstorm')
-extraction_interevent[:] = np.mean(hm.e_all[range(2,hm.e_all.shape[0],2),:], axis=0)
 
 # mean and variance of water table
 wt_all = hm.wt_all[1:,:]
@@ -455,7 +443,6 @@ output_fields = [
         'at_node:total_curvature_rd',
         'at_node:surface_water_effective__discharge',
         'at_node:recharge_rate_mean_storm',
-        'at_node:extraction_rate_mean_interstorm',
         'at_node:wtrel_mean_end_storm',
         'at_node:wtrel_mean_end_interstorm',
         'at_node:sat_mean_end_storm',

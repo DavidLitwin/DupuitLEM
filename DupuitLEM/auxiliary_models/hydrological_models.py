@@ -626,7 +626,6 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
         self.svm = vadose_model
         self.r = self._grid.add_zeros("node", "recharge_rate")
-        self.e = self._grid.add_zeros("node", "extraction_rate")
         self._elev = self._grid.at_node["topographic__elevation"]
         self._wt = self._grid.at_node["water_table__elevation"]
 
@@ -674,18 +673,11 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             )
 
             # run interevent:
-            ## run vadose model, calculate the extraction below the water table
-            ## due to ET.
             interstorm_dt = max(interstorm_dt, 1e-15)  # avoid some nans
             self.svm.run_interevent(interstorm_dt)
-            wt_from_surface = self._elev[cores] - self._wt[cores]
-            # wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
-            self.e[cores] = self.svm.calc_extraction_rate(
-                wt_from_surface, interstorm_dt
-            )
 
-            # set extraction, run groundwater model, accumulate flow
-            self.gdp.recharge = self.e
+            # run groundwater model, accumulate flow
+            self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(interstorm_dt)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
@@ -750,13 +742,10 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.qs_all = np.zeros((Ns, N))
         # all recharge
         self.r_all = np.zeros((Ns, N))
-        # all extraction
-        self.e_all = np.zeros((Ns, N))
 
         # vadose profile properties
         self.cum_recharge_profile = np.zeros_like(self.svm.depths)
         self.bool_recharge_profile = np.zeros_like(self.svm.depths)
-        self.cum_extraction_profile = np.zeros_like(self.svm.depths)
 
         # precip/recharge spatially-averaged properties
         areas = self._grid.cell_area_at_node[cores]
@@ -764,7 +753,6 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self.cum_precip = 0.0
         self.cum_recharge = 0.0
         self.cum_runoff = 0.0
-        self.cum_extraction = 0.0
         self.cum_gw_export = 0.0
         self.cum_pet = 0.0
 
@@ -806,20 +794,13 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             ]
 
             # run interevent:
-            ## run vadose model, calculate the extraction below the water table
-            ## due to ET.
             self.interstorm_dts[i] = max(
                 self.interstorm_dts[i], 1e-15
             )  # avoid some nans
             self.svm.run_interevent(self.interstorm_dts[i])
-            wt_from_surface = self._elev[cores] - self._wt[cores]
-            # wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
-            self.e[cores] = self.svm.calc_extraction_rate(
-                wt_from_surface, self.interstorm_dts[i]
-            )
 
-            # set extraction, run groundwater model, accumulate flow
-            self.gdp.recharge = self.e
+            # run groundwater model, accumulate flow
+            self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = q.copy()
@@ -830,7 +811,6 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
             # record interevent
             self.time[i * 2 + 2] = self.time[i * 2 + 1] + self.interstorm_dts[i]
-            self.e_all[i * 2 + 2, :] = self._grid.at_node["extraction_rate"]
             self.Q_all[i * 2 + 2, :] = self._grid.at_node["surface_water__discharge"]
             self.wt_all[i * 2 + 2, :] = self._grid.at_node["water_table__elevation"]
             self.qs_all[i * 2 + 2, :] = self._grid.at_node[
@@ -840,15 +820,10 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             # record vadose characteristics
             self.cum_recharge_profile += self.svm.recharge_at_depth
             self.bool_recharge_profile += self.svm.recharge_at_depth > 0.0
-            self.cum_extraction_profile += self.svm.extraction_at_depth
-
             # record precip/recharge spatially-averaged characteristics
             self.cum_precip += np.sum(self.intensities[i] * areas) * self.storm_dts[i]
             self.cum_pet += np.sum(self.svm.pet * areas) * self.interstorm_dts[i]
             self.cum_recharge += np.sum(self.r[cores] * areas) * self.storm_dts[i]
-            self.cum_extraction += (
-                np.sum(self.e[cores] * areas) * self.interstorm_dts[i]
-            )
             self.cum_runoff += np.sum(
                 q1[obn] * self.storm_dts[i] + q2[obn] * self.interstorm_dts[i]
             )
@@ -921,7 +896,6 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         super().__init__(grid, routing_method, precip_generator, groundwater_model)
         self.svm = vadose_model
         self.r = self._grid.add_zeros("node", "recharge_rate")
-        self.e = self._grid.add_zeros("node", "extraction_rate")
         self._elev = self._grid.at_node["topographic__elevation"]
         self._wt = self._grid.at_node["water_table__elevation"]
 
@@ -990,18 +964,11 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             )
 
             # run interevent:
-            ## run vadose model, calculate the extraction below the water table
-            ## due to ET.
             interstorm_dt = max(interstorm_dt, 1e-15)  # avoid some nans
             self.svm.run_interevent(interstorm_dt)
-            wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
-            self.e[cores] = self.svm.calc_extraction_rate(
-                wt_from_surface, interstorm_dt
-            )
 
             # set extraction, run groundwater model, accumulate flow
-            self.gdp.recharge = self.e
+            self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(interstorm_dt)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = np.maximum(q - self.Q0, 0.0)
@@ -1145,14 +1112,9 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
                 self.interstorm_dts[i], 1e-15
             )  # avoid some nans
             self.svm.run_interevent(self.interstorm_dts[i])
-            wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
-            self.e[cores] = self.svm.calc_extraction_rate(
-                wt_from_surface, self.interstorm_dts[i]
-            )
 
             # set extraction, run groundwater model, accumulate flow
-            self.gdp.recharge = self.e
+            self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = np.maximum(q - self.Q0, 0.0)

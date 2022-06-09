@@ -60,8 +60,6 @@ class SchenkVadoseModel:
         self.extraction_at_depth = np.zeros_like(self.depths)
         # water depth capacity in each bin
         self.bin_capacity = (self.b / self.Nz) * self.Sawc
-        # mask to set extraction below a certain depth to zero
-        self.extraction_depth_mask = np.zeros_like(self.depths, dtype=bool)
 
     def generate_state_from_analytical(
         self, mean_storm_depth, mean_interstorm_duration, random_seed=None,
@@ -89,38 +87,6 @@ class SchenkVadoseModel:
 
         r = np.random.rand(len(self.depths))
         self.sat_profile = 1 * (r < self.analytical_sat_prob)
-
-    def set_max_extraction_depth(
-        self, mean_storm_depth, mean_interstorm_duration, threshold=0.01,
-    ):
-
-        """
-        Set the field extraction_depth_mask, which, when used in
-        conjunction with the `run_interevent` method, sets the root water uptake
-        rate for water tables below a certain depth equal to zero. It does this
-        using the analytical cdf of rooting depth to find the location where
-        the proportion (1 - threshold) of uptake occurs above this depth. This
-        threshold generally only affects root water uptake in arid cases
-        (pet*tb > ds), where the equilibrium solution to the model suggests
-        some root water uptake occurs at infinite depth.
-
-        Parameters
-        ----------
-        mean_storm_depth: float (L). Mean storm depth.
-        mean_interstorm_duration: float (T). Mean interstorm duration.
-        threshold: threshold relative frequency of extraction. Default 0.001.
-        """
-
-        cdf = extraction_cdf(
-            self.depths,
-            mean_storm_depth,
-            mean_interstorm_duration,
-            self.pet,
-            self.Sawc,
-        )
-
-        self.extraction_depth_mask = cdf > 1 - threshold
-        return cdf
 
     def generate_storm(
         self,
@@ -207,36 +173,7 @@ class SchenkVadoseModel:
         # change bin status
         inds_to_drain = np.where(self.sat_profile == 1)[0][0:n_to_drain]
         self.sat_profile[inds_to_drain] = 0
-
-        # calculate extraction
         self.sat_diff[inds_to_drain] = -1
-        self.extraction_at_depth[:] = (
-            -n_to_drain - np.cumsum(self.sat_diff)
-        ) * self.bin_capacity
-
-        # set extraction to zero where masked
-        self.extraction_at_depth[self.extraction_depth_mask] = 0.0
-
-    def calc_extraction_rate(self, wt_from_surface, interstorm_dt):
-        """calculate the extraction rate given the depth of water table from
-        surface. Returns the (negative) extraction rate for each water
-        table depth provided. If supplied depth is at or greater than profile depth,
-        extraction rate is zero.
-
-        Parameters
-        ----------
-        wt_from_surface: array of floats. Positive values from 0 to
-            maximum aquifer depth, which is usually this is also profile depth.
-        interstorm_dt: float. Interstorm duration.
-        """
-
-        wt_from_surface[wt_from_surface > self.b] = self.b
-        wt_digitized = np.digitize(wt_from_surface, self.depths, right=True)
-
-        out = self.extraction_at_depth[wt_digitized] / interstorm_dt
-        out[wt_from_surface == self.b] = 0.0
-
-        return out
 
     def run_one_step(
         self,
@@ -297,9 +234,7 @@ class SchenkVadoseModel:
 
         self.bool_extraction_at_depth = np.zeros_like(self.depths)
         self.cum_recharge = np.zeros_like(self.depths)
-        self.cum_extraction = np.zeros_like(self.depths)
         self.bool_recharge = np.zeros_like(self.depths)
-        self.bool_extraction = np.zeros_like(self.depths)
         self.cum_storm_dt = 0
         self.cum_interstorm_dt = 0
         self.cum_precip = 0
@@ -310,9 +245,7 @@ class SchenkVadoseModel:
 
             self.bool_extraction_at_depth += -self.sat_diff
             self.cum_recharge += self.recharge_at_depth
-            self.cum_extraction += self.extraction_at_depth
             self.bool_recharge += self.recharge_at_depth > 0.0
-            self.bool_extraction += -self.extraction_at_depth > 0.0
             self.cum_storm_dt += self.Tr
             self.cum_interstorm_dt += self.Tb
             self.cum_precip += self.d
