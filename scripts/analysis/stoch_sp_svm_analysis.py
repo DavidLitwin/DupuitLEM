@@ -151,11 +151,13 @@ def write_SQ(grid, r, dt, file=f):
 
     file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
 
-f1 = open('../post_proc/%s/wt_%d'%(base_output_path, ID), 'w+', newline ='')
+f1 = open('../post_proc/%s/sat_%d'%(base_output_path, ID), 'w+', newline ='')
 w1 = csv.writer(f1)
 def write_wt(grid, r, dt, file=w1):
     wt = grid.at_node["water_table__elevation"]
-    file.writerows(wt)
+    z = grid.at_node["topographic__elevation"]
+    sat = (z-wt) < sat_cond*hg
+    file.writerows(sat)
 
 gdp.callback_fun = write_wt
 
