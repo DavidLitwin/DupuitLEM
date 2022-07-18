@@ -5,6 +5,7 @@ update for new stochastic models
 """
 
 import os
+import csv
 import glob
 import pickle
 import numpy as np
@@ -72,7 +73,7 @@ try:
     tr = df_params['tr'] #mean storm duration [s]
     tb = df_params['tb'] #mean interstorm duration [s]
     ds = df_params['ds'] #mean storm depth [m]
-    T_h = 2000*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
+    T_h = 500*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
 except KeyError:
     df_params_1d = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)[task_id]
     pet = df_params_1d['pet']
@@ -80,7 +81,7 @@ except KeyError:
     tr = df_params_1d['tr'] #mean storm duration [s]
     tb = df_params_1d['tb'] #mean interstorm duration [s]
     ds = df_params_1d['ds'] #mean storm depth [m]
-    T_h = 2000*(tr+tb) #df_params_1d['Nt']*(tr+tb) #total hydrological time [s]
+    T_h = 500*(tr+tb) #df_params_1d['Nt']*(tr+tb) #total hydrological time [s]
 
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
@@ -149,7 +150,14 @@ def write_SQ(grid, r, dt, file=f):
     r_tot = np.sum(r[cores]*area[cores])
 
     file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
-gdp.callback_fun = write_SQ
+
+f1 = open('../post_proc/%s/wt_%d'%(base_output_path, ID), 'w+', newline ='')
+w1 = csv.writer(f1)
+def write_wt(grid, r, dt, file=w1):
+    wt = grid.at_node["water_table__elevation"]
+    file.writerows(wt)
+
+gdp.callback_fun = write_wt
 
 hm.run_step_record_state()
 f.close()
