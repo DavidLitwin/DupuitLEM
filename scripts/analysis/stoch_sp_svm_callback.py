@@ -134,8 +134,11 @@ hm = HydrologyEventVadoseStreamPower(
 #run model
 hm.run_step()
 
-f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
-def write_SQ(grid, r, dt, file=f):
+f = open('../post_proc/%s/state_fluxes_%d.csv'%(base_output_path, ID), 'w')
+f1 = open('../post_proc/%s/sat_%d'%(base_output_path, ID), 'w', newline ='')
+w1 = csv.writer(f1)
+def write_wt(grid, r, dt, file=None):
+
     cores = grid.core_nodes
     h = grid.at_node["aquifer__thickness"]
     wt = grid.at_node["water_table__elevation"]
@@ -149,15 +152,8 @@ def write_SQ(grid, r, dt, file=f):
     sat_nodes = np.sum(sat[cores])
     r_tot = np.sum(r[cores]*area[cores])
 
-    file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
-
-f1 = open('../post_proc/%s/sat_%d'%(base_output_path, ID), 'w', newline ='')
-w1 = csv.writer(f1)
-def write_wt(grid, r, dt, file=w1):
-    wt = grid.at_node["water_table__elevation"]
-    z = grid.at_node["topographic__elevation"]
-    sat = (z-wt) < sat_cond*hg
-    file.writerow(sat*1)
+    f.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
+    w1.writerow(sat*1)
 
 gdp.callback_fun = write_wt
 
