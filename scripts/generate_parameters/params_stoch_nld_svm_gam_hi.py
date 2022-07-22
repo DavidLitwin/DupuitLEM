@@ -1,4 +1,4 @@
-hi"""
+"""
 Generate parameters for StreamPowerModel with
 -- HydrologyEventVadoseStreamPower or HydrologyEventVadoseThresholdStreamPower
 -- FastscapeEroder
