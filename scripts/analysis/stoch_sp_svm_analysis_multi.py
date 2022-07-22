@@ -43,6 +43,7 @@ for i in range(len(files)):
     elev = grid.at_node['topographic__elevation']
     relief[i] = np.mean(elev[grid.core_nodes])
 
+relief = relief - relief[1] # correct for the initial baselevel elevation
 rfinal = relief[-1] # final relief
 pr = np.array([0.1, 0.3, 0.6, 0.9]) # proportion of final relief
 rt = pr*rfinal # corresponding relief
@@ -271,7 +272,7 @@ except:
     print("error fitting recession")
 
 # find times with recharge. Note in df qs and S are at the end of the timestep.
-# i is at the beginning of the timestep. 
+# i is at the beginning of the timestep.
 df['t'] = np.cumsum(df['dt'])
 is_r = df['r'] > 0.0
 pre_r = np.where(np.diff(is_r*1)>0.0)[0] #last data point before recharge
