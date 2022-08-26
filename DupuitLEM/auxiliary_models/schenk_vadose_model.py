@@ -17,7 +17,7 @@ below each soil layer depth and call this the recharge to the water table.
 """
 
 import numpy as np
-from .schenk_analytical_solutions import extraction_cdf, saturation_state
+from .schenk_analytical_solutions import saturation_state
 
 
 class SchenkVadoseModel:
