@@ -64,7 +64,7 @@ class StreamPowerModel:
                     be saved.
                 id: int. The identifying number of the particular run. Output files
                     are saved to (base_path)-(id)/grid_(id).nc
-        steady_state_condition: dict containting information for stopping
+        steady_state_condition: dict containing information for stopping
             model if a condition on elevation change is met. Stopping conditions
             are currently implemented only for the rate of change between the
             present elevation state, and the state recorded in the most recently

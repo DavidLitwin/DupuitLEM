@@ -399,7 +399,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
         self.Ksp = sp_coefficient
         self.Q0 = self._grid.add_zeros("node", "critical_erosion__discharge")
         self._elev = self._grid.at_node["topographic__elevation"]
-        self._recievers = self._grid.at_node["flow__link_to_receiver_node"]
+        self._receivers = self._grid.at_node["flow__link_to_receiver_node"]
 
         if routing_method == "D8":
             self._calc_grad = self._grid.calc_grad_at_d8
@@ -426,7 +426,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
 
         # calculate critical_erosion__discharge
         dzdx = self._calc_grad(self._elev)
-        S = abs(dzdx[self._recievers])  # slope is in direction of flow
+        S = abs(dzdx[self._receivers])  # slope is in direction of flow
         _, _ = self.fa.accumulate_flow(update_flow_director=False)  # to update area
         self.Q0[:] = np.divide(
             self.E0 * np.sqrt(self.area),
@@ -507,7 +507,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
 
         # calculate critical_erosion__discharge
         dzdx = self._calc_grad(self._elev)
-        S = abs(dzdx[self._recievers])  # slope is in direction of flow
+        S = abs(dzdx[self._receivers])  # slope is in direction of flow
         _, _ = self.fa.accumulate_flow(update_flow_director=False)  # to update area
         self.Q0[:] = np.divide(
             self.E0 * np.sqrt(self.area),
@@ -594,7 +594,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
     there is vadose zone storage and evapotranspiration. The SchenkVadoseModel
     is used to determine recharge of water to the water
     table in storm events and interevents respectively. One vadose profile is
-    tracked and this is used to map recharge and extration rates based on
+    tracked and this is used to map recharge and extraction rates based on
     depth to water table across grid. Field "recharge_rate"
     is added as recharge can vary spatially.
 
@@ -896,7 +896,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         self.E0 = sp_threshold
         self.Ksp = sp_coefficient
         self.Q0 = self._grid.add_zeros("node", "critical_erosion__discharge")
-        self._recievers = self._grid.at_node["flow__link_to_receiver_node"]
+        self._receivers = self._grid.at_node["flow__link_to_receiver_node"]
 
         if routing_method == "D8":
             self._calc_grad = self._grid.calc_grad_at_d8
@@ -925,7 +925,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
 
         # calculate critical_erosion__discharge
         dzdx = self._calc_grad(self._elev)
-        S = abs(dzdx[self._recievers])  # slope is in direction of flow
+        S = abs(dzdx[self._receivers])  # slope is in direction of flow
         _, _ = self.fa.accumulate_flow(update_flow_director=False)  # to update area
         self.Q0[:] = np.divide(
             self.E0 * np.sqrt(self.area),
@@ -1028,7 +1028,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
 
         # calculate critical_erosion__discharge
         dzdx = self._calc_grad(self._elev)
-        S = abs(dzdx[self._recievers])  # slope is in direction of flow
+        S = abs(dzdx[self._receivers])  # slope is in direction of flow
         _, _ = self.fa.accumulate_flow(update_flow_director=False)  # to update area
         self.Q0[:] = np.divide(
             self.E0 * np.sqrt(self.area),

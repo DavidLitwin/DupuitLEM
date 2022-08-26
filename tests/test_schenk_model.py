@@ -58,7 +58,7 @@ def test_run_event_1():
 
 def test_run_event_2():
     """Slightly less trivial example of an event where there is already
-    some inital nonuniform saturation. Ensure that the topmost available bins
+    some initial nonuniform saturation. Ensure that the topmost available bins
     are filled."""
 
     sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
@@ -73,7 +73,7 @@ def test_run_event_3():
     """Edge case where event depth is added to a profile that is already
     saturated. In this case, the profile should stay saturated, but the
     recharge should reflect the total amount. That is, a water table
-    at any depth will recieve recharge."""
+    at any depth will receive recharge."""
 
     sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
     sm.sat_profile[:] = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
@@ -84,7 +84,7 @@ def test_run_event_3():
 
 
 def test_run_event_4():
-    """Event where there is already some inital nonuniform saturation and
+    """Event where there is already some initial nonuniform saturation and
     event is larger than storage. Ensure all bins are filled and recharge is
     varying correctly with depth."""
 
