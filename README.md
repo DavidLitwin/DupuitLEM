@@ -25,6 +25,8 @@ Citations:
 
 Litwin, D., Tucker, G., Barnhart, K., & Harman, C. (2020). GroundwaterDupuitPercolator: A Landlab component for groundwater flow. Journal of Open Source Software, 5(46), 1935. https://doi.org/10.21105/joss.01935
 
-*Citation for DupuitLEM:*
+*Citations for DupuitLEM:*
+
+Litwin, D. G., Tucker, G. E., Barnhart, K. R., & Harman, C. J. (2022). Groundwater affects the geomorphic and hydrologic properties of coevolved landscapes. Journal of Geophysical Research: Earth Surface, 127(1), e2021JF006239. https://doi.org/10.1029/2021JF006239
 
 Litwin, D. G., Barnhart, K. R., Tucker, G. E., & Harman, C. J. (2021). DupuitLEM: groundwater landscape evolution with landlab. Zenodo. https://doi.org/10.5281/zenodo.4727916
