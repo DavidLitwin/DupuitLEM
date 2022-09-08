@@ -115,7 +115,7 @@ gdp = GroundwaterDupuitPercolator(mg,
 pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
     mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
-pdr.seed_generator(seedval=2)
+pdr.seed_generator(seedval=4)
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
                  available_water_content=na,

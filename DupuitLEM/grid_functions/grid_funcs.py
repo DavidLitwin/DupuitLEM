@@ -17,7 +17,7 @@ def bind_avg_hydraulic_conductivity(ks, k0, dk):
         Calculate the average hydraulic conductivity when hydraulic conductivity
         varies with depth as:
 
-            k = k0 + (ks-k0)*exp(-d/dk)
+            k = k0 + (ks-k0)*exp(-(b-h)/dk)
 
         Parameters:
             h = aquifer thickness
