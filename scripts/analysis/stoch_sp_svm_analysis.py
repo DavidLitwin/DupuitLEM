@@ -115,7 +115,7 @@ gdp = GroundwaterDupuitPercolator(mg,
 pdr = PrecipitationDistribution(mg, mean_storm_duration=tr,
     mean_interstorm_duration=tb, mean_storm_depth=ds,
     total_t=T_h)
-pdr.seed_generator(seedval=4)
+pdr.seed_generator(seedval=2)
 svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
                  available_water_content=na,
@@ -313,6 +313,14 @@ elev_all = np.ones(wt_all.shape)*mg.at_node['topographic__elevation']
 wtrel_all = np.zeros(wt_all.shape)
 wtrel_all[:, mg.core_nodes] = (wt_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])/(elev_all[:, mg.core_nodes] - base_all[:, mg.core_nodes])
 
+wtrel_05 = mg.add_zeros('node', 'wtrel_05')
+wtrel_95 = mg.add_zeros('node', 'wtrel_95')
+Srel = np.mean(wtrel_all, axis=1) #relative storage timeseries
+quantiles = np.quantile(Srel, [0.05, 0.95])
+quan = [(np.abs(Srel - i)).argmin() for i in quantiles]
+wtrel_05[:] = wtrel_all[quan[0], :]
+wtrel_95[:] = wtrel_all[quan[1], :]
+
 # water table and saturation at end of storm and interstorm
 sat_all = (elev_all-wt_all) < sat_cond*hg
 wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
@@ -481,6 +489,8 @@ output_fields = [
         'at_node:recharge_rate_mean_storm',
         'at_node:wtrel_mean_end_storm',
         'at_node:wtrel_mean_end_interstorm',
+        'at_node:wtrel_05',
+        'at_node:wtrel_95',
         'at_node:sat_mean_end_storm',
         'at_node:sat_mean_end_interstorm',
         'at_node:Q_mean_end_storm',
