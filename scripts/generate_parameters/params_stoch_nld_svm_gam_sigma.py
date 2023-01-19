@@ -81,9 +81,9 @@ sigma_all = np.geomspace(8.0, 128.0, 5)
 gam_all = np.geomspace(1.0, 16.0, 5)
 
 ai = 0.5
-sc = 0.5
-theta = 0.0
-hi = 5.0
+sc = 0.0 # use linear diffusion
+theta = 0.0 # don't use threshold model
+hi = 0.5
 rho = 0.03
 phi = 1.5
 hg = 2.25
