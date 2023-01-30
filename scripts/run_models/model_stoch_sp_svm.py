@@ -20,6 +20,7 @@ b: regolith thickness (m)
 ne: drainable porosity (-)
 na: plant available water content (-)
 K: streampower incision coefficient (1/s)
+n_sp: slope coefficient in streampower model (-)
 D: hillslope diffusivity (m2/s)
 U: uplift rate (m/s)
 hg: geomorphic height scale (m) (only for scaling initial surface roughness)
@@ -108,6 +109,10 @@ try:
     Sc = df_params['Sc']
 except KeyError:
     Sc = 0.0
+try:
+    n_sp = df_params['n_sp']
+except KeyError:
+    n_sp = 1.0
 
 output = {}
 output["output_interval"] = df_params['output_interval']
@@ -205,10 +210,12 @@ else:
                                         groundwater_model=gdp,
                                         vadose_model=svm,
     )
+# m_sp is set to 1, but in our forumulation, the norm discharge
+# field results in the form E = K Q* A^1/2 S^n_sp
 sp = FastscapeEroder(grid,
                     K_sp=Ksp,
                     m_sp=1,
-                    n_sp=1,
+                    n_sp=n_sp,
                     discharge_field="surface_water_area_norm__discharge",
 )
 rm = RegolithConstantThickness(grid, equilibrium_depth=b, uplift_rate=U)
