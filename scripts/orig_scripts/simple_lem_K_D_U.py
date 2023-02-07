@@ -27,14 +27,15 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_path = './data/simple_lem_K_D_U_'
 
-K_all = [1.144342e-13, 7.425230e-14] # DR, BR
+K_all = [1.144342e-13, 7.425230e-14, 4.424391e-13, 2.348977e-13] # DR (0.5), BR (0.5) DR (0.4), BR (0.4)
 D = 5.327475e-10 # m2/s
 U = 3.623215e-13 # m/s
 m_sp = 0.5
-n_sp = 1.0
+n_sp_all = [1.0, 1.0, 1.25, 1.25]
 v0 = 10 # m 
 
 Ksp = K_all[ID]
+n_sp = n_sp_all[ID]
 
 T = 5e6 * 3600 * 24 * 365
 dt = 50 * 3600 * 24 * 365
