@@ -53,7 +53,12 @@ grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.1*np.random.rand(len(z))
 
-fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes')
+fa = FlowAccumulator(grid, 
+                    surface='topographic__elevation', 
+                    flow_director='D8', 
+                    depression_finder='LakeMapperBarnes',
+                    method='D8'
+                    )
 ld = LinearDiffuser(grid, D)
 sp = FastscapeEroder(grid, K_sp=Ksp, m_sp=m_sp, n_sp=n_sp)
 
