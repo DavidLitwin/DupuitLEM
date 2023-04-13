@@ -113,6 +113,13 @@ try:
     n_sp = df_params['n_sp']
 except KeyError:
     n_sp = 1.0
+try:
+    bc = list(df_params['BCs'].values)
+except KeyError:
+    bc = None
+
+
+
 
 output = {}
 output["output_interval"] = df_params['output_interval']
@@ -135,12 +142,21 @@ try:
     zwt = mg.at_node['water_table__elevation']
 
     grid = RasterModelGrid(mg.shape, xy_spacing=mg.dx)
-    grid.set_status_at_node_on_edges(
-            right=grid.BC_NODE_IS_CLOSED,
-            top=grid.BC_NODE_IS_CLOSED,
-            left=grid.BC_NODE_IS_FIXED_VALUE,
-            bottom=grid.BC_NODE_IS_CLOSED,
-    )
+    bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
+    if bc is not None:
+        grid.set_status_at_node_on_edges(
+                right=bc_dict[bc[0]],
+                top=bc_dict[bc[1]],
+                left=bc_dict[bc[2]],
+                bottom=bc_dict[bc[3]],
+        )       
+    else:
+        grid.set_status_at_node_on_edges(
+                right=grid.BC_NODE_IS_CLOSED,
+                top=grid.BC_NODE_IS_CLOSED,
+                left=grid.BC_NODE_IS_FIXED_VALUE,
+                bottom=grid.BC_NODE_IS_CLOSED,
+        )
     elev = grid.add_zeros('node', 'topographic__elevation')
     elev[:] = z.copy()
     base = grid.add_zeros('node', 'aquifer_base__elevation')
@@ -156,12 +172,21 @@ except:
     v0 = df_params['v0']
     np.random.seed(12345)
     grid = RasterModelGrid((Nx, Nx), xy_spacing=v0)
-    grid.set_status_at_node_on_edges(
-            right=grid.BC_NODE_IS_CLOSED,
-            top=grid.BC_NODE_IS_CLOSED,
-            left=grid.BC_NODE_IS_FIXED_VALUE,
-            bottom=grid.BC_NODE_IS_CLOSED,
-    )
+    bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
+    if bc is not None:
+        grid.set_status_at_node_on_edges(
+                right=bc_dict[bc[0]],
+                top=bc_dict[bc[1]],
+                left=bc_dict[bc[2]],
+                bottom=bc_dict[bc[3]],
+        )       
+    else:
+        grid.set_status_at_node_on_edges(
+                right=grid.BC_NODE_IS_CLOSED,
+                top=grid.BC_NODE_IS_CLOSED,
+                left=grid.BC_NODE_IS_FIXED_VALUE,
+                bottom=grid.BC_NODE_IS_CLOSED,
+        )
     elev = grid.add_zeros('node', 'topographic__elevation')
     elev[:] = b + 0.1*hg*np.random.rand(len(elev))
     base = grid.add_zeros('node', 'aquifer_base__elevation')
