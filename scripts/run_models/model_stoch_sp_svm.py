@@ -114,7 +114,7 @@ try:
 except KeyError:
     n_sp = 1.0
 try:
-    bc = list(df_params['BCs'].values)
+    bc = list(str(df_params['BCs']))
 except KeyError:
     bc = None
 
