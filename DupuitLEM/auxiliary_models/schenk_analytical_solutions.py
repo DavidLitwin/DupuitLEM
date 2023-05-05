@@ -12,20 +12,20 @@ def saturation_state(profile_depth, tb, ds, pet, Sawc):
 
     Parameters
     ----------
-    profile_depth : array
+    profile_depth: array
         Depths below surface, stored in svm as self.depths.
-    tb : float
+    tb: float
         Mean interstorm duration.
-    ds : float
+    ds: float
         Mean storm depth.
-    pet : float
+    pet: float
         Potential evapotranspiration rate.
-    Sawc : float
+    Sawc: float
         Plant available water content, as a proportion of total volume.
 
     Returns
     -------
-    out : array
+    out: array
         Probability of saturation at depths.
     """
     a = (profile_depth * Sawc) / ds
@@ -49,20 +49,20 @@ def recharge_freq(profile_depth, tb, ds, pet, Sawc):
 
     Parameters
     ----------
-    profile_depth : array
+    profile_depth: array
         Depths below surface, stored in svm as self.depths.
-    tb : float
+    tb: float
         Mean interstorm duration.
-    ds : float
+    ds: float
         Mean storm depth.
-    pet : float
+    pet: float
         Potential evapotranspiration rate.
-    Sawc : float
+    Sawc: float
         Plant available water content, as a proportion of total volume.
 
     Returns
     -------
-    freq : array
+    freq: array
         Frequency of recharge relative to frequency of events 1/(tr+tb).
     """
     a = (profile_depth * Sawc) / ds
@@ -88,20 +88,20 @@ def extraction_freq(profile_depth, ds, tb, pet, Sawc):
 
     Parameters
     ----------
-    profile_depth : array
+    profile_depth: array
         Depths below surface, stored in svm as self.depths.
-    ds : float
+    ds: float
         Mean storm depth.
-    tb : float
+    tb: float
         Mean interstorm duration.
-    pet : float
+    pet: float
         Potential evapotranspiration rate.
-    Sawc : float
+    Sawc: float
         Plant available water content, as a proportion of total volume.
 
     Returns
     -------
-    freq : array
+    freq: array
         Frequency of extraction relative to frequency of events 1/(tr+tb).
     """
     a = (profile_depth * Sawc) / (pet * tb)
@@ -128,20 +128,20 @@ def extraction_pdf(profile_depth, ds, tb, pet, Sawc):
 
     Parameters
     ----------
-    profile_depth : array
+    profile_depth: array
         Depths below surface, stored in svm as self.depths.
-    ds : float
+    ds: float
         Mean storm depth.
-    tb : float
+    tb: float
         Mean interstorm duration.
-    pet : float
+    pet: float
         Potential evapotranspiration rate.
-    Sawc : float
+    Sawc: float
         Plant available water content, as a proportion of total volume.
 
     Returns
     -------
-    out : array
+    out: array
         PDF of root water uptake at depths in profile_depth.
     """
 
@@ -197,20 +197,20 @@ def extraction_cdf(profile_depth, ds, tb, pet, Sawc):
 
     Parameters
     ----------
-    profile_depth : array
+    profile_depth: array
         Depths below surface, stored in svm as self.depths.
-    ds : float
+    ds: float
         Mean storm depth.
-    tb : float
+    tb: float
         Mean interstorm duration.
-    pet : float
+    pet: float
         Potential evapotranspiration rate.
-    Sawc : float
+    Sawc: float
         Plant available water content, as a proportion of total volume.
 
     Returns
     -------
-    out : array
+    out: array
         PDF of root water uptake at depths in profile_depth.
     """
 

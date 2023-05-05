@@ -45,9 +45,12 @@ class HydrologicalModel:
 
     Parameters
     -----
-    grid: a landlab grid with GroundwaterDupuitPercolator already instantiated
-    routing_method: Either 'D8' or 'Steepest'. This is the routing method for the
-        FlowDirector component. 'Steepest' allows the use of non-raster grids.
+    grid: ModelGrid
+        Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
+        should be instantiated on the grid before instantiating a HydrologicalModel.
+    routing_method: str
+        Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+        component. 'Steepest' allows the use of non-raster grids.
 
     """
 
@@ -95,12 +98,6 @@ class HydrologySteadyStreamPower(HydrologicalModel):
     This accounts for how channel width varies with the square root of area.
     When combined with FastscapeEroder with m=1 and n=1, this produces erosion
     with the form E = K v0 Q* sqrt(a) S, where Q*=Q/(pA).
-
-    Parameters
-    -----
-    grid: landlab grid
-    precip_generator: instantiated PrecipitationDistribution
-    groundwater_model: instantiated GroundwaterDupuitPercolator
     """
 
     def __init__(
@@ -110,6 +107,27 @@ class HydrologySteadyStreamPower(HydrologicalModel):
         groundwater_model=None,
         hydrological_timestep=1e5,
     ):
+        """
+        Parameters
+        -----
+        grid: ModelGrid
+            Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
+            should be instantiated on the grid before instantiating a HydrologicalModel.
+        routing_method: str
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            component. 'Steepest' allows the use of non-raster grids.
+            Default: 'D8'
+        groundwater_model: GroundwaterDupuitPercolator
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            on the supplied grid.
+            Default: None
+        hydrological_timestep: float
+            Time over which to run one step of the HydrologicalModel. In the steady
+            recharge case this is also the timestep for which the groundwater model
+            is run.
+            Default: 1e5
+        """
+
         super().__init__(grid, routing_method)
 
         self.gdp = groundwater_model
@@ -121,8 +139,8 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
     def run_step(self):
         """
-        Run steady model one step. Update groundwater state, route and
-        accumulate flow, updating surface_water__discharge.
+        Run steady model one step. Update groundwater state, route and accumulate 
+        flow, updating surface_water__discharge and surface_water_area_norm__discharge.
         """
 
         # run gw model
@@ -138,6 +156,7 @@ class HydrologySteadyStreamPower(HydrologicalModel):
         self.fa.run_one_step()
 
         # add a criteria that effectively cuts Q* off at 1 (greater due to numerical issues)
+        # this is less of an issue with the new analytical solution for wt rise in gdp.
         qmax = self.gdp.recharge * self.area
         self.q[self.q > qmax] = qmax[self.q > qmax]
 
@@ -149,7 +168,7 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
 class HydrologyEventStreamPower(HydrologicalModel):
 
-    """ "
+    """
     Run hydrological model for series of event-interevent pairs, calculate
     instantaneous flow rate at the beginning and end of event. Runoff accounts
     for discharge during both events and interevents.
@@ -160,18 +179,30 @@ class HydrologyEventStreamPower(HydrologicalModel):
     This accounts for how channel width varies with the square root of area.
     When combined with FastscapeEroder with m=1 and n=1, this produces erosion
     with the form E = K v0 Q* sqrt(a) S, where Q*=Q/(pA).
-
-    Parameters
-    -----
-    grid: landlab grid
-    precip_generator: instantiated PrecipitationDistribution
-    groundwater_model: instantiated GroundwaterDupuitPercolator
-
     """
 
     def __init__(
         self, grid, routing_method="D8", precip_generator=None, groundwater_model=None,
     ):
+        """
+        Parameters
+        -----
+        grid: ModelGrid
+            Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
+            should be instantiated on the grid before instantiating a HydrologicalModel.
+        routing_method: str
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            component. 'Steepest' allows the use of non-raster grids.
+            Default: 'D8'
+        precip_generator: PrecipitationDistribution
+            Landlab PrecipitationDistribution Component object. The HydrologicalModel
+            will run one step for the length of time intantiated in this object.
+            Default: None
+        groundwater_model: GroundwaterDupuitPercolator
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            on the supplied grid.
+            Default: None
+        """
 
         super().__init__(grid, routing_method)
 
@@ -266,7 +297,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
         track the state of the model:
             time: (s)
             intensity: rainfall intensity (m/s)
-            wtrel_all: relative water table position (-)
+            wt_all: water table elevation (m)
             qs_all: surface water specific discharge (m/s)
             Q_all: discharge (m3/s)
 
@@ -363,26 +394,11 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
     tracked, and returned in a fashion that is correctly averaged with threshold
     accounted for in the field "surface_water_effective__discharge".
     CONSEQUENTLY ONE SHOULD LEAVE THE INCISION THRESHOLD FIELD OF
-    FastscapeEroder SET TO ZERO! For the same reason, this field has a different
-    meaning when using the threshold model: it is not an actual discharge,
-    but an effective value that also accounts for geomorphic properties related
-    to the threshold streampower.
-
-    Parameters
-    -----
-    grid: landlab grid
-    routing_method: either "D8" or "Steepest"
-    precip_generator: instantiated PrecipitationDistribution
-    groundwater_model: instantiated GroundwaterDupuitPercolator
-    E0: the streampower incision threshold in the equation
-        E = K v0 Q* sqrt(a) S - E0, where Q*=Q/(pA). Units: L/T
-        Default value: 0.0
-    sp_coefficient: streampower coefficient used in the FastscapeEroder
-        component. Note that in DupuitLEM, the expected value has units 1/L,
-        because it takes a coefficient K/p, where K is the usual streampower
-        coefficient, with units 1/T, and p is the mean precipitation rate with
-        units L/T.
-        Default value: 1e-12
+    FastscapeEroder SET TO ZERO! For the same reason, 
+    "surface_water_effective__discharge" has a different meaning when using 
+    the threshold model: it is not an actual discharge, but an effective value 
+    that also accounts for geomorphic properties related to the threshold 
+    streampower.
     """
 
     def __init__(
@@ -394,6 +410,37 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
         sp_threshold=0.0,
         sp_coefficient=1e-5,
     ):
+        """
+        Parameters
+        -----
+        grid: ModelGrid
+            Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
+            should be instantiated on the grid before instantiating a HydrologicalModel.
+        routing_method: str
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            component. 'Steepest' allows the use of non-raster grids.
+            Default: 'D8'
+        precip_generator: PrecipitationDistribution
+            Landlab PrecipitationDistribution Component object. The HydrologicalModel
+            will run one step for the length of time intantiated in this object.
+            Default: None
+        groundwater_model: GroundwaterDupuitPercolator
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            on the supplied grid.
+            Default: None
+        sp_threshold: float 
+            the streampower incision threshold E0 in the equation
+            E = K Q* sqrt(a v0) S - E0, where Q*=Q/(pA). Units: L/T
+            Default: 0.0
+        sp_coefficient: float
+            streampower coefficient used in the FastscapeEroder
+            component. Note that in DupuitLEM, the expected value has units 1/L,
+            because it takes a coefficient K/p, where K is the usual streampower
+            coefficient, with units 1/T, and p is the mean precipitation rate with
+            units L/T.
+            Default: 1e-5
+        """
+
         super().__init__(grid, routing_method, precip_generator, groundwater_model)
         self.E0 = sp_threshold
         self.Ksp = sp_coefficient
@@ -407,7 +454,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
             self._calc_grad = self._grid.calc_grad_at_link
 
     def run_step(self):
-        """ "
+        """
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Update groundwater state, routes and accumulates flow, update
@@ -488,7 +535,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
         track the state of the model:
             time: (s)
             intensity: rainfall intensity (m/s)
-            wtrel_all: relative water table position (-)
+            wt_all: water table elevation (m)
             qs_all: surface water specific discharge (m/s)
             Q_all: discharge (m3/s)
 
@@ -597,15 +644,6 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
     tracked and this is used to map recharge and extraction rates based on
     depth to water table across grid. Field "recharge_rate"
     is added as recharge can vary spatially.
-
-    Parameters
-    -----
-    grid: landlab grid
-    routing_method: string, either "D8" or "Steepest"
-    precip_generator: instantiated PrecipitationDistribution
-    groundwater_model: instantiated GroundwaterDupuitPercolator
-    vadose_model: instantiated SchenkVadoseModel
-
     """
 
     def __init__(
@@ -616,6 +654,29 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         groundwater_model=None,
         vadose_model=None,
     ):
+        """
+        Parameters
+        -----
+        grid: ModelGrid
+            Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
+            should be instantiated on the grid before instantiating a HydrologicalModel.
+        routing_method: str
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            component. 'Steepest' allows the use of non-raster grids.
+            Default: 'D8'
+        precip_generator: PrecipitationDistribution
+            Landlab PrecipitationDistribution Component object. The HydrologicalModel
+            will run one step for the length of time intantiated in this object.
+            Default: None
+        groundwater_model: GroundwaterDupuitPercolator
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            on the supplied grid.
+            Default: None
+        vadose_model: SchenkVadoseModel
+            Auxiliary model called SchenkVadoseModel, instantiated for a depth profile
+            equal to the permeable thickness.
+            Default: None
+        """
         super().__init__(grid, routing_method, precip_generator, groundwater_model)
 
         self.svm = vadose_model
@@ -704,10 +765,25 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         track the state of the model:
             time: (s)
             intensity: rainfall intensity (m/s)
-            wtrel_all: relative water table position (-)
+            wt_all: water table elevation (m)
             qs_all: surface water specific discharge (m/s)
             Q_all: discharge (m3/s)
+            r_all: recharge rate (m/s)
 
+        also track some cumulative quantities:
+            cum_precip: cumulative precipitation (m3)
+            cum_recharge: cumulative recharge (m3)
+            cum_runoff:  cumulative runoff (m3)
+            cum_gw_export:  cumulative groundwater export through open boundaries (m3)
+            cum_pet:  cumulative potential evapotranspiration (m3)
+
+        and some vadose profile features:
+            cum_recharge_profile: cumulative recharge with depth in the vadose profile
+            bool_recharge_profile: boolean of depths at which recharge occurs
+            mean_recharge_depth: Mean depth of recharge at wt depth given recharge
+                occurred. cum_recharge_profile/bool_recharge_profile
+            recharge_frequency: frequency of recharge events at wt depth.
+                bool_recharge_profile/T_h
         """
         cores = self._grid.core_nodes
 
@@ -858,23 +934,6 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
     meaning when using the threshold model: it is not an actual discharge,
     but an effective value that also accounts for geomorphic properties related
     to the threshold streampower.
-
-    Parameters
-    -----
-    grid: landlab grid
-    routing_method: either "D8" or "Steepest"
-    precip_generator: instantiated PrecipitationDistribution
-    groundwater_model: instantiated GroundwaterDupuitPercolator
-    vadose_model: instantiated SchenkVadoseModel
-    E0: the streampower incision threshold in the equation
-        E = K v0 Q* sqrt(a) S - E0, where Q*=Q/(pA). Units: L/T
-        Default value: 0.0
-    sp_coefficient: streampower coefficient used in the FastscapeEroder
-        component. Note that in DupuitLEM, the expected value has units 1/L,
-        because it takes a coefficient K/p, where K is the usual streampower
-        coefficient, with units 1/T, and p is the mean precipitation rate with
-        units L/T.
-        Default value: 1e-12
     """
 
     def __init__(
@@ -887,6 +946,41 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         sp_threshold=0.0,
         sp_coefficient=1e-5,
     ):
+        """
+        Parameters
+        -----
+        grid: ModelGrid
+            Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
+            should be instantiated on the grid before instantiating a HydrologicalModel.
+        routing_method: str
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            component. 'Steepest' allows the use of non-raster grids.
+            Default: 'D8'
+        precip_generator: PrecipitationDistribution
+            Landlab PrecipitationDistribution Component object. The HydrologicalModel
+            will run one step for the length of time intantiated in this object.
+            Default: None
+        groundwater_model: GroundwaterDupuitPercolator
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            on the supplied grid.
+            Default: None
+        vadose_model: SchenkVadoseModel
+            Auxiliary model called SchenkVadoseModel, instantiated for a depth profile
+            equal to the permeable thickness.
+            Default: None
+        sp_threshold: float 
+            the streampower incision threshold E0 in the equation
+            E = K Q* sqrt(a v0) S - E0, where Q*=Q/(pA). Units: L/T
+            Default: 0.0
+        sp_coefficient: float
+            streampower coefficient used in the FastscapeEroder
+            component. Note that in DupuitLEM, the expected value has units 1/L,
+            because it takes a coefficient K/p, where K is the usual streampower
+            coefficient, with units 1/T, and p is the mean precipitation rate with
+            units L/T.
+            Default: 1e-5
+        """
+
         super().__init__(grid, routing_method, precip_generator, groundwater_model)
         self.svm = vadose_model
         self.r = self._grid.add_zeros("node", "recharge_rate")
@@ -984,7 +1078,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         )
 
     def run_step_record_state(self):
-        """ "
+        """
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
         Initially generate exponential precip, fill pits, find flow directions,
@@ -992,26 +1086,29 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         update vadose model state, calculate recharge, update groundwater state,
         route flow, calculate additional erosion-generating flow. After, calculate
         surface_water_effective__discharge and surface_water_area_norm__discharge.
-
+ 
         track the state of the model:
             time: (s)
             intensity: rainfall intensity (m/s)
-            wtrel_all: relative water table position (-)
+            wt_all: water table elevation (m)
             qs_all: surface water specific discharge (m/s)
             Q_all: discharge (m3/s)
-            r_all: spatially-distributed recharge rate (m/s)
-            cum_recharge_profile: cumulative recharge given wt depth
-            bool_recharge_profile: boolean of whether recharge has occurred at
-                wt depth
+            r_all: recharge rate (m/s)
+
+        also track some cumulative quantities:
+            cum_precip: cumulative precipitation (m3)
+            cum_recharge: cumulative recharge (m3)
+            cum_runoff:  cumulative runoff (m3)
+            cum_gw_export:  cumulative groundwater export through open boundaries (m3)
+            cum_pet:  cumulative potential evapotranspiration (m3)
+
+        and some vadose profile features:
+            cum_recharge_profile: cumulative recharge with depth in the vadose profile
+            bool_recharge_profile: boolean of depths at which recharge occurs
             mean_recharge_depth: Mean depth of recharge at wt depth given recharge
                 occurred. cum_recharge_profile/bool_recharge_profile
             recharge_frequency: frequency of recharge events at wt depth.
                 bool_recharge_profile/T_h
-            cum_precip: cumulative precip over simulation (m3)
-            cum_recharge: cumulative recharge over simulation (m3)
-            cum_runoff: cumulative runoff (surface flow leaving open boundary nodes)
-                over simulation (m3)
-
         """
         cores = self._grid.core_nodes
 

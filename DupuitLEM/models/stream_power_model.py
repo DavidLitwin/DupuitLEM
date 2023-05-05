@@ -38,46 +38,51 @@ class StreamPowerModel:
 
         Parameters:
         --------
-        hydrology_model: an instance of a DupuitLEM hydrology model, either
-            HydrologyEventStreamPower or HydrologySteadyStreamPower.
-            default: None
-        diffusion_model: an instance of a landlab diffusion component.
-            default: None
-        erosion_model: an instance of the landlab FastscapeEroder component.
-            default: None
-        regolith_model: an instance of a DupuitLEM regolith model.
-            default: None
-        morphologic_scaling_factor: float. Multiplying factor on the hydrological
-            timestep to calculate the morphologic timestep.
-            default: 500
-        total_morphological_time: float. Total model duration.
-            default: 1e6*365*24*3600 (1Myr)
-        maximum_morphological_dt: float. The maximum allowable morphologic timestep.
-            default: None
-        output_dict: dict containing fields to specify output behavior.
-            default: None
-            dict contains the following fields:
+        hydrology_model: HydrologicalModel
+            An instance of a DupuitLEM hydrology model.
+            Default: None
+        diffusion_model: Landlab.Component
+            An instance of a landlab diffusion component.
+            Default: None
+        erosion_model: FastScapeEroder
+            An instance of the landlab FastscapeEroder component.
+            Default: None
+        regolith_model: RegolithModel
+            An instance of a DupuitLEM regolith model.
+            Default: None
+        morphologic_scaling_factor: float
+            Multiplying factor on the hydrological timestep to calculate 
+            the morphologic timestep.
+            Default: 500.0
+        total_morphological_time: float
+            Total model duration.
+            Default: 1e6*365*24*3600 (1Myr)
+        maximum_morphological_dt: float
+            The maximum allowable morphologic timestep.
+            Default: None
+        output_dict: dict 
+            Dictionary containing fields to specify output behavior.
+            Contains the following fields:
                 output_interval: int. The number of model iterations between saving output
-                output_fields: list of string(s). Fields at node that will be saved
+                output_fields: list of strings. Fields at node that will be saved
                     to netcdf file.
                 base_path: string. The path and folder base name where the output will
                     be saved.
                 id: int. The identifying number of the particular run. Output files
                     are saved to (base_path)-(id)/grid_(id).nc
-        steady_state_condition: dict containing information for stopping
-            model if a condition on elevation change is met. Stopping conditions
-            are currently implemented only for the rate of change between the
-            present elevation state, and the state recorded in the most recently
-            saved output. So, using steady_state_condition is conditional on
-            saving output with output_dict.
-
-            default: None
-            dict contains the following fields:
+            Default: None
+        steady_state_condition: dict 
+            Dictionary containing information for stopping model if a condition on 
+            elevation change is met. Stopping conditions are currently implemented 
+            only for the rate of change between the present elevation state, and the 
+            state recorded in the most recently saved output. So, using 
+            steady_state_condition is conditional on saving output with output_dict.
+            Contains the following fields:
                 stop_at_rate: float. the critical rate of elevation change [m/yr]
                 how: string. Either 'mean' (find the mean elevation change rate)
                     or 'percentile' (find the corresponding percentile of change)
                 percentile_value: float. if 'how' is 'percentile', this is the chosen percentile.
-
+            Default: None
         """
 
         self.verboseprint = print if verbose else lambda *a, **k: None
@@ -96,6 +101,7 @@ class StreamPowerModel:
         self.rm = regolith_model
         self.sp = erosion_model
 
+        # configure timesteps
         self.MSF = morphologic_scaling_factor  # morphologic scaling factor [-]
         self.T_m = total_morphological_time  # total model time [s]
         self.dt_m_max = maximum_morphological_dt  # max morphologic timestep [s]
@@ -103,6 +109,7 @@ class StreamPowerModel:
             self.dt_m = self.hm.T_h * self.MSF
             self.N = int(self.T_m // self.dt_m)
 
+        # configure outputs
         if output_dict:
             self.save_output = True
             self.output_interval = output_dict["output_interval"]
@@ -112,6 +119,7 @@ class StreamPowerModel:
         else:
             self.save_output = False
 
+        # configure stopping conditions
         if steady_state_condition:
             if not output_dict:
                 raise ValueError(
@@ -152,11 +160,13 @@ class StreamPowerModel:
 
         Parameters:
         --------
-        dt_m: morphoplogic timestep. float.
-        dt_m_max: maximum morphoplogic timestep. float. If provided,
+        dt_m: float
+            Morphoplogic timestep. 
+        dt_m_max: float
+            Maximum morphoplogic timestep. If provided,
             geomorphic timestep dt_m is subdivided so that
             no substep exceeds dt_m_max.
-            default: None
+            Default: None
         """
 
         # run gw model, calculate discharge fields

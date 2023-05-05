@@ -2,17 +2,6 @@
 """
 Created on Wed May 12 08:37:58 2021
 
-An implementation of the SWIEM vadose zone model described by Schenk (2008)
-"The Shallowest Possible Water Extracton Profile: A Null Model for Global Root
-Distributons". The model tracks discrete soil layers, and is "lazy" in the
-sense that ET always removes water from the highest soil layers where water
-is present. The saturation state in each layer is binary: either it is
-saturated to some "field capacity" or has drained to some "wilting point".
-
-Added to this model, we present a solution for determining the recharge to
-the water table at depths. We calculate the water that fills soil layers
-below each soil layer depth and call this the recharge to the water table.
-
 @author: dgbli
 """
 
@@ -21,11 +10,24 @@ from .schenk_analytical_solutions import saturation_state
 
 
 class SchenkVadoseModel:
+    """
+    An implementation of the SWIEM vadose zone model described by Schenk (2008)
+    "The Shallowest Possible Water Extracton Profile: A Null Model for Global Root
+    Distributons". The model tracks discrete soil layers, and is "lazy" in the
+    sense that ET always removes water from the highest soil layers where water
+    is present. The saturation state in each layer is binary: either it is
+    saturated to some "field capacity" or has drained to some "wilting point".
+
+    Added to this model, we present a solution for determining the recharge to
+    the water table at depths. We calculate the water that fills soil layers
+    below each soil layer depth and call this the recharge to the water table.
+    """
+
     def __init__(
         self,
         potential_evapotranspiration_rate=2e-7,
         available_water_content=0.15,
-        profile_depth=5,
+        profile_depth=5.0,
         num_bins=500,
     ):
         """
@@ -33,16 +35,20 @@ class SchenkVadoseModel:
 
         Parameters
         ----------
-        potential_evapotranspiration_rate: float (L/T).
-            Default=2x10^-7 m/s.
-        available_water_content: float (-).
-            Plant available water content, as a proportion of total volume.
-            Range 0 to 1. Default=0.15.
-        profile_depth: float (L).
-            Depth of vadose zone to be considered. Defaul=5 m.
-        num_bins: int (-).
-            Number of saturation bins in which to divide profile. Default=500.
+        potential_evapotranspiration_rate: float
+            The potential ET rate during interstorm periods (L/T).
+            Default: 2e-7
+        available_water_content: float
+            Plant available water content, as a proportion of total volume (-). Range 0 to 1. 
+            Default: 0.15
+        profile_depth: float
+            Depth of vadose zone to be considered (L)
+            Defaul: 5.0
+        num_bins: int
+            Number of saturation bins in which to divide profile. 
+            Default: 500
         """
+
         self.pet = potential_evapotranspiration_rate
         self.Sawc = available_water_content
         self.b = profile_depth
@@ -64,16 +70,18 @@ class SchenkVadoseModel:
     def generate_state_from_analytical(
         self, mean_storm_depth, mean_interstorm_duration, random_seed=None,
     ):
-
         """
         Set the saturation profile by generating random values from
         the analytical solution for saturation state.
 
         Parameters
         ----------
-        mean_storm_depth: float (L). Mean storm depth.
-        mean_interstorm_duration: float (T). Mean interstorm duration.
+        mean_storm_depth: float 
+            Mean storm depth (L).
+        mean_interstorm_duration: float 
+            Mean interstorm duration (T).
         """
+
         if random_seed:
             np.random.seed(random_seed)
 
@@ -96,14 +104,21 @@ class SchenkVadoseModel:
         random_seed=None,
     ):
 
-        """Generate one storm depth, duration, and insterstorm duration from
+        """
+        Generate one storm depth, duration, and insterstorm duration from
         exponential distributions.
 
         Parameters
         ----------
-        mean_storm_depth: float (L). Mean storm depth.
-        mean_storm_duration: float (T). Mean storm duration.
-        mean_interstorm_duration: float (T). Mean interstorm duration.
+        mean_storm_depth: float 
+            Mean storm depth (L).
+        mean_storm_duration: float
+            Mean storm duration (T).
+        mean_interstorm_duration: float
+            Mean interstorm duration (T).
+        random_seed: int
+            seed for exponential precipitation depth, duration, interstorm duration.
+            Default: None
         """
 
         if random_seed:
@@ -114,11 +129,13 @@ class SchenkVadoseModel:
         self.Tb = np.random.exponential(mean_interstorm_duration)
 
     def run_event(self, storm_depth):
-        """Run storm event, updating saturation profile and recharge at depth.
+        """
+        Run storm event, updating saturation profile and recharge at depth.
 
         Parameters
         ----------
-        storm_dt: float. Storm depth.
+        storm_dt: float
+            Storm depth.
         """
 
         # clear sat diff
@@ -138,16 +155,19 @@ class SchenkVadoseModel:
         ) * self.bin_capacity
 
     def calc_recharge_rate(self, wt_from_surface, storm_dt):
-        """calculate the recharge rate during storm event given the depth of water
+        """
+        Calculate the recharge rate during storm event given the depth of water
         table from surface. Returns the recharge rate for each water table
         depth provided. If supplied wt depth is greater than profile depth,
         recharge rate is depth at base of the profile.
 
         Parameters
         ----------
-        wt_from_surface: array of floats. Positive values from 0 to
-            maximum aquifer depth, which is usually this is also profile depth.
-        storm_dt: float. Storm duration.
+        wt_from_surface: array
+            Positive values from 0 to maximum aquifer depth, which is 
+            also the profile depth.
+        storm_dt: float
+            Storm duration.
         """
 
         wt_from_surface[wt_from_surface > self.b] = self.b
@@ -158,11 +178,14 @@ class SchenkVadoseModel:
         return out
 
     def run_interevent(self, interstorm_dt):
-        """Run storm interevent, updating saturation profile.
+        """
+        Run storm interevent, updating saturation profile.
 
         Parameters
         ----------
-        interstorm_dt: float. Duration without precipitation."""
+        interstorm_dt: float
+            Duration without precipitation    
+        """
 
         # clear sat diff
         self.sat_diff[:] = 0
@@ -183,15 +206,21 @@ class SchenkVadoseModel:
         random_seed=None,
     ):
 
-        """Run step: generate exponential storm depth duration, interstorm
+        """
+        Run step: generate exponential storm depth duration, interstorm
         duration, run event, and run interevent.
 
         Parameters
         ----------
-        mean_storm_depth: float (L). Mean storm depth.
-        mean_storm_duration: float (T). Mean storm duration.
-        mean_interstorm_duration: float (T). Mean interstorm duration.
-        random_seed: int (-) numpy random seed for reproduceability.
+        mean_storm_depth: float
+            Mean storm depth.
+        mean_storm_duration: float
+            Mean storm duration.
+        mean_interstorm_duration: float
+            Mean interstorm duration.
+        random_seed: int
+            numpy random seed for reproduceability.
+            Default: None
         """
 
         if random_seed:
@@ -211,18 +240,27 @@ class SchenkVadoseModel:
         mean_interstorm_duration=1e5,
         random_seed=None,
     ):
-
-        """Run model: run step Nt times, calculate average recharge depth and
+        """
+        Run model: run step Nt times, calculate average recharge depth and
         recharge frequency at each depth in the profile.
 
         Parameters
         ----------
-        num_timesteps: int (-) number of storm interstorm pairs to run.
-        mean_storm_depth: float (L). Mean storm depth.
-        mean_storm_duration: float (T). Mean storm duration.
-        mean_interstorm_duration: float (T). Mean interstorm duration.
-        random_seed: int (-) numpy random seed for reproduceability.
-
+        num_timesteps: int
+            number of storm interstorm pairs to run.
+            Default: 100
+        mean_storm_depth: float
+            Mean storm depth.
+            Default: 0.02
+        mean_storm_duration: float
+            Mean storm duration.
+            Default: 1e3
+        mean_interstorm_duration: float
+            Mean interstorm duration.
+            Default: 1e5
+        random_seed: int
+            numpy random seed for reproduceability.
+            Default: None
         """
 
         self.d = mean_storm_depth

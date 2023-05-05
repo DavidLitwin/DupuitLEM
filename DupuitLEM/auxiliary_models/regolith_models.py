@@ -1,7 +1,4 @@
 """
-Models to update regolith state: topographic__elevation and aquifer_base__elevation
-given uplift and regolith production.
-
 Author: David Litwin
 
 Date: 19 May 2020
@@ -11,8 +8,19 @@ import numpy as np
 
 
 class RegolithModel:
+    """
+    Models to update regolith state: topographic__elevation and aquifer_base__elevation
+    given uplift and regolith production.
+    """
     def __init__(self, grid):
-
+        """
+        Initialize a RegolithModel
+        
+        Parameters
+        -----
+        grid: ModelGrid
+            Landlab ModelGrid object. 
+        """
         self._elev = grid.at_node["topographic__elevation"]
         self._base = grid.at_node["aquifer_base__elevation"]
         self._wt = grid.at_node["water_table__elevation"]
@@ -32,9 +40,12 @@ class RegolithConstantThickness(RegolithModel):
         """
         Parameters:
         -----
-        grid: landlab grid
-        equilibrium_depth: float. Constant thickness value
-        uplift_rate: float. Constant uplift rate
+        grid: ModelGrid
+            Landlab ModelGrid object. 
+        equilibrium_depth: float
+            Constant thickness value.
+        uplift_rate: float
+            Constant uplift rate.
         """
 
         super().__init__(grid)
@@ -42,6 +53,15 @@ class RegolithConstantThickness(RegolithModel):
         self.U = uplift_rate
 
     def run_step(self, dt_m):
+        """Advance regolith model one step in time, keeping constant thickness.
+        uplift topographic__elevation, offset aquifer_base__elevation from 
+        surface, set water table elevation based on original aquifer thickness.
+        
+        Parameters:
+        -----
+        dt_m: float
+            Timestep for update.
+        """
 
         # aquifer storage, assume porosity constant
         h = self._wt - self._base
@@ -68,11 +88,20 @@ class RegolithConstantThicknessPerturbed(RegolithModel):
         """
         Parameters:
         -----
-        grid: landlab grid
-        equilibrium_depth: float. Constant thickness value
-        uplift_rate: float. Constant uplift rate
-        std: float. standard deviation of the perturbation
-        seed: int. seed for perturbation
+        grid: ModelGrid
+            Landlab ModelGrid object. 
+        equilibrium_depth: float
+            Constant thickness value.
+            Default: 1.0
+        uplift_rate: float
+            Constant uplift rate.
+            Default: 1e-12
+        std: float
+            Standard deviation of the perturbation.
+            Default: 0.01
+        seed: int
+            Seed for perturbation.
+            Default: None
         """
 
         super().__init__(grid)
@@ -82,6 +111,16 @@ class RegolithConstantThicknessPerturbed(RegolithModel):
         self.r = np.random.RandomState(seed)
 
     def run_step(self, dt_m):
+        """Advance regolith model one step in time, keeping constant thickness.
+        uplift topographic__elevation and add perturbation, offset 
+        aquifer_base__elevation from surface, set water table elevation based 
+        on original aquifer thickness.
+        
+        Parameters:
+        -----
+        dt_m: float
+            Timestep for update.
+        """
 
         # aquifer storage, assume porosity constant
         h = self._wt - self._base
@@ -112,10 +151,17 @@ class RegolithExponentialProduction(RegolithModel):
         """
         Parameters:
         -----
-        grid: landlab grid
-        regolith_production_rate: float. maximum regolith production rate
-        characteristic_depth: float. exponential characteristic depth
-        uplift_rate: float. Constant uplift rate
+        grid: ModelGrid
+            Landlab ModelGrid object. 
+        characteristic_depth: float
+            Exponential characteristic depth.
+            Default: 1.0
+        regolith_production_rate: float
+            Maximum regolith production rate.
+            Default: 2e-12       
+        uplift_rate: float
+            Constant uplift rate.
+            Default: 1e-12
         """
 
         super().__init__(grid)
@@ -124,7 +170,17 @@ class RegolithExponentialProduction(RegolithModel):
         self.w0 = regolith_production_rate
 
     def run_step(self, dt_m):
-
+        """Advance regolith model one step in time. Uplift topographic__elevation 
+        Calculate new thickness based on production and subtract from the
+        elevation surface. Set water table elevation based 
+        on original aquifer thickness.
+        
+        Parameters:
+        -----
+        dt_m: float
+            Timestep for update.
+        """
+        
         h = self._wt - self._base  # aquifer storage, assume const n
         b0 = self._elev - self._base  # current thickness
 

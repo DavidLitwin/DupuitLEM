@@ -12,6 +12,27 @@ from landlab.grid.mappers import map_mean_of_link_nodes_to_link
 
 
 def bind_avg_hydraulic_conductivity(ks, k0, dk):
+    """
+    Function to creat the bound_avg_hydraulic_conductivity function. This function
+    is used when the desired effective hydraulic conductivity needs to vary with
+    depth:
+        k = k0 + (ks-k0)*exp(-(b-h)/dk)
+
+    Parameters
+    ----------   
+    ks: float
+        Hydraulic conductivity at the ground surface.
+    k0: float
+        Asymptotic permeability at infinite depth.
+    dk: float
+        Characteristic depth.
+
+    Returns
+    -------
+    bound_avg_hydraulic_conductivity: function
+        Function to supply to GroundwaterDupuitPercolator
+    """
+
     def bound_avg_hydraulic_conductivity(grid):
         """
         Calculate the average hydraulic conductivity when hydraulic conductivity
@@ -19,14 +40,18 @@ def bind_avg_hydraulic_conductivity(ks, k0, dk):
 
             k = k0 + (ks-k0)*exp(-(b-h)/dk)
 
-        Parameters:
-            h = aquifer thickness
-            b = depth from surface to impermeable base
-            k0: asymptotic permeability at infinite depth
-            ks: hydraulic conductivity at the ground surface
-            dk = characteristic depth
+        Parameters
+        ----------
+        grid: ModelGrid
+            Landlab ModelGrid object. 
 
+        Returns
+        -------
+        kavg: array
+            Array of effective hydrualic conductivities given water table position
+            and a depth-dependent hydraulic conductivity model.
         """
+
         h = grid.at_node["aquifer__thickness"]
         b = (
             grid.at_node["topographic__elevation"]

@@ -22,7 +22,10 @@ from DupuitLEM.auxiliary_models import (
 
 
 def test_stream_power_run_step():
-
+    """
+    Test that streampower model erodes material and 
+    maintains the permeable thickness.
+    """
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
     mg.set_status_at_node_on_edges(
         right=mg.BC_NODE_IS_CLOSED,
@@ -58,7 +61,10 @@ def test_stream_power_run_step():
 
 
 def test_stream_power_save_output(tmpdir):
-
+    """
+    Test that the streampower model saves the output fields
+    requested.
+    """
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
     mg.set_status_at_node_on_edges(
         right=mg.BC_NODE_IS_CLOSED,
@@ -117,7 +123,10 @@ def test_stream_power_save_output(tmpdir):
 
 
 def test_stream_power_save_output_hex(tmpdir):
-
+    """
+    Test that streampower model saves the output on a 
+    hexagonal grid.
+    """
     mg = HexModelGrid((3, 3), node_layout="rect", spacing=10.0)
     mg.status_at_node[mg.status_at_node == 1] = 4
     mg.status_at_node[1] = 1
@@ -174,7 +183,11 @@ def test_stream_power_save_output_hex(tmpdir):
 
 
 def test_stream_power_run_step_subdivide():
-
+    """
+    Test that the streampower model subdivides the 
+    geomorphic timestep, and that this still updates
+    topography and maintains permeable thickness.
+    """
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
     mg.set_status_at_node_on_edges(
         right=mg.BC_NODE_IS_CLOSED,
@@ -211,7 +224,14 @@ def test_stream_power_run_step_subdivide():
 
 
 def test_stream_power_run_model_subdivide():
+    """
+    Test that the streampower model subdivides 
+    the geomorphic timestep when using the run_model
+    method.
 
+    (Check this - might not be right)
+    """
+    
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
     mg.set_status_at_node_on_edges(
         right=mg.BC_NODE_IS_CLOSED,
