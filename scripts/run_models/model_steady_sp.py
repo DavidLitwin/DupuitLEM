@@ -2,7 +2,7 @@
 This script runs the StreamPowerModel with:
 -- HydrologySteadyStreamPower
 -- FastscapeEroder
--- TaylorNonLinearDiffuser
+-- TaylorNonLinearDiffuser/LinearDiffuser
 -- RegolithConstantThickness
 
 ------
@@ -29,6 +29,12 @@ Nx: number of nodes in x and y dimension (if grid not supplied)
 Optional:
 RE: recharge efficiency (-) If supplied, recharge rate is p*RE.
 E0: streampower incision threshold.
+Sc: critical hillslope slope (-)
+BCs: number/string that tells the model how to set the boundary conditions.
+    1 indicates a fixed value boundary, 4 indicates a closed boundary. They
+    are ordered RightTopLeftBottom, e.g. 4414, 1111.
+    Default: 4414
+
 
 -------
 Starting grid can be supplied as NETCDF4 created with landlab, 'grid.nc' with
@@ -99,6 +105,10 @@ try:
     Sc = df_params['Sc']
 except KeyError:
     Sc = 0.0
+try:
+    bc = list(str(df_params['BCs']))
+except KeyError:
+    bc = None
 
 
 output = {}
@@ -123,12 +133,21 @@ try:
     print("Using supplied initial grid")
 
     grid = RasterModelGrid(mg.shape, xy_spacing=mg.dx)
-    grid.set_status_at_node_on_edges(
-            right=grid.BC_NODE_IS_CLOSED,
-            top=grid.BC_NODE_IS_CLOSED,
-            left=grid.BC_NODE_IS_FIXED_VALUE,
-            bottom=grid.BC_NODE_IS_CLOSED,
-    )
+    bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
+    if bc is not None:
+        grid.set_status_at_node_on_edges(
+                right=bc_dict[bc[0]],
+                top=bc_dict[bc[1]],
+                left=bc_dict[bc[2]],
+                bottom=bc_dict[bc[3]],
+        )       
+    else:
+        grid.set_status_at_node_on_edges(
+                right=grid.BC_NODE_IS_CLOSED,
+                top=grid.BC_NODE_IS_CLOSED,
+                left=grid.BC_NODE_IS_FIXED_VALUE,
+                bottom=grid.BC_NODE_IS_CLOSED,
+        )
     elev = grid.add_zeros('node', 'topographic__elevation')
     elev[:] = z.copy()
     base = grid.add_zeros('node', 'aquifer_base__elevation')
@@ -142,12 +161,21 @@ except:
     v0 = df_params['v0']
     np.random.seed(12345)
     grid = RasterModelGrid((Nx, Nx), xy_spacing=v0)
-    grid.set_status_at_node_on_edges(
-            right=grid.BC_NODE_IS_CLOSED,
-            top=grid.BC_NODE_IS_CLOSED,
-            left=grid.BC_NODE_IS_FIXED_VALUE,
-            bottom=grid.BC_NODE_IS_CLOSED,
-    )
+    bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
+    if bc is not None:
+        grid.set_status_at_node_on_edges(
+                right=bc_dict[bc[0]],
+                top=bc_dict[bc[1]],
+                left=bc_dict[bc[2]],
+                bottom=bc_dict[bc[3]],
+        )       
+    else:
+        grid.set_status_at_node_on_edges(
+                right=grid.BC_NODE_IS_CLOSED,
+                top=grid.BC_NODE_IS_CLOSED,
+                left=grid.BC_NODE_IS_FIXED_VALUE,
+                bottom=grid.BC_NODE_IS_CLOSED,
+        )
     elev = grid.add_zeros('node', 'topographic__elevation')
     elev[:] = b + 0.1*hg*np.random.rand(len(elev))
     base = grid.add_zeros('node', 'aquifer_base__elevation')

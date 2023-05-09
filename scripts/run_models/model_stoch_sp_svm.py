@@ -1,8 +1,8 @@
 """
 This script runs the StreamPowerModel with:
--- HydrologyEventVadoseStreamPower
+-- HydrologyEventVadoseStreamPower/HydrologyEventVadoseThresholdStreamPower
 -- FastscapeEroder
--- TaylorNonLinearDiffuser
+-- TaylorNonLinearDiffuser/LinearDiffuser
 -- RegolithConstantThickness
 
 ------
@@ -34,6 +34,11 @@ Nx: number of nodes in x and y dimension (if grid not supplied)
 Optional:
 E0: streampower incision coefficient (m/s)
 Sc: critical hillslope slope (-)
+BCs: number/string that tells the model how to set the boundary conditions.
+    1 indicates a fixed value boundary, 4 indicates a closed boundary. They
+    are ordered RightTopLeftBottom, e.g. 4414, 1111.
+    Default: 4414
+
 
 -------
 Starting grid can be supplied as NETCDF4 created with landlab, 'grid.nc' with
