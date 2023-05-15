@@ -10,19 +10,14 @@ import glob
 import pickle
 import numpy as np
 import pandas as pd
-import richdem as rd
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
-from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
-from landlab.io.netcdf import to_netcdf, from_netcdf, read_netcdf
+from landlab import imshow_grid, RasterModelGrid, HexModelGrid
+from landlab.io.netcdf import from_netcdf, read_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
-    HeightAboveDrainageCalculator,
-    DrainageDensity,
     )
-from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
