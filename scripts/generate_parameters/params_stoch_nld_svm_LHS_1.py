@@ -74,9 +74,6 @@ def generate_parameters(p, ne, v0, lg, tg, alpha, gam, hi, sigma, rho, ai, theta
 
     return K, D, U, ksat, p, pet, b, ne, na, v0, hg, lg, tg, E0, ds, tr, tb, alpha, gam, hi, sigma, rho, ai, theta, phi
 
-sampler = qmc.LatinHypercube(d=5, seed=2023) # gam, sigma, hi (beta), alpha, Ai 
-sample = sampler.random(n=50)
-
 bnd_gam = [1.0, 16.0]
 bnd_sigma = [8.0, 128.0]
 bnd_hi = [0.1, 2.5]
@@ -86,6 +83,9 @@ bnd_rho = [0.03,0.5]
 bnd_phi = [0.5, 2]
 
 bnds = list(zip(bnd_gam, bnd_sigma, bnd_hi, bnd_alpha, bnd_ai, bnd_rho, bnd_phi))
+
+sampler = qmc.LatinHypercube(d=len(bnds[0]), seed=2023) # gam, sigma, hi (beta), alpha, Ai, rho, phi
+sample = sampler.random(n=50)
 scaled_sample = qmc.scale(sample, bnds[0], bnds[1])
 
 sc = 1.0
