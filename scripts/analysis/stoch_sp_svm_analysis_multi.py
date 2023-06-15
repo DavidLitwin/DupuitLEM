@@ -26,6 +26,7 @@ from landlab.components import (
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
+from DupuitLEM.grid_functions import bind_avg_exp_ksat, bind_avg_recip_ksat
 
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 ID = int(os.environ['MODEL_RUN'])
@@ -69,41 +70,73 @@ plt.close()
 
 ########## Run hydrological model
 # load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
-try:
-    df_params = pd.read_csv('parameters.csv', index_col=0)[str(ID)]
-except FileNotFoundError:
-    df_params = pickle.load(open('./parameters.p','rb'))
-    df_params = df_params.iloc[ID]
+df_params = pd.read_csv('parameters.csv', index_col=0)[str(ID)]
 
-Ks = df_params['ksat'] #hydraulic conductivity [m/s]
 ne = df_params['ne'] #drainable porosity [-]
 b = df_params['b'] #characteristic depth  [m]
 p = df_params['p'] #average precipitation rate [m/s]
 tg = df_params['tg']
 dtg = df_params['dtg']
 hg = df_params['hg']
-try:
-    pet = df_params['pet']
-    na = df_params['na']
-    tr = df_params['tr'] #mean storm duration [s]
-    tb = df_params['tb'] #mean interstorm duration [s]
-    ds = df_params['ds'] #mean storm depth [m]
-    T_h = 2000*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
-except KeyError:
-    df_params_1d = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)[str(ID)]
-    pet = df_params_1d['pet']
-    na = df_params['na']
-    tr = df_params_1d['tr'] #mean storm duration [s]
-    tb = df_params_1d['tb'] #mean interstorm duration [s]
-    ds = df_params_1d['ds'] #mean storm depth [m]
-    T_h = 2000*(tr+tb) #df_params_1d['Nt']*(tr+tb) #total hydrological time [s]
-
+pet = df_params['pet']
+na = df_params['na']
+tr = df_params['tr'] #mean storm duration [s]
+tb = df_params['tb'] #mean interstorm duration [s]
+ds = df_params['ds'] #mean storm depth [m]
+T_h = 2000*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
+
+# boundary conditions
+try:
+    bc = list(str(df_params['BCs']))
+except KeyError:
+    bc = None
+
+# hydraulic conductivity
+try:
+    ksat_type = df_params['ksat_type']
+
+    if ksat_type == 'recip':
+        try:
+            ks = df_params['ksurface']
+            d = df_params['kdecay']
+
+            ksat = bind_avg_recip_ksat(ks, d)
+        except KeyError:
+            print('could not find parameters ksurface and/or kdecay for ksat_type %s'%ksat_type)
+
+    elif ksat_type == 'exp':
+        try:
+            ks = df_params['ksurface']
+            k0  = df_params['kdepth']
+            dk = df_params['kdecay']
+
+            ksat = bind_avg_exp_ksat(ks, k0, dk)
+        except KeyError:
+            print('could not find parameters ksurface, kdepth, and/or kdecay for ksat_type %s'%ksat_type)
+    else:
+        print('Could not find ksat_type %s'%ksat_type)
+        raise KeyError
+except KeyError:
+    ksat = df_params['ksat']
 
 #initialize grid
 mg = RasterModelGrid(grid.shape, xy_spacing=grid.dx)
-mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
-                              left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
+bc_dict = {'4':mg.BC_NODE_IS_CLOSED, '1':mg.BC_NODE_IS_FIXED_VALUE}
+if bc is not None:
+    mg.set_status_at_node_on_edges(
+            right=bc_dict[bc[0]],
+            top=bc_dict[bc[1]],
+            left=bc_dict[bc[2]],
+            bottom=bc_dict[bc[3]],
+    )       
+else:
+    mg.set_status_at_node_on_edges(
+            right=mg.BC_NODE_IS_CLOSED,
+            top=mg.BC_NODE_IS_CLOSED,
+            left=mg.BC_NODE_IS_FIXED_VALUE,
+            bottom=mg.BC_NODE_IS_CLOSED,
+    )
 z = mg.add_zeros('node', 'topographic__elevation')
 z[:] = elev
 zb = mg.add_zeros('node', 'aquifer_base__elevation')
@@ -136,7 +169,7 @@ else:
 
 gdp = GroundwaterDupuitPercolator(mg,
                                   porosity=ne,
-                                  hydraulic_conductivity=Ks,
+                                  hydraulic_conductivity=ksat,
                                   regularization_f=0.01,
                                   recharge_rate=0.0,
                                   courant_coefficient=0.05,
