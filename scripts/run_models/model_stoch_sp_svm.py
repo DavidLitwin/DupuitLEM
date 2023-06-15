@@ -98,6 +98,13 @@ try:
 except FileNotFoundError:
     print("Supply a parameter file, 'parameters.csv' with column title equal to TASK_ID")
 
+# get dtypes right
+for ind in df_params.index:
+    try:
+        df_params[ind] = float(df_params[ind])
+    except ValueError:
+        df_params[ind] = str(df_params[ind])
+
 # pull values for this run
 p = df_params['p']
 pet = df_params['pet']
@@ -120,6 +127,7 @@ Tg = df_params['Tg']
 ksf = df_params['ksf']
 dtg_max = df_params['dtg_max']
 
+# try the arguments that might be present
 try:
     E0 = df_params['E0']
 except KeyError:
@@ -163,7 +171,7 @@ try:
 except KeyError:
     ksat = df_params['ksat']
 
-
+# make output dictionary
 output = {}
 output["output_interval"] = df_params['output_interval']
 output["output_fields"] = [
