@@ -10,7 +10,7 @@ Parameters must be supplied in CSV file, 'parameters.csv'. The CSV file must
 have a header with the number corresponding to the 'SLURM_ARRAY_TASK_ID' and
 must contain at least the following columns:
 
-ksat: Saturated hydraulic conductivity (m/s)
+ksat: saturated hydraulic conductivity (m/s) (if not ksat_type)
 p: steady precip rate (m/s)
 pet: potential evapotranspiration rate (m/s)
 tr: mean storm duration (s)
@@ -38,6 +38,17 @@ BCs: number/string that tells the model how to set the boundary conditions.
     1 indicates a fixed value boundary, 4 indicates a closed boundary. They
     are ordered RightTopLeftBottom, e.g. 4414, 1111.
     Default: 4414
+ksat_type: a way to specify that the hydraulic conductivity changes with depth
+    according to one of the functions in grid_funcs. Options at the moment are
+    'exp' for exponential form, and 'recip' for reciprocal form. Each has 
+    additional arguments:
+    'exp':
+        ksurface: (ks) surface hydraulic conductivity
+        kdepth: (k0) a lower conductivity
+        kdecay: (dk) decline rate coefficient
+    'recip':
+        ksurface: (ks) surface hydraulic conductivity
+        kdecay: (dk) decline rate coefficient
 
 
 -------
@@ -73,6 +84,10 @@ from DupuitLEM.auxiliary_models import (
     RegolithConstantThickness,
     SchenkVadoseModel,
     )
+from DupuitLEM.grid_functions import (
+    bind_avg_exp_ksat, 
+    bind_avg_recip_ksat,
+)
 
 #slurm info
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
@@ -84,7 +99,6 @@ except FileNotFoundError:
     print("Supply a parameter file, 'parameters.csv' with column title equal to TASK_ID")
 
 # pull values for this run
-ksat = df_params['ksat']
 p = df_params['p']
 pet = df_params['pet']
 b = df_params['b']
@@ -122,8 +136,32 @@ try:
     bc = list(str(df_params['BCs']))
 except KeyError:
     bc = None
+try:
+    ksat_type = df_params['ksat_type']
 
+    if ksat_type == 'recip':
+        try:
+            ks = df_params['ksurface']
+            d = df_params['kdecay']
 
+            ksat = bind_avg_recip_ksat(ks, d)
+        except KeyError:
+            print('could not find parameters ksurface and/or kdecay for ksat_type %s'%ksat_type)
+
+    elif ksat_type == 'exp':
+        try:
+            ks = df_params['ksurface']
+            k0  = df_params['kdepth']
+            dk = df_params['kdecay']
+
+            ksat = bind_avg_exp_ksat(ks, k0, dk)
+        except KeyError:
+            print('could not find parameters ksurface, kdepth, and/or kdecay for ksat_type %s'%ksat_type)
+    else:
+        print('Could not find ksat_type %s'%ksat_type)
+        raise KeyError
+except KeyError:
+    ksat = df_params['ksat']
 
 
 output = {}
@@ -195,6 +233,7 @@ except:
     elev = grid.add_zeros('node', 'topographic__elevation')
     elev[:] = b + 0.1*hg*np.random.rand(len(elev))
     base = grid.add_zeros('node', 'aquifer_base__elevation')
+    base[:] = elev - b
     wt = grid.add_zeros('node', 'water_table__elevation')
     wt[:] = elev.copy()
 
