@@ -15,5 +15,6 @@ setup(
         'numpy',
         'pandas',
         'landlab',
+        'tqdm',
     ],
 )
