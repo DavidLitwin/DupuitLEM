@@ -69,7 +69,6 @@ def bind_avg_exp_ksat(ks, k0, dk):
 
     return bound_avg_exp_ksat
 
-
 def bind_avg_recip_ksat(ks, d):
     """
     Function to creat the bound_avg_recip_ksat function. This function
