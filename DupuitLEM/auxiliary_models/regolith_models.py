@@ -192,3 +192,41 @@ class RegolithExponentialProduction(RegolithModel):
 
         # update water table
         self._wt[:] = self._base + h
+
+
+class RegolithConstantBaselevel(RegolithModel):
+    """
+    Aquifer base is not updated (so it stays at same
+    position relative to baselevel), and uplift rate is spatially 
+    uniform and constant in time. The additional permeable material 
+    that enters above baselevel is presumed saturated, so the water 
+    table stays at the same position relative to topography.
+    """
+
+    def __init__(self, grid, uplift_rate=1e-12):
+        """
+        Parameters:
+        -----
+        grid: ModelGrid
+            Landlab ModelGrid object. 
+        uplift_rate: float
+            Constant uplift rate.
+        """
+
+        super().__init__(grid)
+        self.U = uplift_rate
+
+    def run_step(self, dt_m):
+        """Advance regolith model one step in time, keeping constant aquifer base.
+        uplift topographic__elevation and water table elevation directly.
+        
+        Parameters:
+        -----
+        dt_m: float
+            Timestep for update.
+        """
+
+        # uplift
+        self._elev[self._cores] += self.U * dt_m
+        self._wt[self._cores] += self.U * dt_m
+

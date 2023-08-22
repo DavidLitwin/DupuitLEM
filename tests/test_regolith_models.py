@@ -12,6 +12,7 @@ from DupuitLEM.auxiliary_models import (
     RegolithConstantThickness,
     RegolithConstantThicknessPerturbed,
     RegolithExponentialProduction,
+    RegolithConstantBaselevel,
 )
 
 
@@ -83,3 +84,24 @@ def test_exp_reg_prod():
     assert_almost_equal(z[4], 1.002)
     assert_almost_equal(zb[4], 1.002 - np.log(np.exp(b0) + 1e9 * 2e-12))
     assert_almost_equal(zwt[4], 1.002 - np.log(np.exp(b0) + 1e9 * 2e-12) + 1.0)
+
+
+def test_const_baselevel():
+    """
+    Test RegolithConstantBaselevel and ensure fields are updated
+    based on an exact solution.
+    """
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+
+    z = mg.add_ones("node", "topographic__elevation")
+    zb = mg.add_zeros("node", "aquifer_base__elevation")
+    zwt = mg.add_ones("node", "water_table__elevation")
+
+    rm = RegolithConstantBaselevel(mg)
+    rm.run_step(1e9)
+
+    assert_almost_equal(z[4], 1.001)
+    assert_almost_equal(zb[4], 0.000)
+    assert_almost_equal(zwt[4], 1.001)
+
