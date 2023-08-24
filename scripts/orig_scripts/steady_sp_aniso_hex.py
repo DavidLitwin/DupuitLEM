@@ -141,7 +141,7 @@ output["output_fields"] = [
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
         ]
-output["base_output_path"] = '/Users/dlitwin/Documents/Research Data/Local output/steady_aniso_3-1/data/'
+output["base_output_path"] = './data/steady_aniso_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
