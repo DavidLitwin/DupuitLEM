@@ -9,6 +9,7 @@ import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
+from numpy.linalg import inv
 
 from landlab import imshow_grid
 from landlab.io.netcdf import from_netcdf, to_netcdf
@@ -21,7 +22,11 @@ from landlab.components import (
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologySteadyStreamPower
-from DupuitLEM.grid_functions import calc_gw_flux, calc_max_gw_flux
+from DupuitLEM.grid_functions import (
+    get_link_hydraulic_conductivity,
+    calc_gw_flux,
+    calc_max_gw_flux,
+)
 
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
@@ -56,7 +61,9 @@ except FileNotFoundError:
     df_params = df_params.iloc[ID]
     df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
 
-Ks = df_params['ksat'] # hydraulic conductivity [m/s]
+kmax = df_params['ksat']
+kmin = kmax * 1/(df_params['k_ratio'])
+krot = df_params['k_rot']
 p = df_params['p'] # recharge rate [m/s]
 n = df_params['n'] # drainable porosity [-]
 b = df_params['b'] # characteristic depth  [m]
@@ -65,9 +72,15 @@ tg = df_params['tg']
 dtg = df_params['dtg']
 hg = df_params['hg']
 
+# calculate link hydraulic conductivity
+rot = np.array([[np.cos(krot), -np.sin(krot)],[np.sin(krot), np.cos(krot)]])
+K_principal = np.array([[kmax,0.0],[0.0, kmin]])
+K = rot @ K_principal @ inv(rot)
+k1 = get_link_hydraulic_conductivity(mg, K)
+
 gdp = GroundwaterDupuitPercolator(mg,
           porosity=n,
-          hydraulic_conductivity=Ks,
+          hydraulic_conductivity=k1,
           regularization_f=0.01,
           recharge_rate=p,
           courant_coefficient=0.1, #*Ks/1e-5,
@@ -97,11 +110,11 @@ Qstar[:] = Q/(mg.at_node['drainage_area']*p)
 
 # groundwater flux
 q_out_max = mg.add_zeros('node', 'gw_flux_out_max')
-q_in_max = mg.add_zeros('node', 'gw_flux_in_max')
+# q_in_max = mg.add_zeros('node', 'gw_flux_in_max')
 q_out = mg.add_zeros('node', 'gw_flux_out')
 q_in = mg.add_zeros('node', 'gw_flux_in')
 q_in[:], q_out[:] = calc_gw_flux(mg)
-q_in_max[:], q_out_max[:] = calc_max_gw_flux(mg, Ks, b)
+# q_in_max[:], q_out_max[:] = calc_max_gw_flux(mg, k1, b)
 
 ##### steepness, curvature, and topographic index
 curvature = mg.add_zeros('node', 'curvature')

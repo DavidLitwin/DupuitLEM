@@ -25,23 +25,7 @@ from DupuitLEM.auxiliary_models import (
     HydrologySteadyStreamPower,
     RegolithConstantBaselevel,
     )
-
-def get_link_hydraulic_conductivity(grid, K):
-    """Returns array of hydraulic conductivity on links, allowing for aquifers
-    with laterally anisotropic hydraulic conductivity.
-
-    Parameters
-    ----------
-    K: (2x2) array of floats (m/s)
-        The hydraulic conductivity tensor:
-        [[Kxx, Kxy],[Kyx,Kyy]]
-    """
-
-    u = grid.unit_vector_at_link
-    K_link = np.zeros(len(u))
-    for i in range(len(u)):
-        K_link[i] = np.dot(np.dot(u[i, :], K), u[i, :])
-    return K_link
+from DupuitLEM.grid_functions import get_link_hydraulic_conductivity
 
 #%%
 #slurm info
