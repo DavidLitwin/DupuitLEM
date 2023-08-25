@@ -9,6 +9,7 @@ Date: 16 March 2020
 
 import numpy as np
 from landlab.grid.mappers import map_mean_of_link_nodes_to_link
+from landlab import LinkStatus
 
 
 def bind_avg_exp_ksat(ks, k0, dk):
@@ -195,3 +196,71 @@ def bind_avg_dual_ksat(Ks_0, Ks_1, b_1):
         return Kavg
 
     return bound_avg_dual_ksat
+
+
+def get_link_hydraulic_conductivity(grid, K):
+    """Returns array of hydraulic conductivity on links, allowing for aquifers
+    with laterally anisotropic hydraulic conductivity.
+
+    Parameters
+    ----------
+    K: (2x2) array of floats (m/s)
+        The hydraulic conductivity tensor:
+        [[Kxx, Kxy],[Kyx,Kyy]]
+    """
+
+    u = grid.unit_vector_at_link
+    K_link = np.zeros(len(u))
+    for i in range(len(u)):
+        K_link[i] = np.dot(np.dot(u[i, :], K), u[i, :])
+    return K_link
+
+
+def calc_max_gw_flux(grid, k, b):
+    """
+    Calculate the maximum groundwater flux into and out of nodes.
+    """
+    base = grid.at_node['aquifer_base__elevation']
+
+    # Calculate gradients
+    base_grad = grid.calc_grad_at_link(base)
+    cosa = np.cos(np.arctan(base_grad))
+    hydr_grad = base_grad * cosa
+
+    # calc max gw flux at links
+    # Calculate groundwater velocity
+    vel = -k * hydr_grad
+    vel[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
+
+    # Calculate specific discharge
+    q = grid.add_zeros('link', 'q_max_link')
+    q[:] = b * cosa * vel
+
+    q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
+    q_all_links_at_node_dir_out = q_all_links_at_node < 0
+    widths_link = grid.length_of_face[grid.face_at_link]
+    widths_link_at_node = widths_link[grid.links_at_node]
+    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths_link_at_node, axis=1)
+
+    q_all_links_at_node_dir_in = q_all_links_at_node > 0
+    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths_link_at_node, axis=1)
+
+    return Qgw_in, Qgw_out
+
+def calc_gw_flux(grid):
+    """
+    Calculate the groundwater flux into and out of nodes.
+    """
+    # Calculate specific discharge
+    q = grid.at_link['groundwater__specific_discharge']
+
+    q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
+    q_all_links_at_node_dir_out = q_all_links_at_node < 0
+    widths_link = grid.length_of_face[grid.face_at_link]
+    widths_link_at_node = widths_link[grid.links_at_node]
+    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths_link_at_node, axis=1)
+
+    q_all_links_at_node_dir_in = q_all_links_at_node > 0
+    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths_link_at_node, axis=1)
+
+    return Qgw_in, Qgw_out
