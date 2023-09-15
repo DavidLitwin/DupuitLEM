@@ -11,7 +11,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib import colormaps
+from matplotlib import colormaps, cm
 
 from landlab import RasterModelGrid, imshow_grid
 from landlab.io.netcdf import to_netcdf, from_netcdf
@@ -58,7 +58,7 @@ def get_neighborhood_indices(field, p, n, mask=None):
 directory = '/Users/dlitwin/Documents/Research Data/HPC output/DupuitLEMResults/post_proc'
 base_output_path = 'stoch_gam_sigma_14'
 model_runs = np.arange(25)
-ID=22
+ID=12
 
 df_params = pd.read_csv('%s/%s/params_ID_%d.csv'%(directory,base_output_path, ID), index_col=0)[str(ID)]
 
@@ -85,7 +85,7 @@ na = df_params['na'] #plant available volumetric water content
 tr = df_params['tr'] #mean storm duration [s]
 tb = df_params['tb'] #mean interstorm duration [s]
 ds = df_params['ds'] #mean storm depth [m]
-T_h = 2200*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
+T_h = 1000*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
 try:
@@ -205,10 +205,17 @@ hm.run_step()
 hm.run_step_record_state()
 
 
-#%%
+#%% dump
 
 with open(os.path.join(directory,base_output_path,f'Qall_{ID}.pkl'), 'wb') as file:
     pickle.dump(hm.Q_all, file)
+
+#%% load
+
+with open(os.path.join(directory,base_output_path,f'Qall_{ID}.pkl'), 'rb') as file:
+	Q_all = pickle.load(file)
+
+
 
 #%% analysis of discharge
 
@@ -229,16 +236,48 @@ for p in percs:
 
 #%%
 
+# get existing full-domain discharge timeseries from csv
+df = pd.read_csv(os.path.join(directory,base_output_path,f'dt_qs_s_{ID}.csv'), sep=',',header=None, names=['dt','r', 'qs', 'S', 'sat_nodes'])
+# remove the first row (test row written by init of gdp)
+df.drop(0, inplace=True)
+df.reset_index(drop=True, inplace=True)
+# make dimensionless timeseries
+Atot = np.sum(mg.cell_area_at_node[mg.core_nodes])
+df['qs_norm'] = df['qs']/Atot
+
+# get some info from the hydrological model that was just run
+area = grid.at_node['drainage_area']
+Q_all = hm.Q_all[1:,:]
+dt = np.diff(hm.time)
+intensity = hm.intensity[:-1]
+
+# sort and calculate exceedance for Q at ids
 Q_sorted_ids = np.zeros((Q_all.shape[0], len(ids)))
 dt_sorted_ids = np.zeros_like(Q_sorted_ids)
 exceedance_ids = np.zeros_like(Q_sorted_ids)
 for i, id in enumerate(ids):
-    Q = Q_all[:,id]
-
+    Q = Q_all[:,id]/area[id] * 3600 * 1000
     sorted_inds = np.flip(np.argsort(Q))
     Q_sorted_ids[:,i] = Q[sorted_inds]
     dt_sorted_ids[:,i] = dt[sorted_inds]
-    exceedance_ids[:,i] = np.cumsum(dt_sorted_id)/np.sum(dt)
+    exceedance_ids[:,i] = np.cumsum(dt_sorted_ids[:,i])/np.sum(dt)
+
+# sort and calculate exceedance for rainfall 
+sorted_inds = np.flip(np.argsort(intensity))
+sorted_i = intensity[sorted_inds]
+dt_sorted_i = dt[sorted_inds]
+exceedance_i = np.cumsum(dt_sorted_i)/np.sum(dt)
+
+# sort and calculate exceedance for Qtot from the csv
+Qtot = df['qs_norm'].values
+dt_Qtot = df['dt'].values
+sorted_inds = np.flip(np.argsort(Qtot))
+sorted_Qtot = Qtot[sorted_inds]
+dt_sorted_Qtot = dt_Qtot[sorted_inds]
+exceedance_Qtot = np.cumsum(dt_sorted_Qtot)/np.sum(dt_Qtot)
+
+
+#%% plot exceedance
 
 viridis = cm.get_cmap('viridis', len(percs))
 vir = viridis.colors
@@ -247,35 +286,19 @@ c_class= 5*[0]+5*[1]+5*[2]
 fig, ax = plt.subplots()
 for i, id in enumerate(ids):
     ax.scatter(Q_sorted_ids[:,i], exceedance_ids[:,i], s=2, c=vir[c_class[i]])
+ax.scatter(sorted_i*1e3*3600, exceedance_i, s=2, c='r', label='Rainfall')
+ax.scatter(sorted_Qtot*1e3*3600, exceedance_Qtot, s=2, c='k', label='Q total')
 ax.set_xscale('log')
 ax.set_yscale('log')
+ax.set_xlabel('Q [mm/hr]')
+ax.set_ylabel('Exceedance Frequency')
+ax.set_xlim((1e-6,1e2))
+fig.legend(frameon=False)
 
-#%%
 
-# picking locations of points
-Q_storm = grid.at_node['Q_mean_end_storm']
-indices = np.arange(len(Q_storm)).reshape(grid.shape)
-# indices = indices.T
-Q_storm = Q_storm.reshape(grid.shape)
-N = grid.shape[0]
+#%% Attempt at manual selection of watershed points
 
-fig, ax = plt.subplots()
-imshow_grid(grid, 'Q_mean_end_storm')
-
-#%%
-
-im = ax.imshow(np.log(Q_storm), cmap='plasma', interpolation=None, origin="lower")
-for i in range(N):
-    for j in range(N):
-        if j%2==0:
-            text = ax.text(j,i,indices[i,j], ha="center", va="center", color="w", fontsize=0.5, rotation=45)
-        else:
-            text = ax.text(j,i,indices[i,j], ha="center", va="center", color="w", fontsize=0.5, rotation=-45)
-plt.savefig(os.path.join(directory,base_output_path,f'labeled_{ID}.pdf'), dpi=600)
-
-#%%
-
-# # transect across a larger stream channel
+# transect across a larger stream channel
 pts = [4508, 5518,5923,5563]
 
 area = grid.at_node['drainage_area']
@@ -301,20 +324,3 @@ for pt in inds:
 ax.set_yscale('log') 
 plt.legend()
 
-# %%
-
-Q = grid.at_node['Q_mean_end_storm']
-fig, ax = plt.subplots()
-ax.scatter(TI[grid.core_nodes],Q[grid.core_nodes]/area[grid.core_nodes],c=np.log(area[grid.core_nodes]), cmap='viridis')
-# %%
-
-# %%
-
-field = np.random.rand(5000)
-ids, vals = get_neighborhood_indices(field,10,5)
-
-
-# %%
-
-
-# %%
