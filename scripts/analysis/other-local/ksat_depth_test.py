@@ -93,17 +93,23 @@ plt.ylabel('h')
 plt.legend()
 
 #%%
+# reciprocal ksat functions
 
 def k_func_1(h, b, d, ks):
+    # calculate ksat at aquifer thickness h with reciprocal function
     return ks/((b-h)/d+1)
 
 def ks_func_1(T, b, d):
+    # calculate surface ksat for reciprocal function
     return T/(d*np.log((b+d)/d))
 
 def keff_func_1(h, b, d, ks):
+    # calculate effective hydraulic conductivity for aquifer thickness h
     return (ks*d)/h * np.log((b + d)/(b + d - h))
 
 #%%
+# plot ksat with depth for different b
+
 ks = 0.001
 T = 5
 plt.figure()
@@ -116,9 +122,26 @@ plt.xlabel('ksat')
 plt.ylabel('h')
 plt.legend()
 
+#%%
+# plot ksat with depth for different decay rates d
+
+ks = 0.001
+T = 5
+b = 5
+plt.figure()
+for d in np.linspace(0.1,0.9,9):
+    h = np.linspace(0,b,50)
+    ks = ks_func_1(T, b, d)
+    plt.plot(k_func_1(h,b,d,ks), h, label=f'd={d}')
+plt.xlabel('ksat')
+plt.ylabel('h')
+# plt.xscale('log')
+plt.legend()
 
 
 #%%
+# develop tests for DupuitLEM
+
 # initialize model grid
 mg = RasterModelGrid((4, 4), xy_spacing=1.0)
 elev = mg.add_zeros("node", "topographic__elevation")

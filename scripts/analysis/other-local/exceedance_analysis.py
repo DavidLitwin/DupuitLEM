@@ -58,7 +58,7 @@ def get_neighborhood_indices(field, p, n, mask=None):
 directory = '/Users/dlitwin/Documents/Research Data/HPC output/DupuitLEMResults/post_proc'
 base_output_path = 'stoch_gam_sigma_14'
 model_runs = np.arange(25)
-ID=12
+ID=6
 
 df_params = pd.read_csv('%s/%s/params_ID_%d.csv'%(directory,base_output_path, ID), index_col=0)[str(ID)]
 
@@ -88,6 +88,15 @@ ds = df_params['ds'] #mean storm depth [m]
 T_h = 1000*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 
+
+# # change the hydraulic conductivity to depth-dependent
+# def ks_func(T, b, d):
+#     return T/(d*np.log((b+d)/d))
+# df_params['ksat_type'] = 'recip'
+# df_params['kdecay'] = 0.2 * df_params['b']
+# df_params['ksurface'] = ks_func(df_params['ksat']*df_params['b'], df_params['b'], df_params['kdecay'])
+
+
 try:
     bc = list(str(df_params['BCs']))
 except KeyError:
@@ -103,6 +112,8 @@ try:
             d = df_params['kdecay']
 
             ksat = bind_avg_recip_ksat(ks, d)
+            print('using recip ksat')
+
         except KeyError:
             print('could not find parameters ksurface and/or kdecay for ksat_type %s'%ksat_type)
 
@@ -140,19 +151,16 @@ else:
     )
 
 #%%
+# initialize grid and components
 
 #initialize grid
-mg = RasterModelGrid(grid.shape, xy_spacing=grid.dx)
-mg.set_status_at_node_on_edges(right=mg.BC_NODE_IS_CLOSED, top=mg.BC_NODE_IS_CLOSED, \
-                              left=mg.BC_NODE_IS_FIXED_VALUE, bottom=mg.BC_NODE_IS_CLOSED)
 z = mg.add_zeros('node', 'topographic__elevation')
 z[:] = elev
+z[np.isnan(z)] = b
 zb = mg.add_zeros('node', 'aquifer_base__elevation')
 zb[:] = base
 zwt = mg.add_zeros('node', 'water_table__elevation')
 zwt[:] = base + wtrel * b
-
-
 
 # f = open('../post_proc/%s/Q_pts_%d.csv'%(base_output_path, ID), 'w')
 # def write_Q(grid, r, dt, file=f):
@@ -200,12 +208,12 @@ hm = HydrologyEventVadoseStreamPower(
 
 #%%
 #run model
-hm.run_step()
 
+hm.run_step()
 hm.run_step_record_state()
 
-
-#%% dump
+#%% 
+# #dump
 
 with open(os.path.join(directory,base_output_path,f'Qall_{ID}.pkl'), 'wb') as file:
     pickle.dump(hm.Q_all, file)
@@ -217,17 +225,19 @@ with open(os.path.join(directory,base_output_path,f'Qall_{ID}.pkl'), 'rb') as fi
 
 
 
-#%% analysis of discharge
+#%% 
+# analysis of discharge
 
-
-#%% select indices
-
+# indices based on average runoff from post processing
 Q_mean_end_storm = grid.at_node['Q_mean_end_storm']
-percs = [99.9,99,95]
+TI = grid.at_node['topographic__index_D8']
+percs = [99,95,90]
 ids = []
 ps = []
 vals = []
 
+# get five points in the neighborhood of the quantiles, since places don't necessarily 
+# behave similarly even when close together
 for p in percs:
     inds, Qs = get_neighborhood_indices(Q_mean_end_storm, p, 5, mask=grid.core_nodes)
     ids += inds
@@ -235,13 +245,14 @@ for p in percs:
 
 
 #%%
+# calculate exceedance
 
 # get existing full-domain discharge timeseries from csv
 df = pd.read_csv(os.path.join(directory,base_output_path,f'dt_qs_s_{ID}.csv'), sep=',',header=None, names=['dt','r', 'qs', 'S', 'sat_nodes'])
 # remove the first row (test row written by init of gdp)
 df.drop(0, inplace=True)
 df.reset_index(drop=True, inplace=True)
-# make dimensionless timeseries
+# normalize by area
 Atot = np.sum(mg.cell_area_at_node[mg.core_nodes])
 df['qs_norm'] = df['qs']/Atot
 
@@ -277,23 +288,33 @@ dt_sorted_Qtot = dt_Qtot[sorted_inds]
 exceedance_Qtot = np.cumsum(dt_sorted_Qtot)/np.sum(dt_Qtot)
 
 
-#%% plot exceedance
+#%% 
+# plot exceedance
 
-viridis = cm.get_cmap('viridis', len(percs))
+viridis = cm.get_cmap('viridis_r', len(percs))
 vir = viridis.colors
 
 c_class= 5*[0]+5*[1]+5*[2]
 fig, ax = plt.subplots()
 for i, id in enumerate(ids):
-    ax.scatter(Q_sorted_ids[:,i], exceedance_ids[:,i], s=2, c=vir[c_class[i]])
+    ax.scatter(Q_sorted_ids[:,i], exceedance_ids[:,i], s=2, c=vir[c_class[i]], label=r"~$Q_{%d}$"%ps[i])
 ax.scatter(sorted_i*1e3*3600, exceedance_i, s=2, c='r', label='Rainfall')
-ax.scatter(sorted_Qtot*1e3*3600, exceedance_Qtot, s=2, c='k', label='Q total')
+# ax.scatter(sorted_Qtot*1e3*3600, exceedance_Qtot, s=2, c='k', label='Q total')
 ax.set_xscale('log')
 ax.set_yscale('log')
 ax.set_xlabel('Q [mm/hr]')
 ax.set_ylabel('Exceedance Frequency')
-ax.set_xlim((1e-6,1e2))
-fig.legend(frameon=False)
+ax.set_xlim((1e-3,1e2))
+hand, labl = ax.get_legend_handles_labels()
+handout=[]
+lablout=[]
+for h,l in zip(hand,labl):
+    if l not in lablout:
+        lablout.append(l)
+        handout.append(h)
+ax.legend(handout, lablout, loc='lower left')
+plt.savefig(os.path.join(directory,base_output_path,f'Q_exceedance_{ID}.pdf'), dpi=300)
+
 
 
 #%% Attempt at manual selection of watershed points
