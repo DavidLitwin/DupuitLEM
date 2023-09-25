@@ -58,7 +58,7 @@ def get_neighborhood_indices(field, p, n, mask=None):
 directory = '/Users/dlitwin/Documents/Research Data/HPC output/DupuitLEMResults/post_proc'
 base_output_path = 'stoch_gam_sigma_14'
 model_runs = np.arange(25)
-ID=6
+ID=12
 
 df_params = pd.read_csv('%s/%s/params_ID_%d.csv'%(directory,base_output_path, ID), index_col=0)[str(ID)]
 
@@ -93,7 +93,7 @@ sat_cond = 0.025 # distance from surface (units of hg) for saturation
 # def ks_func(T, b, d):
 #     return T/(d*np.log((b+d)/d))
 # df_params['ksat_type'] = 'recip'
-# df_params['kdecay'] = 0.2 * df_params['b']
+# df_params['kdecay'] = 0.1 * df_params['b']
 # df_params['ksurface'] = ks_func(df_params['ksat']*df_params['b'], df_params['b'], df_params['kdecay'])
 
 
@@ -218,6 +218,15 @@ hm.run_step_record_state()
 with open(os.path.join(directory,base_output_path,f'Qall_{ID}.pkl'), 'wb') as file:
     pickle.dump(hm.Q_all, file)
 
+with open(os.path.join(directory,base_output_path,f'qs_all_{ID}.pkl'), 'wb') as file:
+    pickle.dump(hm.qs_all, file)
+
+with open(os.path.join(directory,base_output_path,f'storm_dts_{ID}.pkl'), 'wb') as file:
+    pickle.dump(hm.storm_dts, file)
+
+with open(os.path.join(directory,base_output_path,f'interstorm_dts_{ID}.pkl'), 'wb') as file:
+    pickle.dump(hm.interstorm_dts, file)
+
 #%% load
 
 with open(os.path.join(directory,base_output_path,f'Qall_{ID}.pkl'), 'rb') as file:
@@ -240,6 +249,7 @@ vals = []
 # behave similarly even when close together
 for p in percs:
     inds, Qs = get_neighborhood_indices(Q_mean_end_storm, p, 5, mask=grid.core_nodes)
+    # inds, Qs = get_neighborhood_indices(TI, p, 5, mask=grid.core_nodes)
     ids += inds
     ps += [p]*5
 
