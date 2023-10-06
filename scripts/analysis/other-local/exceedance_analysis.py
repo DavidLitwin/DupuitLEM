@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import colormaps, cm
+import statsmodels.api as sm
 
 from landlab import RasterModelGrid, imshow_grid
 from landlab.io.netcdf import to_netcdf, from_netcdf
@@ -325,33 +326,116 @@ for h,l in zip(hand,labl):
 ax.legend(handout, lablout, loc='lower left')
 plt.savefig(os.path.join(directory,base_output_path,f'Q_exceedance_{ID}.pdf'), dpi=300)
 
+#%% exceedance of full domain baseflow
+
+ID = 24
+
+dfq = pd.read_csv(os.path.join(directory,base_output_path,f'q_s_dt_ID_{ID}.csv'), sep=',',header=[0], index_col=0)
+
+Atot = np.sum(mg.cell_area_at_node[mg.core_nodes])
+dfq['qs_norm'] = dfq['qs']/Atot
+dfq['qb_norm'] = dfq['qb']/Atot
+dfq['r_norm'] = dfq['r']/Atot
+
+# total baseflow
+Qbtot = dfq['qb_norm'].values
+dt_Qbtot = dfq['dt'].values
+sorted_inds = np.flip(np.argsort(Qbtot))
+sorted_Qbtot = Qbtot[sorted_inds]
+dt_sorted_Qbtot = dt_Qbtot[sorted_inds]
+exceedance_Qbtot = np.cumsum(dt_sorted_Qbtot)/np.sum(dt_Qbtot)
+
+# total discharge
+Qtot = dfq['qs_norm'].values
+dt_Qtot = dfq['dt'].values
+sorted_inds = np.flip(np.argsort(Qtot))
+sorted_Qtot = Qtot[sorted_inds]
+dt_sorted_Qtot = dt_Qtot[sorted_inds]
+exceedance_Qtot = np.cumsum(dt_sorted_Qtot)/np.sum(dt_Qtot)
+
+# total recharge
+rtot = dfq['r_norm'].values
+dt_rtot = dfq['dt'].values
+sorted_inds = np.flip(np.argsort(rtot))
+sorted_rtot = rtot[sorted_inds]
+dt_sorted_rtot = dt_rtot[sorted_inds]
+exceedance_rtot = np.cumsum(dt_sorted_rtot)/np.sum(dt_rtot)
 
 
-#%% Attempt at manual selection of watershed points
+# total precip (not yet possible)
 
-# transect across a larger stream channel
-pts = [4508, 5518,5923,5563]
-
-area = grid.at_node['drainage_area']
-TI = grid.at_node['topographic__index_D8']
-quants = [99.99,99.9,99,90]
-
-# inds = [np.argwhere(TI==np.percentile(TI[grid.core_nodes],q,method='lower'))[0][0] for q in quants]
-inds = [np.argwhere(area==np.percentile(area[grid.core_nodes],q,method='lower'))[0][0] for q in quants]
-
-x_inds = grid.x_of_node[inds]
-y_inds = grid.y_of_node[inds]
-area_inds = area[inds]
-
+# plot
 fig, ax = plt.subplots()
-imshow_grid(grid, 'Q_mean_end_storm', cmap='viridis')
-ax.scatter(x_inds,y_inds, c=area_inds, cmap='plasma')
+ax.scatter(sorted_rtot, exceedance_rtot, s=2, c='g', label=r'$r$')
+ax.scatter(sorted_Qtot, exceedance_Qtot, s=2, c='cornflowerblue', label=r'$Q$')
+ax.scatter(sorted_Qbtot, exceedance_Qbtot, s=2, c='b', label=r'$Q_b$')
+ax.set_xscale('log')
+ax.set_yscale('log')
+ax.set_xlabel('Q [mm/hr]')
+ax.set_ylabel('Exceedance Frequency')
+ax.legend(frameon=False)
+
+# %% determining tau and b (recession)
+
+def calc_recession_params(q, r, dt):
+    """
+    Calculate the Brutsaert and Niebur recession parameters a and b:
+        dQ/dt = - a Q^b
+    
+    parameters
+    ----------
+    q: array of (area-normalized) discharge
+    r: array of recharge or precipitation
+    dt: array of timesteps (uniform or non-uniform)
+
+    returns
+    --------
+    results: full statsmodels output object
+    logQ: ln(Q) used in regression
+    logdQdt: ln(-dQ/dt) used in regression
+    """
+
+    # iterate through timeseries and find places without recharge where
+    # discharge is also decreasing
+    dQdt = []
+    Q = []
+    for i in range(1,len(r)):
+        if r[i-1] == 0.0:
+            if q[i] < q[i-1]:
+                dQdt.append((q[i] - q[i-1])/dt[i-1]) # check dt[i] or dt[i-1]
+                Q.append((q[i] + q[i-1])/2)
+    dQdt = np.array(dQdt)
+    Q = np.array(Q)
+    
+    # remove places that could cause issues for log
+    cond = np.logical_and(-dQdt>0, Q>0)
+    logdQdt = np.log(-dQdt[cond])
+    logQ = np.log(Q[cond])
+
+    # linear regression ln(-dQ/dt) = b ln(Q) + ln(a)
+    x = sm.add_constant(logQ)
+    model = sm.OLS(logdQdt,x)
+    results = model.fit()
+
+    return results, logQ, logdQdt
+
+# total baseflow
+qs = dfq['qs_norm'].values * 1e3 * 3600 # mm/hr
+r = dfq['r_norm'].values * 1e3 * 3600 # mm/hr
+dt = dfq['dt'].values / 3600 # hr
+
+results, logQ, logdQdt = calc_recession_params(qs,r,dt)
+
+plt.figure()
+plt.scatter(logQ, logdQdt, s=2, alpha=0.2)
+
 
 #%%
+a = np.exp(results.params[0])
+b = results.params[1]
+mu = np.mean(qs)
+tau = (mu**(1-b))/a
+# tau = (𝜇^(1−b))∕a
 
-fig, ax = plt.subplots()
-for pt in inds:
-    plt.plot(hm.time/(3600*24), hm.Q_all[:,pt]/area[pt]*(3600*1e3), label=str(pt))
-ax.set_yscale('log') 
-plt.legend()
 
+# %%
