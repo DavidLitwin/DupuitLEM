@@ -384,24 +384,25 @@ plt.savefig(os.path.join(directory,base_output_path,f'b_area_{ID}_rsq.png'))
 
 #%% plots with other things
 
-field = grid.at_node['topographic__index_D8']
+field = grid.at_node['slope_D8']
+cond = rec_rsq > 0.5
 plt.figure()
-plt.scatter(field[mg1.core_nodes], rec_tau[mg1.core_nodes], s=3, alpha=0.3)
+plt.scatter(field[cond], rec_tau[cond], s=3, alpha=0.3)
 plt.ylim(1e-2,1e6)
 plt.yscale('log')
-plt.xscale('log')
-# plt.xlabel('Drainage Area')
+# plt.xscale('log')
+plt.xlabel('Slope')
 plt.ylabel('Tau (hrs)')
-# plt.savefig(os.path.join(directory,base_output_path,f'tau_area_{ID}.png'))
+plt.savefig(os.path.join(directory,base_output_path,f'tau_slope_{ID}.png'))
 
 plt.figure()
-plt.scatter(field[mg1.core_nodes], rec_b[mg1.core_nodes], s=3, alpha=0.3)
+plt.scatter(field[cond], rec_b[cond], s=3, alpha=0.3)
 plt.ylim(0,1.5)
 # plt.yscale('log')
-plt.xscale('log')
-# plt.xlabel('Drainage Area')
+# plt.xscale('log')
+plt.xlabel('Slope')
 plt.ylabel('b (-)')
-# plt.savefig(os.path.join(directory,base_output_path,f'b_area_{ID}.png'))
+plt.savefig(os.path.join(directory,base_output_path,f'b_slope_{ID}.png'))
 
 
 #%%
