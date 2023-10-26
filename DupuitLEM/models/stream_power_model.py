@@ -32,7 +32,6 @@ class StreamPowerModel:
         steady_state_condition=None,
         verbose=False,
     ):
-
         """
         Initialize StreamPowerModel.
 
@@ -51,7 +50,7 @@ class StreamPowerModel:
             An instance of a DupuitLEM regolith model.
             Default: None
         morphologic_scaling_factor: float
-            Multiplying factor on the hydrological timestep to calculate 
+            Multiplying factor on the hydrological timestep to calculate
             the morphologic timestep.
             Default: 500.0
         total_morphological_time: float
@@ -60,7 +59,7 @@ class StreamPowerModel:
         maximum_morphological_dt: float
             The maximum allowable morphologic timestep.
             Default: None
-        output_dict: dict 
+        output_dict: dict
             Dictionary containing fields to specify output behavior.
             Contains the following fields:
                 output_interval: int. The number of model iterations between saving output
@@ -71,11 +70,11 @@ class StreamPowerModel:
                 id: int. The identifying number of the particular run. Output files
                     are saved to (base_path)-(id)/grid_(id).nc
             Default: None
-        steady_state_condition: dict 
-            Dictionary containing information for stopping model if a condition on 
-            elevation change is met. Stopping conditions are currently implemented 
-            only for the rate of change between the present elevation state, and the 
-            state recorded in the most recently saved output. So, using 
+        steady_state_condition: dict
+            Dictionary containing information for stopping model if a condition on
+            elevation change is met. Stopping conditions are currently implemented
+            only for the rate of change between the present elevation state, and the
+            state recorded in the most recently saved output. So, using
             steady_state_condition is conditional on saving output with output_dict.
             Contains the following fields:
                 stop_at_rate: float. the critical rate of elevation change [m/yr]
@@ -161,7 +160,7 @@ class StreamPowerModel:
         Parameters:
         --------
         dt_m: float
-            Morphoplogic timestep. 
+            Morphoplogic timestep.
         dt_m_max: float
             Maximum morphoplogic timestep. If provided,
             geomorphic timestep dt_m is subdivided so that
@@ -173,7 +172,6 @@ class StreamPowerModel:
         self.hm.run_step()
 
         if dt_m_max is not None:
-
             remaining_time = dt_m
             self.num_substeps = 0
 
@@ -234,13 +232,10 @@ class StreamPowerModel:
 
         # Run model forward
         for i in tqdm(range(self.N), desc="Completion"):
-
             self.run_step(self.dt_m, dt_m_max=self.dt_m_max)
 
             if self.save_output:
-
                 if i % self.output_interval == 0 or i == max(range(self.N)):
-
                     # save the specified grid fields
                     filename = self.base_path + "%d_grid_%d.nc" % (self.id, i)
                     to_netcdf(
@@ -251,7 +246,6 @@ class StreamPowerModel:
                     )
 
                 if self.stop_cond and i % self.output_interval == 0 and i > 0:
-
                     # check stopping condition
                     filename0 = self.base_path + "%d_grid_%d.nc" % (
                         self.id,

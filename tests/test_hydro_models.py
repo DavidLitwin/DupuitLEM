@@ -22,6 +22,7 @@ from DupuitLEM.auxiliary_models import (
     HydrologyEventVadoseThresholdStreamPower,
 )
 
+
 # HydrologySteadyStreamPower
 def test_steady_sp_raster():
     """
@@ -207,6 +208,62 @@ def test_stoch_sp_raster_record_state():
     assert_equal(hm.wt_all[0, :], wt0)
 
 
+def test_stoch_sp_methods_same():
+    """
+    Initialize HydrologyEventStreamPower on a raster grid.
+    Use several storm-interstorm pairs and make sure run_step_record_state
+    method gives the same answer as run_step method.
+    """
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg.add_ones("node", "topographic__elevation")
+    mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, porosity=0.2)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=1000,
+    )
+    pd.seed_generator(seedval=1)
+    hm = HydrologyEventStreamPower(mg, precip_generator=pd, groundwater_model=gdp)
+    hm.run_step_record_state()
+
+    mg1 = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg1.set_status_at_node_on_edges(
+        right=mg1.BC_NODE_IS_CLOSED,
+        top=mg1.BC_NODE_IS_CLOSED,
+        left=mg1.BC_NODE_IS_CLOSED,
+        bottom=mg1.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg1.add_ones("node", "topographic__elevation")
+    mg1.add_zeros("node", "aquifer_base__elevation")
+    mg1.add_ones("node", "water_table__elevation")
+
+    gdp1 = GroundwaterDupuitPercolator(mg1, porosity=0.2)
+    pd1 = PrecipitationDistribution(
+        mg1,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=1000,
+    )
+    pd1.seed_generator(seedval=1)
+    hm1 = HydrologyEventStreamPower(mg1, precip_generator=pd1, groundwater_model=gdp1)
+    hm1.run_step()
+
+    assert_equal(hm.q_eff, hm1.q_eff)
+
+
 # HydrologyEventThresholdStreamPower
 def test_stoch_sp_threshold_raster_null():
     """
@@ -376,7 +433,8 @@ def test_stoch_sp_threshold_above_threshold():
     storm_q = 0.0244046740  # accumulated q before threshold effect subtracted
     # interstorm_q = 0.0  # interstorm q is zero in this case
     assert_almost_equal(
-        hm.q_eff[4], max(storm_q - hm.Q0[4], 0) * storm_dt / hm.T_h,
+        hm.q_eff[4],
+        max(storm_q - hm.Q0[4], 0) * storm_dt / hm.T_h,
     )
 
 
@@ -474,11 +532,16 @@ def test_stoch_sp_vadose_raster_null():
     )
     pd.seed_generator(seedval=1)
     svm = SchenkVadoseModel(
-        potential_evapotranspiration_rate=0.0, profile_depth=1.0, num_bins=int(1e6),
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseStreamPower(
-        mg, precip_generator=pd, groundwater_model=gdp, vadose_model=svm,
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        vadose_model=svm,
     )
     hm.run_step()
 
@@ -514,7 +577,9 @@ def test_stoch_sp_vadose_hex_null():
     )
     pd.seed_generator(seedval=1)
     svm = SchenkVadoseModel(
-        potential_evapotranspiration_rate=0.0, profile_depth=1.0, num_bins=int(1e6),
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseStreamPower(
@@ -560,11 +625,16 @@ def test_stoch_sp_vadose_record_state():
     )
     pd.seed_generator(seedval=1)
     svm = SchenkVadoseModel(
-        potential_evapotranspiration_rate=0.0, profile_depth=1.0, num_bins=int(1e6),
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseStreamPower(
-        mg, precip_generator=pd, groundwater_model=gdp, vadose_model=svm,
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        vadose_model=svm,
     )
 
     wt0 = wt.copy()
@@ -596,6 +666,84 @@ def test_stoch_sp_vadose_record_state():
     assert_equal(hm.qs_all[0, :], np.zeros(9))
     assert_equal(hm.Q_all[0, :], np.zeros(9))
     assert_equal(hm.wt_all[0, :], wt0)
+
+
+def test_stoch_sp_vadose_methods_same():
+    """
+    Initialize HydrologyEventVadoseStreamPower on a raster grid.
+    Use several storm-interstorm pairs and make sure run_step_record_state
+    method gives the same answer as run_step method.
+    """
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg.add_ones("node", "topographic__elevation")
+    mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, porosity=0.2)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=1000,
+    )
+    pd.seed_generator(seedval=1)
+    svm = SchenkVadoseModel(
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e4),
+    )
+    svm.sat_profile[:] = 1.0  # start initially saturated
+    hm = HydrologyEventVadoseStreamPower(
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        vadose_model=svm,
+    )
+    hm.run_step_record_state()
+
+    mg1 = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg1.set_status_at_node_on_edges(
+        right=mg1.BC_NODE_IS_CLOSED,
+        top=mg1.BC_NODE_IS_CLOSED,
+        left=mg1.BC_NODE_IS_CLOSED,
+        bottom=mg1.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg1.add_ones("node", "topographic__elevation")
+    mg1.add_zeros("node", "aquifer_base__elevation")
+    mg1.add_ones("node", "water_table__elevation")
+
+    gdp1 = GroundwaterDupuitPercolator(mg1, porosity=0.2)
+    pd1 = PrecipitationDistribution(
+        mg1,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=1000,
+    )
+    pd1.seed_generator(seedval=1)
+    svm1 = SchenkVadoseModel(
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e4),
+    )
+    svm1.sat_profile[:] = 1.0  # start initially saturated
+    hm1 = HydrologyEventVadoseStreamPower(
+        mg1,
+        precip_generator=pd1,
+        groundwater_model=gdp1,
+        vadose_model=svm1,
+    )
+    hm1.run_step()
+
+    assert_equal(hm.q_eff, hm1.q_eff)
 
 
 # HydrologyEventVadoseThresholdStreamPower
@@ -631,7 +779,9 @@ def test_stoch_sp_vadose_threshold_raster_null():
     )
     pd.seed_generator(seedval=1)
     svm = SchenkVadoseModel(
-        potential_evapotranspiration_rate=0.0, profile_depth=1.0, num_bins=int(1e6),
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(
@@ -676,7 +826,9 @@ def test_stoch_sp_vadose_threshold_hex_null():
     )
     pd.seed_generator(seedval=1)
     svm = SchenkVadoseModel(
-        potential_evapotranspiration_rate=0.0, profile_depth=1.0, num_bins=int(1e6),
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(
@@ -725,7 +877,9 @@ def test_stoch_sp_vadose_threshold_below_threshold():
     )
     pd.seed_generator(seedval=1)
     svm = SchenkVadoseModel(
-        potential_evapotranspiration_rate=0.0, profile_depth=1.0, num_bins=int(1e6),
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(
@@ -773,7 +927,9 @@ def test_stoch_sp_vadose_threshold_above_threshold():
     )
     pd.seed_generator(seedval=1)
     svm = SchenkVadoseModel(
-        potential_evapotranspiration_rate=0.0, profile_depth=1.0, num_bins=int(1e6),
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
     )
     svm.sat_profile[:] = 1.0  # start initially saturated
     hm = HydrologyEventVadoseThresholdStreamPower(
@@ -790,5 +946,6 @@ def test_stoch_sp_vadose_threshold_above_threshold():
     storm_q = 0.0244046740  # accumulated q before threshold effect subtracted
     # interstorm_q = 0.0  # interstorm q is zero in this case
     assert_almost_equal(
-        hm.q_eff[4], max(storm_q - hm.Q0[4], 0) * storm_dt / hm.T_h,
+        hm.q_eff[4],
+        max(storm_q - hm.Q0[4], 0) * storm_dt / hm.T_h,
     )

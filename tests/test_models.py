@@ -23,7 +23,7 @@ from DupuitLEM.auxiliary_models import (
 
 def test_stream_power_run_step():
     """
-    Test that streampower model erodes material and 
+    Test that streampower model erodes material and
     maintains the permeable thickness.
     """
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
@@ -51,7 +51,11 @@ def test_stream_power_run_step():
     rm = RegolithConstantThickness(mg, uplift_rate=0.0)
 
     mdl = StreamPowerModel(
-        mg, hydrology_model=hm, diffusion_model=ld, erosion_model=sp, regolith_model=rm,
+        mg,
+        hydrology_model=hm,
+        diffusion_model=ld,
+        erosion_model=sp,
+        regolith_model=rm,
     )
 
     mdl.run_step(1e5)
@@ -124,7 +128,7 @@ def test_stream_power_save_output(tmpdir):
 
 def test_stream_power_save_output_hex(tmpdir):
     """
-    Test that streampower model saves the output on a 
+    Test that streampower model saves the output on a
     hexagonal grid.
     """
     mg = HexModelGrid((3, 3), node_layout="rect", spacing=10.0)
@@ -184,7 +188,7 @@ def test_stream_power_save_output_hex(tmpdir):
 
 def test_stream_power_run_step_subdivide():
     """
-    Test that the streampower model subdivides the 
+    Test that the streampower model subdivides the
     geomorphic timestep, and that this still updates
     topography and maintains permeable thickness.
     """
@@ -213,7 +217,11 @@ def test_stream_power_run_step_subdivide():
     rm = RegolithConstantThickness(mg, uplift_rate=0.0)
 
     mdl = StreamPowerModel(
-        mg, hydrology_model=hm, diffusion_model=ld, erosion_model=sp, regolith_model=rm,
+        mg,
+        hydrology_model=hm,
+        diffusion_model=ld,
+        erosion_model=sp,
+        regolith_model=rm,
     )
 
     mdl.run_step(1e5, dt_m_max=2e4)
@@ -225,13 +233,13 @@ def test_stream_power_run_step_subdivide():
 
 def test_stream_power_run_model_subdivide():
     """
-    Test that the streampower model subdivides 
+    Test that the streampower model subdivides
     the geomorphic timestep when using the run_model
     method.
 
     (Check this - might not be right)
     """
-    
+
     mg = RasterModelGrid((3, 3), xy_spacing=10.0)
     mg.set_status_at_node_on_edges(
         right=mg.BC_NODE_IS_CLOSED,

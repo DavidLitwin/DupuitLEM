@@ -104,4 +104,3 @@ def test_const_baselevel():
     assert_almost_equal(z[4], 1.001)
     assert_almost_equal(zb[4], 0.000)
     assert_almost_equal(zwt[4], 1.001)
-

@@ -12,14 +12,15 @@ class RegolithModel:
     Models to update regolith state: topographic__elevation and aquifer_base__elevation
     given uplift and regolith production.
     """
+
     def __init__(self, grid):
         """
         Initialize a RegolithModel
-        
+
         Parameters
         -----
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
         """
         self._elev = grid.at_node["topographic__elevation"]
         self._base = grid.at_node["aquifer_base__elevation"]
@@ -41,7 +42,7 @@ class RegolithConstantThickness(RegolithModel):
         Parameters:
         -----
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
         equilibrium_depth: float
             Constant thickness value.
         uplift_rate: float
@@ -54,9 +55,9 @@ class RegolithConstantThickness(RegolithModel):
 
     def run_step(self, dt_m):
         """Advance regolith model one step in time, keeping constant thickness.
-        uplift topographic__elevation, offset aquifer_base__elevation from 
+        uplift topographic__elevation, offset aquifer_base__elevation from
         surface, set water table elevation based on original aquifer thickness.
-        
+
         Parameters:
         -----
         dt_m: float
@@ -89,7 +90,7 @@ class RegolithConstantThicknessPerturbed(RegolithModel):
         Parameters:
         -----
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
         equilibrium_depth: float
             Constant thickness value.
             Default: 1.0
@@ -112,10 +113,10 @@ class RegolithConstantThicknessPerturbed(RegolithModel):
 
     def run_step(self, dt_m):
         """Advance regolith model one step in time, keeping constant thickness.
-        uplift topographic__elevation and add perturbation, offset 
-        aquifer_base__elevation from surface, set water table elevation based 
+        uplift topographic__elevation and add perturbation, offset
+        aquifer_base__elevation from surface, set water table elevation based
         on original aquifer thickness.
-        
+
         Parameters:
         -----
         dt_m: float
@@ -152,13 +153,13 @@ class RegolithExponentialProduction(RegolithModel):
         Parameters:
         -----
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
         characteristic_depth: float
             Exponential characteristic depth.
             Default: 1.0
         regolith_production_rate: float
             Maximum regolith production rate.
-            Default: 2e-12       
+            Default: 2e-12
         uplift_rate: float
             Constant uplift rate.
             Default: 1e-12
@@ -170,17 +171,17 @@ class RegolithExponentialProduction(RegolithModel):
         self.w0 = regolith_production_rate
 
     def run_step(self, dt_m):
-        """Advance regolith model one step in time. Uplift topographic__elevation 
+        """Advance regolith model one step in time. Uplift topographic__elevation
         Calculate new thickness based on production and subtract from the
-        elevation surface. Set water table elevation based 
+        elevation surface. Set water table elevation based
         on original aquifer thickness.
-        
+
         Parameters:
         -----
         dt_m: float
             Timestep for update.
         """
-        
+
         h = self._wt - self._base  # aquifer storage, assume const n
         b0 = self._elev - self._base  # current thickness
 
@@ -197,9 +198,9 @@ class RegolithExponentialProduction(RegolithModel):
 class RegolithConstantBaselevel(RegolithModel):
     """
     Aquifer base is not updated (so it stays at same
-    position relative to baselevel), and uplift rate is spatially 
-    uniform and constant in time. The additional permeable material 
-    that enters above baselevel is presumed saturated, so the water 
+    position relative to baselevel), and uplift rate is spatially
+    uniform and constant in time. The additional permeable material
+    that enters above baselevel is presumed saturated, so the water
     table stays at the same position relative to topography.
     """
 
@@ -208,7 +209,7 @@ class RegolithConstantBaselevel(RegolithModel):
         Parameters:
         -----
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
         uplift_rate: float
             Constant uplift rate.
         """
@@ -219,7 +220,7 @@ class RegolithConstantBaselevel(RegolithModel):
     def run_step(self, dt_m):
         """Advance regolith model one step in time, keeping constant aquifer base.
         uplift topographic__elevation and water table elevation directly.
-        
+
         Parameters:
         -----
         dt_m: float
@@ -229,4 +230,3 @@ class RegolithConstantBaselevel(RegolithModel):
         # uplift
         self._elev[self._cores] += self.U * dt_m
         self._wt[self._cores] += self.U * dt_m
-

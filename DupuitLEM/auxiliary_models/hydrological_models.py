@@ -49,13 +49,12 @@ class HydrologicalModel:
         Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
         should be instantiated on the grid before instantiating a HydrologicalModel.
     routing_method: str
-        Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+        Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector
         component. 'Steepest' allows the use of non-raster grids.
 
     """
 
     def __init__(self, grid, routing_method):
-
         self._grid = grid
 
         if routing_method == "D8":
@@ -114,11 +113,11 @@ class HydrologySteadyStreamPower(HydrologicalModel):
             Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
             should be instantiated on the grid before instantiating a HydrologicalModel.
         routing_method: str
-            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector
             component. 'Steepest' allows the use of non-raster grids.
             Default: 'D8'
         groundwater_model: GroundwaterDupuitPercolator
-            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated
             on the supplied grid.
             Default: None
         hydrological_timestep: float
@@ -139,7 +138,7 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
     def run_step(self):
         """
-        Run steady model one step. Update groundwater state, route and accumulate 
+        Run steady model one step. Update groundwater state, route and accumulate
         flow, updating surface_water__discharge and surface_water_area_norm__discharge.
         """
 
@@ -182,7 +181,11 @@ class HydrologyEventStreamPower(HydrologicalModel):
     """
 
     def __init__(
-        self, grid, routing_method="D8", precip_generator=None, groundwater_model=None,
+        self,
+        grid,
+        routing_method="D8",
+        precip_generator=None,
+        groundwater_model=None,
     ):
         """
         Parameters
@@ -191,7 +194,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
             should be instantiated on the grid before instantiating a HydrologicalModel.
         routing_method: str
-            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector
             component. 'Steepest' allows the use of non-raster grids.
             Default: 'D8'
         precip_generator: PrecipitationDistribution
@@ -199,7 +202,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
             will run one step for the length of time intantiated in this object.
             Default: None
         groundwater_model: GroundwaterDupuitPercolator
-            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated
             on the supplied grid.
             Default: None
         """
@@ -209,6 +212,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
         self.q_eff = self._grid.add_zeros("node", "surface_water_effective__discharge")
         self.q_an = self._grid.add_zeros("node", "surface_water_area_norm__discharge")
         self.area = self._grid.at_node["drainage_area"]
+        self.qs = self._grid.at_node["average_surface_water__specific_discharge"]
         self.pd = precip_generator
         self.gdp = groundwater_model
         self.T_h = self.pd._run_time
@@ -222,7 +226,7 @@ class HydrologyEventStreamPower(HydrologicalModel):
         interstorm_dts = []
         intensities = []
 
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
+        for storm_dt, interstorm_dt in self.pd.yield_storms():
             storm_dts.append(storm_dt)
             interstorm_dts.append(interstorm_dt)
             intensities.append(float(self._grid.at_grid["rainfall__flux"]))
@@ -249,19 +253,15 @@ class HydrologyEventStreamPower(HydrologicalModel):
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
-        q_total_vol = np.zeros_like(self.q_eff)
+        q_total = np.zeros_like(self.q_eff)
         # q2 = np.zeros_like(self.q_eff)
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
-
+        for storm_dt, interstorm_dt in self.pd.yield_storms():
             intensity = float(self._grid.at_grid["rainfall__flux"])
-
-            # q0 = q2.copy()  # save prev end of interstorm flow rate
 
             # run event, accumulate flow
             self.gdp.recharge = intensity
             self.gdp.run_with_adaptive_time_step_solver(storm_dt)
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q1 = q.copy()
+            q_total += self.qs * storm_dt
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
@@ -269,16 +269,16 @@ class HydrologyEventStreamPower(HydrologicalModel):
             # run interevent, accumulate flow
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(max(interstorm_dt, 1e-15))
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q2 = q.copy()
+            q_total += self.qs * interstorm_dt
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
 
-            # volume of runoff contributed during timestep
-            q_total_vol += q1 * storm_dt + q2 * interstorm_dt
+        # set effective runoff rates
+        self.qs[:] = q_total / self.T_h
+        _, Q = self.fa.accumulate_flow(update_flow_director=False)
 
-        self.q_eff[:] = q_total_vol / self.T_h
+        self.q_eff[:] = Q
         self.q_an[:] = np.divide(
             self.q_eff,
             np.sqrt(self.area),
@@ -394,10 +394,10 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
     tracked, and returned in a fashion that is correctly averaged with threshold
     accounted for in the field "surface_water_effective__discharge".
     CONSEQUENTLY ONE SHOULD LEAVE THE INCISION THRESHOLD FIELD OF
-    FastscapeEroder SET TO ZERO! For the same reason, 
-    "surface_water_effective__discharge" has a different meaning when using 
-    the threshold model: it is not an actual discharge, but an effective value 
-    that also accounts for geomorphic properties related to the threshold 
+    FastscapeEroder SET TO ZERO! For the same reason,
+    "surface_water_effective__discharge" has a different meaning when using
+    the threshold model: it is not an actual discharge, but an effective value
+    that also accounts for geomorphic properties related to the threshold
     streampower.
     """
 
@@ -417,7 +417,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
             Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
             should be instantiated on the grid before instantiating a HydrologicalModel.
         routing_method: str
-            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector
             component. 'Steepest' allows the use of non-raster grids.
             Default: 'D8'
         precip_generator: PrecipitationDistribution
@@ -425,10 +425,10 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
             will run one step for the length of time intantiated in this object.
             Default: None
         groundwater_model: GroundwaterDupuitPercolator
-            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated
             on the supplied grid.
             Default: None
-        sp_threshold: float 
+        sp_threshold: float
             the streampower incision threshold E0 in the equation
             E = K Q* sqrt(a v0) S - E0, where Q*=Q/(pA). Units: L/T
             Default: 0.0
@@ -486,8 +486,7 @@ class HydrologyEventThresholdStreamPower(HydrologyEventStreamPower):
         self.max_substeps_interstorm = 0
         q_total_vol = np.zeros_like(self.q_eff)
         # q2 = np.zeros_like(self.q_eff)
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
-
+        for storm_dt, interstorm_dt in self.pd.yield_storms():
             intensity = float(self._grid.at_grid["rainfall__flux"])
 
             # q0 = q2.copy()  # save prev end of interstorm flow rate
@@ -661,7 +660,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
             should be instantiated on the grid before instantiating a HydrologicalModel.
         routing_method: str
-            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector
             component. 'Steepest' allows the use of non-raster grids.
             Default: 'D8'
         precip_generator: PrecipitationDistribution
@@ -669,7 +668,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             will run one step for the length of time intantiated in this object.
             Default: None
         groundwater_model: GroundwaterDupuitPercolator
-            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated
             on the supplied grid.
             Default: None
         vadose_model: SchenkVadoseModel
@@ -685,14 +684,10 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
         self._wt = self._grid.at_node["water_table__elevation"]
 
     def run_step(self):
-        """ "
-        Run hydrological model for series of event-interevent pairs, calculate
-        flow rates at end of events and interevents over total_hydrological_time.
-        Initially generate exponential precip, fill pits, find flow directions,
-        calculate critical erosion rate. Through storm-interstorm pairs,
-        update vadose model state, calculate recharge, update groundwater state,
-        route flow, calculate additional erosion-generating flow. After, calculate
-        surface_water_effective__discharge and surface_water_area_norm__discharge.
+        """
+        Run hydrological model for series of event-interevent pairs, calculating the
+        total surface runoff produced at the end of each event and interevent, and then
+        routing this at the end.
         """
         cores = self._grid.core_nodes
 
@@ -706,9 +701,8 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
-        q_total_vol = np.zeros_like(self.q_eff)
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
-
+        q_total = np.zeros_like(self.q_eff)
+        for storm_dt, interstorm_dt in self.pd.yield_storms():
             intensity = float(self._grid.at_grid["rainfall__flux"])
 
             # run event:
@@ -721,8 +715,7 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
             self.gdp.run_with_adaptive_time_step_solver(storm_dt)
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q1 = q.copy()
+            q_total += self.qs * storm_dt
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
@@ -734,17 +727,16 @@ class HydrologyEventVadoseStreamPower(HydrologyEventStreamPower):
             # run groundwater model, accumulate flow
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(interstorm_dt)
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q2 = q.copy()
+            q_total += self.qs * interstorm_dt
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
 
-            # volume of runoff contributed during timestep
-            q_total_vol += q1 * storm_dt + q2 * interstorm_dt
-
         # set effective runoff rates
-        self.q_eff[:] = q_total_vol / self.T_h
+        self.qs[:] = q_total / self.T_h
+        _, Q = self.fa.accumulate_flow(update_flow_director=False)
+
+        self.q_eff[:] = Q
         self.q_an[:] = np.divide(
             self.q_eff,
             np.sqrt(self.area),
@@ -953,7 +945,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             Landlab ModelGrid object. The Landlab component GroundwaterDupuitPercolator
             should be instantiated on the grid before instantiating a HydrologicalModel.
         routing_method: str
-            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector 
+            Either 'D8' or 'Steepest'. This is the routing method for the FlowDirector
             component. 'Steepest' allows the use of non-raster grids.
             Default: 'D8'
         precip_generator: PrecipitationDistribution
@@ -961,14 +953,14 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
             will run one step for the length of time intantiated in this object.
             Default: None
         groundwater_model: GroundwaterDupuitPercolator
-            Landlab GroundwaterDupuitPercolator Component object that is instantiated 
+            Landlab GroundwaterDupuitPercolator Component object that is instantiated
             on the supplied grid.
             Default: None
         vadose_model: SchenkVadoseModel
             Auxiliary model called SchenkVadoseModel, instantiated for a depth profile
             equal to the permeable thickness.
             Default: None
-        sp_threshold: float 
+        sp_threshold: float
             the streampower incision threshold E0 in the equation
             E = K Q* sqrt(a v0) S - E0, where Q*=Q/(pA). Units: L/T
             Default: 0.0
@@ -1031,8 +1023,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
         q_total_vol = np.zeros_like(self.q_eff)
-        for (storm_dt, interstorm_dt) in self.pd.yield_storms():
-
+        for storm_dt, interstorm_dt in self.pd.yield_storms():
             intensity = float(self._grid.at_grid["rainfall__flux"])
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
@@ -1086,7 +1077,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventStreamPower):
         update vadose model state, calculate recharge, update groundwater state,
         route flow, calculate additional erosion-generating flow. After, calculate
         surface_water_effective__discharge and surface_water_area_norm__discharge.
- 
+
         track the state of the model:
             time: (s)
             intensity: rainfall intensity (m/s)

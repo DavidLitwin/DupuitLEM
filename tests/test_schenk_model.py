@@ -11,7 +11,7 @@ from DupuitLEM.auxiliary_models import SchenkVadoseModel
 
 
 def test_init_depth_profile():
-    """"Check depths and bin capacity. Depths correspond to the bottom
+    """Check depths and bin capacity. Depths correspond to the bottom
     of each bin. Bin capacity is bin depth * available_water_content."""
 
     sm = SchenkVadoseModel(num_bins=5)
@@ -33,7 +33,7 @@ def test_generate_storm():
 
 
 def test_run_event_0():
-    """"Trivial case of an event. Event depth is less than half bin volume so
+    """Trivial case of an event. Event depth is less than half bin volume so
     sat profile and recharge at depth are unchanged."""
 
     sm = SchenkVadoseModel(num_bins=5, available_water_content=1.0)
@@ -45,7 +45,7 @@ def test_run_event_0():
 
 
 def test_run_event_1():
-    """"simple case of an event. An event with depth 2 fills the top 2 bins
+    """simple case of an event. An event with depth 2 fills the top 2 bins
     when bins have unit depth and can be filled 100% with water. Recharge is
     calculated on a 'floor' basis."""
 
@@ -97,11 +97,13 @@ def test_run_event_4():
 
 
 def test_run_interevent_0():
-    """ Trivial case of an interevent. PET over interval is less than
+    """Trivial case of an interevent. PET over interval is less than
     half bin capacity so sat profile remains unchanged."""
 
     sm = SchenkVadoseModel(
-        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=1.0,
+        num_bins=5,
+        available_water_content=1.0,
+        potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([1, 1, 1, 0, 0])
     sm.run_interevent(0.49)
@@ -110,7 +112,7 @@ def test_run_interevent_0():
 
 
 def test_run_interevent_1():
-    """ Simple case of an interevent. With unit PET rate, the top two
+    """Simple case of an interevent. With unit PET rate, the top two
     bins are drained after 2 units of time when bins have unit depth and
     can be filled 100% with water. Note recharge_at_depth is not reset."""
 
@@ -130,7 +132,9 @@ def test_run_interevent_2():
     case, the remaining saturation is drained."""
 
     sm = SchenkVadoseModel(
-        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=1.0,
+        num_bins=5,
+        available_water_content=1.0,
+        potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
     sm.run_interevent(4.0)
@@ -143,7 +147,9 @@ def test_run_interevent_3():
     case, the remaining saturation is drained."""
 
     sm = SchenkVadoseModel(
-        num_bins=5, available_water_content=1.0, potential_evapotranspiration_rate=1.0,
+        num_bins=5,
+        available_water_content=1.0,
+        potential_evapotranspiration_rate=1.0,
     )
     sm.sat_profile[:] = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
     sm.run_interevent(4.0)

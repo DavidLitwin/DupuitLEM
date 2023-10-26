@@ -39,13 +39,13 @@ class SchenkVadoseModel:
             The potential ET rate during interstorm periods (L/T).
             Default: 2e-7
         available_water_content: float
-            Plant available water content, as a proportion of total volume (-). Range 0 to 1. 
+            Plant available water content, as a proportion of total volume (-). Range 0 to 1.
             Default: 0.15
         profile_depth: float
             Depth of vadose zone to be considered (L)
             Defaul: 5.0
         num_bins: int
-            Number of saturation bins in which to divide profile. 
+            Number of saturation bins in which to divide profile.
             Default: 500
         """
 
@@ -68,7 +68,10 @@ class SchenkVadoseModel:
         self.bin_capacity = (self.b / self.Nz) * self.Sawc
 
     def generate_state_from_analytical(
-        self, mean_storm_depth, mean_interstorm_duration, random_seed=None,
+        self,
+        mean_storm_depth,
+        mean_interstorm_duration,
+        random_seed=None,
     ):
         """
         Set the saturation profile by generating random values from
@@ -76,9 +79,9 @@ class SchenkVadoseModel:
 
         Parameters
         ----------
-        mean_storm_depth: float 
+        mean_storm_depth: float
             Mean storm depth (L).
-        mean_interstorm_duration: float 
+        mean_interstorm_duration: float
             Mean interstorm duration (T).
         """
 
@@ -103,14 +106,13 @@ class SchenkVadoseModel:
         mean_interstorm_duration,
         random_seed=None,
     ):
-
         """
         Generate one storm depth, duration, and insterstorm duration from
         exponential distributions.
 
         Parameters
         ----------
-        mean_storm_depth: float 
+        mean_storm_depth: float
             Mean storm depth (L).
         mean_storm_duration: float
             Mean storm duration (T).
@@ -164,7 +166,7 @@ class SchenkVadoseModel:
         Parameters
         ----------
         wt_from_surface: array
-            Positive values from 0 to maximum aquifer depth, which is 
+            Positive values from 0 to maximum aquifer depth, which is
             also the profile depth.
         storm_dt: float
             Storm duration.
@@ -184,7 +186,7 @@ class SchenkVadoseModel:
         Parameters
         ----------
         interstorm_dt: float
-            Duration without precipitation    
+            Duration without precipitation
         """
 
         # clear sat diff
@@ -205,7 +207,6 @@ class SchenkVadoseModel:
         mean_interstorm_duration,
         random_seed=None,
     ):
-
         """
         Run step: generate exponential storm depth duration, interstorm
         duration, run event, and run interevent.
@@ -227,7 +228,9 @@ class SchenkVadoseModel:
             np.random.seed(random_seed)
 
         self.generate_storm(
-            mean_storm_depth, mean_storm_duration, mean_interstorm_duration,
+            mean_storm_depth,
+            mean_storm_duration,
+            mean_interstorm_duration,
         )
         self.run_event(self.Dr)
         self.run_interevent(self.Tb)
@@ -278,7 +281,6 @@ class SchenkVadoseModel:
         self.cum_precip = 0
 
         for i in range(self.Nt):
-
             self.run_one_step(self.d, self.tr, self.tb)
 
             self.bool_extraction_at_depth += -self.sat_diff

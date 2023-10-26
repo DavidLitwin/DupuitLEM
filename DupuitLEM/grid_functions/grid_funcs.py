@@ -20,7 +20,7 @@ def bind_avg_exp_ksat(ks, k0, dk):
         k = k0 + (ks-k0)*exp(-(b-h)/dk)
 
     Parameters
-    ----------   
+    ----------
     ks: float
         Hydraulic conductivity at the ground surface.
     k0: float
@@ -44,7 +44,7 @@ def bind_avg_exp_ksat(ks, k0, dk):
         Parameters
         ----------
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
 
         Returns
         -------
@@ -70,6 +70,7 @@ def bind_avg_exp_ksat(ks, k0, dk):
 
     return bound_avg_exp_ksat
 
+
 def bind_avg_recip_ksat(ks, d):
     """
     Function to creat the bound_avg_recip_ksat function. This function
@@ -78,7 +79,7 @@ def bind_avg_recip_ksat(ks, d):
         k = ks / ((b-h)/d+1)
 
     Parameters
-    ----------   
+    ----------
     ks: float
         Hydraulic conductivity at the ground surface (b=h).
     d: float
@@ -100,7 +101,7 @@ def bind_avg_recip_ksat(ks, d):
         Parameters
         ----------
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
 
         Returns
         -------
@@ -122,21 +123,20 @@ def bind_avg_recip_ksat(ks, d):
         if np.allclose(b, b[0]):
             b1 = b[0]
         else:
-            blink = map_mean_of_link_nodes_to_link(grid, b) 
+            blink = map_mean_of_link_nodes_to_link(grid, b)
             b1 = blink[hlink > 0.0]
 
-        kavg[hlink > 0.0] = (
-            (ks*d)/h1 * np.log((b1 + d)/(b1 + d - h1))
-        )
+        kavg[hlink > 0.0] = (ks * d) / h1 * np.log((b1 + d) / (b1 + d - h1))
         return kavg
 
     return bound_avg_recip_ksat
+
 
 def bind_avg_dual_ksat(Ks_0, Ks_1, b_1):
     """
     Function to create the bound_avg_dual_ksat function. This function
     is used when the hydraulic conductivity has a two-layer structure,
-    in which the lower layer is bounded at the bottom by the 
+    in which the lower layer is bounded at the bottom by the
     aquifer_base__elevation, and the upper layer bounded by a surface
     a fixed distance b1 below topography z:
 
@@ -145,7 +145,7 @@ def bind_avg_dual_ksat(Ks_0, Ks_1, b_1):
              ( Ks_1,    zwt > z - b1
 
     Parameters
-    ----------   
+    ----------
     Ks_0: float
         Hydraulic conductivity of lower layer.
     ks_1: float
@@ -161,7 +161,7 @@ def bind_avg_dual_ksat(Ks_0, Ks_1, b_1):
 
     def bound_avg_dual_ksat(grid):
         """
-        Calculate the average hydraulic conductivity for a two-layer 
+        Calculate the average hydraulic conductivity for a two-layer
         subsurface structure:
 
              ( Ks_0,    zwt <= z - b1
@@ -171,7 +171,7 @@ def bind_avg_dual_ksat(Ks_0, Ks_1, b_1):
         Parameters
         ----------
         grid: ModelGrid
-            Landlab ModelGrid object. 
+            Landlab ModelGrid object.
 
         Returns
         -------
@@ -187,8 +187,8 @@ def bind_avg_dual_ksat(Ks_0, Ks_1, b_1):
         zwt = grid.at_node["water_table__elevation"]
 
         # calc avg if wt in upper layer, then conditional set if in lower layer
-        Ks_node = ((z1-z0)*Ks_0 + (zwt - z1)*Ks_1)/(zwt-z0)
-        Ks_node[zwt<=z1] = Ks_0
+        Ks_node = ((z1 - z0) * Ks_0 + (zwt - z1) * Ks_1) / (zwt - z0)
+        Ks_node[zwt <= z1] = Ks_0
 
         # map to links
         Kavg = map_mean_of_link_nodes_to_link(grid, Ks_node)
@@ -220,7 +220,7 @@ def calc_max_gw_flux(grid, k, b):
     """
     Calculate the maximum groundwater flux into and out of nodes.
     """
-    base = grid.at_node['aquifer_base__elevation']
+    base = grid.at_node["aquifer_base__elevation"]
 
     # Calculate gradients
     base_grad = grid.calc_grad_at_link(base)
@@ -233,34 +233,43 @@ def calc_max_gw_flux(grid, k, b):
     vel[grid.status_at_link == LinkStatus.INACTIVE] = 0.0
 
     # Calculate specific discharge
-    q = grid.add_zeros('link', 'q_max_link')
+    q = grid.add_zeros("link", "q_max_link")
     q[:] = b * cosa * vel
 
-    q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
+    q_all_links_at_node = q[grid.links_at_node] * grid.link_dirs_at_node
     q_all_links_at_node_dir_out = q_all_links_at_node < 0
     widths_link = grid.length_of_face[grid.face_at_link]
     widths_link_at_node = widths_link[grid.links_at_node]
-    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths_link_at_node, axis=1)
+    Qgw_out = np.sum(
+        q_all_links_at_node * q_all_links_at_node_dir_out * widths_link_at_node, axis=1
+    )
 
     q_all_links_at_node_dir_in = q_all_links_at_node > 0
-    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths_link_at_node, axis=1)
+    Qgw_in = np.sum(
+        q_all_links_at_node * q_all_links_at_node_dir_in * widths_link_at_node, axis=1
+    )
 
     return Qgw_in, Qgw_out
+
 
 def calc_gw_flux(grid):
     """
     Calculate the groundwater flux into and out of nodes.
     """
     # Calculate specific discharge
-    q = grid.at_link['groundwater__specific_discharge']
+    q = grid.at_link["groundwater__specific_discharge"]
 
-    q_all_links_at_node = q[grid.links_at_node]*grid.link_dirs_at_node
+    q_all_links_at_node = q[grid.links_at_node] * grid.link_dirs_at_node
     q_all_links_at_node_dir_out = q_all_links_at_node < 0
     widths_link = grid.length_of_face[grid.face_at_link]
     widths_link_at_node = widths_link[grid.links_at_node]
-    Qgw_out = np.sum(q_all_links_at_node*q_all_links_at_node_dir_out*widths_link_at_node, axis=1)
+    Qgw_out = np.sum(
+        q_all_links_at_node * q_all_links_at_node_dir_out * widths_link_at_node, axis=1
+    )
 
     q_all_links_at_node_dir_in = q_all_links_at_node > 0
-    Qgw_in = np.sum(q_all_links_at_node*q_all_links_at_node_dir_in*widths_link_at_node, axis=1)
+    Qgw_in = np.sum(
+        q_all_links_at_node * q_all_links_at_node_dir_in * widths_link_at_node, axis=1
+    )
 
     return Qgw_in, Qgw_out
