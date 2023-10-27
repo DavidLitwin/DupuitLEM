@@ -11,7 +11,7 @@ from landlab.io.netcdf import from_netcdf, to_netcdf
 from landlab.components import FlowAccumulator
 
 base_output_path = 'simple_lem_Nx_1'
-directory = 'C:/Users/dgbli/Documents/Research Data/HPC output/DupuitLEMResults/post_proc/'
+directory = '/Users/dlitwin/Documents/Research Data/HPC output/DupuitLEMResults/post_proc/'
 id_range = range(4)
 
 df_params = pd.read_csv(directory+base_output_path+'/parameters.csv')
@@ -37,7 +37,17 @@ A = grid.at_node['drainage_area']
 a_star = (A/grid.dx)/lg
 S_star = S*lg/hg
 
-cheads = np.log(a_star/S_star*(1+0.5*np.sqrt(a_star)*S_star))
+# cheads = np.log(a_star/S_star*(1+0.5*np.sqrt(a_star)*S_star))
+# cheads[np.isinf(cheads)] = np.nan
+
+K = df_params['K'][i]
+D = df_params['D'][i]
+U = df_params['U'][i]
+v0 = df_params['v0'][i]
+a = A/grid.dx
+
+cheads =  - 5/2 * K * np.sqrt(v0 * a) * S + D * S/a + U
+# cheads = - D * S/a + U
 cheads[np.isinf(cheads)] = np.nan
 
 # plot single hillshade
@@ -52,8 +62,8 @@ md = plt.imshow(cheads.reshape(grid.shape).T,
             extent=(x[0], x[-1], y[0], y[-1]), 
             cmap='seismic', 
             norm=colors.CenteredNorm(0.0),
-            alpha=0.4)
-plt.colorbar(md)
+            alpha=0.8)
+plt.colorbar(md, label=r'$-\frac{5}{2}K\sqrt{v_0a}S - D\frac{S}{a}+ U$')
 plt.ylabel(r'$y/\ell_g$')
 plt.xlabel(r'$x/\ell_g$')
 # plt.savefig('%s/hillshade_%s.png'%(save_directory, base_output_path), dpi=300) 
