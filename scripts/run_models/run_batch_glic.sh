@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=dlem
 #SBATCH --time=12:0:0
-#SBATCH --partition=defq
 #SBATCH --nodes=1
 # number of tasks (processes) per node
 #SBATCH --ntasks-per-node=1
