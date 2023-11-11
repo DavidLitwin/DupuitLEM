@@ -57,7 +57,8 @@ try:
     r_condition = df_params['r_condition']
 except KeyError:
     r_condition = 0.0
-routing_method = df_params['routing_method']
+# routing_method = df_params['routing_method']
+routing_method = 'D8'
 save_directory = './data/simple_sp_'
 
 N = int(T//dt)
