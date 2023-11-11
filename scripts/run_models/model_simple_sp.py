@@ -50,6 +50,7 @@ except KeyError:
     bc = None
 try:
     output_interval = df_params['output_interval']
+    save_transients = True
 except KeyError:
     output_interval = None
     save_transients = False
