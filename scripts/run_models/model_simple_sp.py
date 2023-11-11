@@ -40,7 +40,19 @@ K = df_params['K']
 U = df_params['U']
 m = df_params['m']
 n = df_params['n']
-Sc = df_params['Sc']
+try:
+    Sc = df_params['Sc']
+except KeyError:
+    Sc = 0.0
+try:
+    bc = list(str(df_params['BCs']))
+except KeyError:
+    bc = None
+try:
+    output_interval = df_params['output_interval']
+except KeyError:
+    output_interval = None
+    save_transients = False
 routing_method = df_params['routing_method']
 save_transients = df_params['save_transients']
 r_condition = df_params['r_condition']
@@ -48,15 +60,24 @@ output_interval = df_params['output_interval']
 save_directory = './data/simple_sp_'
 
 N = int(T//dt)
-output_interval = 500
 
 np.random.seed(12345)
 grid = RasterModelGrid((Nx, Ny), xy_spacing=v0)
-grid.set_status_at_node_on_edges(right=grid.BC_NODE_IS_CLOSED,
-                                top=grid.BC_NODE_IS_FIXED_VALUE,
-                                left=grid.BC_NODE_IS_CLOSED,
-                                bottom=grid.BC_NODE_IS_FIXED_VALUE,
-)
+bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
+if bc is not None:
+    grid.set_status_at_node_on_edges(
+            right=bc_dict[bc[0]],
+            top=bc_dict[bc[1]],
+            left=bc_dict[bc[2]],
+            bottom=bc_dict[bc[3]],
+    )       
+else:
+    grid.set_status_at_node_on_edges(
+            right=grid.BC_NODE_IS_CLOSED,
+            top=grid.BC_NODE_IS_CLOSED,
+            left=grid.BC_NODE_IS_FIXED_VALUE,
+            bottom=grid.BC_NODE_IS_CLOSED,
+    )
 z = grid.add_zeros('node', 'topographic__elevation')
 z[:] = 0.5*np.random.rand(len(z))
 

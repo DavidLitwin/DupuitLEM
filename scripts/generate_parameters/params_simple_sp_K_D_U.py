@@ -26,7 +26,6 @@ m = 0.5
 n = 1
 Sc = 0.0
 routing_method = 'D8'
-save_transients = True
 r_condition = 1e-8
 
 prod = np.array(list(product(K_all, D_all, U_all, v0_all)))
@@ -39,6 +38,8 @@ df_params['m'] = m
 df_params['n'] = n
 df_params['Sc'] = Sc
 df_params['routing_method'] = routing_method
-df_params['save_transients'] = save_transients
+df_params['r_condition'] = r_condition
+df_params['output_interval'] = 500
+df_params['BCs'] = 4141
 
 df_params.loc[ID].to_csv('parameters.csv', index=True)
