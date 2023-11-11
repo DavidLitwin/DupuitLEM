@@ -12,9 +12,9 @@ script=$1
 output_folder=$2
 savedir=~/data/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 mkdir $savedir/data
-cd ~/dlitwin3/DupuitLEM
+cd ~/code/DupuitLEM
 git rev-parse HEAD > $savedir/lem_script_id.txt
-cd ~/dlitwin3/landlab
+cd ~/code/landlab
 git rev-parse HEAD > $savedir/lem_gdp_id.txt
 
 scriptloc=~/code/DupuitLEM/scripts/run_models/$script

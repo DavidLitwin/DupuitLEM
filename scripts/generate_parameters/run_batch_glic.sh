@@ -16,7 +16,7 @@ if [ ! -d $savedir ]; then
 fi
 cd ~/code/DupuitLEM
 git rev-parse HEAD > $savedir/params_script_id.txt
-cd ~/dlitwin3/landlab
+cd ~/code/landlab
 git rev-parse HEAD > $savedir/params_gdp_id.txt
 
 scriptloc=~/code/DupuitLEM/scripts/generate_parameters/$script
