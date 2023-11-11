@@ -53,10 +53,11 @@ try:
 except KeyError:
     output_interval = None
     save_transients = False
+try:
+    r_condition = df_params['r_condition']
+except KeyError:
+    r_condition = 0.0
 routing_method = df_params['routing_method']
-save_transients = df_params['save_transients']
-r_condition = df_params['r_condition']
-output_interval = df_params['output_interval']
 save_directory = './data/simple_sp_'
 
 N = int(T//dt)
