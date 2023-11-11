@@ -60,7 +60,7 @@ except KeyError:
     r_condition = 0.0
 # routing_method = df_params['routing_method']
 routing_method = 'D8'
-save_directory = './data/simple_sp_'
+save_directory = './data'
 
 N = int(T//dt)
 
@@ -136,7 +136,7 @@ for i in tqdm(range(N), desc="Completion"):
     # save output
     if save_transients:
         if i%output_interval==0:
-            filename = os.path.join(save_directory, '%d_grid_%d.nc'%(ID,i))
+            filename = os.path.join(save_directory, 'simple_sp_%d_grid_%d.nc'%(ID,i))
             to_netcdf(grid, filename)
 
     # check relief condition
@@ -152,13 +152,12 @@ cf.calculate_chi()
 # save things
 
 # save grid
-filename = os.path.join(save_directory, 'grid_%d.nc'%ID)
-to_netcdf(grid, filename)
+to_netcdf(grid, 'grid_%d.nc'%ID)
 
 # topography
 plt.figure()
 grid.imshow("topographic__elevation", colorbar_label='Elevation [m]')
-plt.savefig(os.path.join(save_directory, 'elevation_%d.png'%ID))
+plt.savefig('elevation_%d.png')
 
 # save relief
-np.savetxt(os.path.join(save_directory, 'relief_%d.csv'%ID), relief, delimiter=',')
+np.savetxt('relief_%d.csv'%ID, relief, delimiter=',')
