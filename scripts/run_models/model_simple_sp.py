@@ -14,11 +14,8 @@ from landlab.components import (
     FlowDirectorSteepest,
     LakeMapperBarnes,
     DepressionFinderAndRouter,
-    ChiFinder,
     )
 from landlab.io.netcdf import to_netcdf
-
-import matplotlib.pyplot as plt
 
 #slurm info
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
@@ -29,6 +26,12 @@ try:
     # df = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)
 except FileNotFoundError:
     print("Supply a parameter file, 'parameters.csv' with column title equal to TASK_ID")
+
+for ind in df_params.index:
+    try:
+        df_params[ind] = float(df_params[ind])
+    except ValueError:
+        df_params[ind] = str(df_params[ind])
 
 Nx = df_params['Nx']
 Ny = df_params['Ny']
@@ -58,8 +61,10 @@ try:
     r_condition = df_params['r_condition']
 except KeyError:
     r_condition = 0.0
-# routing_method = df_params['routing_method']
-routing_method = 'D8'
+try:
+    routing_method = df_params['routing_method']
+except ValueError:
+    routing_method = 'D8'
 save_directory = './data'
 
 N = int(T//dt)
@@ -143,21 +148,9 @@ for i in tqdm(range(N), desc="Completion"):
     relief[i] = np.mean(z[grid.core_nodes])
     if i > 100:
         if np.mean(np.abs(np.diff(relief[i-50:i])/dt)) < r_condition:
+            filename = os.path.join(save_directory, 'simple_sp_%d_grid_%d.nc'%(ID,i))
+            to_netcdf(grid, filename)
             break
-
-# calculate chi everywhere
-cf = ChiFinder(grid, min_drainage_area=100*v0**2, reference_concavity=m/n, reference_area=v0**2)
-cf.calculate_chi()
-
-# save things
-
-# save grid
-to_netcdf(grid, 'grid_%d.nc'%ID)
-
-# topography
-plt.figure()
-grid.imshow("topographic__elevation", colorbar_label='Elevation [m]')
-plt.savefig('elevation_%d.png')
 
 # save relief
 np.savetxt('relief_%d.csv'%ID, relief, delimiter=',')
