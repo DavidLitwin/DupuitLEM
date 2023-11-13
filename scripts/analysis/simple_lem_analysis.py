@@ -111,17 +111,17 @@ network[:] = curvature > 0
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
 to_netcdf(mg, filename, format="NETCDF4")
 
-# relief change
-output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
-dt_nd = output_interval*df_params['dt'][ID]/df_params['tg'][ID]
-relief_change = np.zeros(len(files))
-for i in range(1,len(files)):
-    grid = from_netcdf(files[i])
-    elev = grid.at_node['topographic__elevation']
-    relief_change[i] = np.mean(elev[grid.core_nodes])
+# relief change (nondimensional version)
+# output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
+# dt_nd = output_interval*df_params['dt']/df_params['tg']
+# relief_change = np.zeros(len(files))
+# for i in range(1,len(files)):
+#     grid = from_netcdf(files[i])
+#     elev = grid.at_node['topographic__elevation']
+#     relief_change[i] = np.mean(elev[grid.core_nodes])
 
-r_change = pd.DataFrame()
-r_change['r_nd'] = relief_change[:]/df_params['hg'][ID]
-r_change['drdt_nd'] = np.diff(r_change['r_nd'], prepend=0.0)/dt_nd
-r_change['t_nd'] = np.arange(len(files))*dt_nd
-r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
+# r_change = pd.DataFrame()
+# r_change['r_nd'] = relief_change[:]/df_params['hg']
+# r_change['drdt_nd'] = np.diff(r_change['r_nd'], prepend=0.0)/dt_nd
+# r_change['t_nd'] = np.arange(len(files))*dt_nd
+# r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
