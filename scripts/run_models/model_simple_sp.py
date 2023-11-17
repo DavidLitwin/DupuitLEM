@@ -33,8 +33,12 @@ for ind in df_params.index:
     except ValueError:
         df_params[ind] = str(df_params[ind])
 
-Nx = df_params['Nx']
-Ny = df_params['Ny']
+try:
+    Nx = df_params['Nx']
+    Ny = df_params['Ny']
+except KeyError:
+    Nx = df_params['Nx']
+    Ny = df_params['Nx']
 T = df_params['T']
 dt = df_params['dt']
 v0 = df_params['v0']

@@ -29,10 +29,11 @@ Tg: total geomorphic time (s)
 ksf: scaling factor between hydrological time and geomorphic time (-)
 output_interval: how frequently grid will be saved (timesteps)
 v0: grid spacing (m) (if grid not supplied)
-Nx: number of nodes in x and y dimension (if grid not supplied)
+Nx: number of nodes in x dimension (if grid not supplied)
+Ny: number of nodes in y dimension (if grid not supplied. If not supplied, grid is Nx,Nx)
 
 Optional:
-E0: streampower incision coefficient (m/s)
+E0: streampower incision threshold (m/s)
 Sc: critical hillslope slope (-)
 BCs: number/string that tells the model how to set the boundary conditions.
     1 indicates a fixed value boundary, 4 indicates a closed boundary. They
@@ -219,10 +220,16 @@ try:
 
 except:
     print("Initial grid not present or could not be read. Initializing new grid.")
-    Nx = df_params['Nx']
+    try:
+        Nx = df_params['Nx']
+        Ny = df_params['Ny']
+    except KeyError:
+        Nx = df_params['Nx']
+        Ny = df_params['Nx']
+
     v0 = df_params['v0']
     np.random.seed(12345)
-    grid = RasterModelGrid((Nx, Nx), xy_spacing=v0)
+    grid = RasterModelGrid((Nx, Ny), xy_spacing=v0)
     bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
     if bc is not None:
         grid.set_status_at_node_on_edges(
