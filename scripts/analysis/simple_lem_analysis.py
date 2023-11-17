@@ -81,7 +81,7 @@ fa = FlowAccumulator(mg, flow_director='D8', depression_finder='DepressionFinder
 fa.run_one_step()
 
 # calculate chi everywhere
-cf = ChiFinder(mg, min_drainage_area=100*mg.dx**2, reference_concavity=m/n, reference_area=mg.dx**2)
+cf = ChiFinder(mg, min_drainage_area=100*mg.dx**2, reference_concavity=m/n, reference_area=1)
 cf.calculate_chi()
 
 S8 = mg.add_zeros('node', 'slope_D8')
