@@ -229,7 +229,7 @@ except:
 
     v0 = df_params['v0']
     np.random.seed(12345)
-    grid = RasterModelGrid((Nx, Ny), xy_spacing=v0)
+    grid = RasterModelGrid((Ny, Nx), xy_spacing=v0)
     bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
     if bc is not None:
         grid.set_status_at_node_on_edges(

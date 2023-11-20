@@ -62,18 +62,24 @@ p = df_params['p'] # recharge rate [m/s]
 ne = df_params['ne'] # drainable porosity [-]
 b = df_params['b'] # characteristic depth  [m]
 Th = df_params['Th'] # hydrological timestep
-tg = df_params['tg']
 dtg = df_params['dtg']
+tg = df_params['tg']
 hg = df_params['hg']
 conc = 0.5 # concavity for chi analysis (default...)
+try:
+    RE = df_params['RE']
+except KeyError:
+    print("no recharge efficiency 'RE' provided. Using RE = 1.0")
+    RE = 1.0
 
 gdp = GroundwaterDupuitPercolator(mg,
-          porosity=ne,
-          hydraulic_conductivity=Ks,
-          regularization_f=0.01,
-          recharge_rate=p,
-          courant_coefficient=0.1, #*Ks/1e-5,
-          vn_coefficient = 0.1, #*Ks/1e-5,
+        porosity=ne,
+        hydraulic_conductivity=Ks,
+        regularization_f=0.01,
+        regularization_f=0.01,
+        recharge_rate=p*RE,
+        courant_coefficient=0.1, #*Ks/1e-5,
+        vn_coefficient=0.1, #*Ks/1e-5,
 )
 
 hm = HydrologySteadyStreamPower(
