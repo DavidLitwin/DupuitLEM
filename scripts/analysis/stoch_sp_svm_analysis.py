@@ -20,6 +20,7 @@ from landlab.components import (
     PrecipitationDistribution,
     HeightAboveDrainageCalculator,
     DrainageDensity,
+    ChiFinder,
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
@@ -79,6 +80,7 @@ tb = df_params['tb'] #mean interstorm duration [s]
 ds = df_params['ds'] #mean storm depth [m]
 T_h = 2000*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
+conc = 0.5 # reference concacvity for chi analysis
 
 try:
     bc = list(str(df_params['BCs']))
@@ -444,7 +446,7 @@ try:
 except:
     print('failed to calculate HAND')
 
-######## Calculate drainage density
+######## Calculate drainage density and chi
 dd = DrainageDensity(mg, channel__mask=np.uint8(network_curvature))
 try:
     channel_mask = mg.at_node['channel__mask']
@@ -455,8 +457,12 @@ try:
     df_output['dd_sat_interstorm'] = dd.calculate_drainage_density()
     df_output['mean hillslope len sat interstorm'] = 1/(2*df_output['dd_sat_interstorm'])
 
+    # chi
+    cf = ChiFinder(mg, min_drainage_area=mg.dx**2, reference_concavity=conc, reference_area=1)
+    cf.calculate_chi()
+
 except:
-    print('failed to calculate drainage density')
+    print('failed to calculate drainage density and chi')
 
 ####### calculate elevation change
 try:
@@ -510,6 +516,7 @@ output_fields = [
         "at_node:aquifer_base__elevation",
         'at_node:channel_mask_curvature',
         'at_node:channel_mask_sat_interstorm',
+        'at_node:channel__chi_index',
         'at_node:hand_curvature',
         'at_node:hand_sat_interstorm',
         'at_node:saturation_class',

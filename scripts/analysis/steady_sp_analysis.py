@@ -18,6 +18,7 @@ from landlab.components import (
     GroundwaterDupuitPercolator,
     HeightAboveDrainageCalculator,
     DrainageDensity,
+    ChiFinder,
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologySteadyStreamPower
@@ -58,15 +59,16 @@ except FileNotFoundError:
 
 Ks = df_params['ksat'] # hydraulic conductivity [m/s]
 p = df_params['p'] # recharge rate [m/s]
-n = df_params['n'] # drainable porosity [-]
+ne = df_params['ne'] # drainable porosity [-]
 b = df_params['b'] # characteristic depth  [m]
 Th = df_params['Th'] # hydrological timestep
 tg = df_params['tg']
 dtg = df_params['dtg']
 hg = df_params['hg']
+conc = 0.5 # concavity for chi analysis (default...)
 
 gdp = GroundwaterDupuitPercolator(mg,
-          porosity=n,
+          porosity=ne,
           hydraulic_conductivity=Ks,
           regularization_f=0.01,
           recharge_rate=p,
@@ -153,13 +155,18 @@ df_output['mean hand'] = np.mean(hand[mg.core_nodes])
 cell_area = max(mg.cell_area_at_node)
 df_output['hand mean ridges'] = np.mean(hand[mg.at_node["drainage_area"]==cell_area])
 
-######## Calculate drainage density
+######## Calculate drainage density, Chi
 if isinstance(mg, RasterModelGrid):
     dd = DrainageDensity(mg, channel__mask=np.uint8(network))
     channel_mask = mg.at_node['channel__mask']
     df_output['drainage density'] = dd.calculate_drainage_density()
     df_output['mean hillslope len'] = 1/(2*df_output['drainage density'])
     df_output['mean hillslope len ridges'] = np.mean(mg.at_node["surface_to_channel__minimum_distance"][mg.at_node["drainage_area"]==cell_area])
+
+   # chi
+    cf = ChiFinder(mg, min_drainage_area=mg.dx**2, reference_concavity=conc, reference_area=1)
+    cf.calculate_chi()
+
 
 ####### calculate relief change
 output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1][:-3])
@@ -181,6 +188,7 @@ raster_out = [
         'at_node:topographic__index_D4',
         'at_node:slope_D8',
         'at_node:slope_D4',
+        'at_node:channel__chi_index',
         ]
 hex_out = [
         'at_node:topographic__index_D6',
