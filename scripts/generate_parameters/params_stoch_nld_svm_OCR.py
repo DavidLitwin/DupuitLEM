@@ -38,8 +38,8 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
 # set up params
-K_all = np.geomspace(1e-4,1e-5,5)/(365*24*3600) # s-1
-ksat_all = np.geomspace(0.2,2,5) /(24*3600) # m/s
+K_all = np.geomspace(4e-6,2e-5,5)/(365*24*3600) # s-1
+ksat_all = np.geomspace(0.5,2.5,5) /(24*3600) # m/s
 prod = np.array(list(product(K_all, ksat_all)))
 df_params = pandas.DataFrame(prod, columns=['K', 'ksat'])
 
@@ -47,7 +47,7 @@ df_params['Sc'] = 1.2 # critical slope
 df_params['D'] = 0.003/(365*24*3600) # m2/s
 df_params['U'] = 1e-4/(365*24*3600) # m/s
 df_params['E0'] = 0.0 # don't use threshold model
-df_params['v0'] = 30 # m
+df_params['v0'] = 20 # m
 
 # estimated poisson parameters for HJAndrews (from script get_event_lengths.py)
 df_params['tr'] = 6.34 * 3600 # s
