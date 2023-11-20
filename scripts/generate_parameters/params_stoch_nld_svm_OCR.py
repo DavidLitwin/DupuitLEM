@@ -70,7 +70,7 @@ df_params['Tg'] = 5e7 * 3600 * 24 * 365 # Total geomorphic simulation time [s]
 df_params['Th'] = 25*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
 df_params['dtg'] = 500 * 3600 * 24 * 365 # geomorphic timestep [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
-df_params['dtg_max'] = 600 # the maximum duration of a geomorphic substep [s]
+df_params['dtg_max'] = 600 * 3600 * 24 * 365 # the maximum duration of a geomorphic substep [s]
 df_params['output_interval'] = 2000
 
 df_params['lg'] = calc_lg(df_params.D, df_params.K, df_params.v0)

@@ -126,9 +126,12 @@ Nz = df_params['Nz']
 Th = df_params['Th']
 Tg = df_params['Tg']
 ksf = df_params['ksf']
-dtg_max = df_params['dtg_max']
 
 # try the arguments that might be present
+try:
+    dtg_max = df_params['dtg_max']
+except KeyError:
+    dtg_max = None
 try:
     E0 = df_params['E0']
 except KeyError:
