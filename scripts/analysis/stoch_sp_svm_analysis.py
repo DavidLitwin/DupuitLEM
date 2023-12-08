@@ -544,6 +544,7 @@ output_fields = [
         'at_node:sat_mean_end_interstorm',
         'at_node:Q_mean_end_storm',
         'at_node:Q_mean_end_interstorm',
+        'at_node:flow__receiver_node',
         ]
 
 filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
