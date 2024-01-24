@@ -42,7 +42,7 @@ ksat_all = np.geomspace(0.5,2.5,5) /(24*3600) # m/s
 prod = np.array(list(product(K_all, ksat_all)))
 df_params = pandas.DataFrame(prod, columns=['K', 'ksat'])
 
-df_params['Sc'] = 1.2 # critical slope
+df_params['Sc'] = 0.0 # Don't use critical slope
 df_params['D'] = 0.003/(365*24*3600) # m2/s
 df_params['U'] = 1e-4/(365*24*3600) # m/s
 df_params['E0'] = 0.0 # don't use threshold model
@@ -53,7 +53,7 @@ tr = 6.34 * 3600 # s
 tb = 22.58 * 3600 # s
 ds = 6.86 / 1000 # m
 df_params['p'] = ds/(tr+tb) # m/s
-df_params['RE'] = 0.75 # recharge efficiency (Q/P for Mack Creek)
+df_params['RE'] = 1.0 # 0.75 # recharge efficiency (Q/P for Mack Creek)
 df_params['ne'] = 0.1
 df_params['b'] = 2.0
 
