@@ -42,11 +42,11 @@ ksat_all = np.geomspace(0.5,2.5,5) /(24*3600) # m/s
 prod = np.array(list(product(K_all, ksat_all)))
 df_params = pandas.DataFrame(prod, columns=['K', 'ksat'])
 
-df_params['Sc'] = 0.0 # Don't use critical slope
+df_params['Sc'] = 1.2 # critical slope
 df_params['D'] = 0.003/(365*24*3600) # m2/s
 df_params['U'] = 1e-4/(365*24*3600) # m/s
 df_params['E0'] = 0.0 # don't use threshold model
-df_params['v0'] = 20 # m
+df_params['v0'] = 10 # m
 
 # estimated poisson parameters for HJAndrews (from script get_event_lengths.py)
 tr = 6.34 * 3600 # s
@@ -65,7 +65,7 @@ df_params['Tg'] = 5e7 * 3600 * 24 * 365 # Total geomorphic simulation time [s]
 df_params['Th'] = 10*(tr+tb) # hydrologic simulation time [s]
 df_params['dtg'] = 500 * 3600 * 24 * 365 # geomorphic timestep [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
-df_params['dtg_max'] = 600 # the maximum duration of a geomorphic substep [s]
+df_params['dtg_max'] = 100 * 3600 * 24 * 365 # the maximum duration of a geomorphic substep [s]
 df_params['output_interval'] = 2000
 
 df_params['lg'] = calc_lg(df_params.D, df_params.K, df_params.v0)
