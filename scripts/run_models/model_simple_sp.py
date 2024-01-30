@@ -91,7 +91,7 @@ else:
             bottom=grid.BC_NODE_IS_CLOSED,
     )
 z = grid.add_zeros('node', 'topographic__elevation')
-z[:] = 0.5*np.random.rand(len(z))
+z[grid.core_nodes] = 0.2*np.random.rand(len(grid.core_nodes))
 
 # depression_finder='DepressionFinderAndRouter', routing='D8'
 # fa = FlowAccumulator(grid, surface='topographic__elevation', flow_director='D8', depression_finder='LakeMapperBarnes', method='D8')
@@ -150,7 +150,7 @@ for i in tqdm(range(N), desc="Completion"):
 
     # check relief condition
     relief[i] = np.mean(z[grid.core_nodes])
-    if i > 100:
+    if r_condition > 0.0 and i > 100:
         if np.mean(np.abs(np.diff(relief[i-50:i])/dt)) < r_condition:
             filename = os.path.join(save_directory, 'simple_sp_%d_grid_%d.nc'%(ID,i))
             to_netcdf(grid, filename)
