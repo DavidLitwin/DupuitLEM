@@ -25,7 +25,7 @@ dt = 100
 m = 0.5
 n = 1
 Sc = 0.0
-# routing_method = 'D8'
+routing_method = 'D8'
 r_condition = 0.0 #1e-8
 
 prod = np.array(list(product(K_all, D_all, U_all, v0_all)))
@@ -37,7 +37,7 @@ df_params['dt'] = dt
 df_params['m'] = m
 df_params['n'] = n
 df_params['Sc'] = Sc
-# df_params['routing_method'] = routing_method
+df_params['routing_method'] = routing_method
 df_params['r_condition'] = r_condition
 df_params['output_interval'] = 500
 df_params['BCs'] = 4141
