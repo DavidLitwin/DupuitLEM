@@ -29,8 +29,8 @@ def calc_hc(K, D, U, m, n):
 def calc_lc(K, D, U, m, n):
     return (K**(-1) * D**n * U**(1-n))**(1/(n+2*m))
 
-# task_id = os.environ['SLURM_ARRAY_TASK_ID']
-# ID = int(task_id)
+task_id = os.environ['SLURM_ARRAY_TASK_ID']
+ID = int(task_id)
 
 D_all = [1e-1, 1e-2]
 U_all = [1e-3, 1e-4]
