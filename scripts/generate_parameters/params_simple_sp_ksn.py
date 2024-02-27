@@ -29,13 +29,14 @@ def calc_hc(K, D, U, m, n):
 def calc_lc(K, D, U, m, n):
     return (K**(-1) * D**n * U**(1-n))**(1/(n+2*m))
 
-task_id = os.environ['SLURM_ARRAY_TASK_ID']
-ID = int(task_id)
+# task_id = os.environ['SLURM_ARRAY_TASK_ID']
+# ID = int(task_id)
 
 D_all = [1e-1, 1e-2]
 U_all = [1e-3, 1e-4]
 ksn_all = np.geomspace(1,36,5)
-v0_nd_all = [0.5, 1.0, 2.0]
+# v0_nd_all = [0.5, 1.0, 2.0]
+v0_all = [10, 20, 50]
 Nx = 400
 Ny = 200
 m = 0.5
@@ -45,12 +46,14 @@ T_nd = 250
 routing_method = 'D8'
 r_condition = 0.0 #1e-8
 
-prod = np.array(list(product(ksn_all, D_all, U_all, v0_nd_all)))
-df_params = pd.DataFrame(prod, columns=['ksn', 'D', 'U', 'v0_nd'])
+# prod = np.array(list(product(ksn_all, D_all, U_all, v0_nd_all)))
+# df_params = pd.DataFrame(prod, columns=['ksn', 'D', 'U', 'v0_nd'])
+prod = np.array(list(product(ksn_all, D_all, U_all, v0_all)))
+df_params = pd.DataFrame(prod, columns=['ksn', 'D', 'U', 'v0'])
 
 df_params['K'] = df_params['U'] * df_params['ksn']**(-n)
-lg = calc_lg_v0nd(df_params.K, df_params.D, df_params.U, m, n, df_params['v0_nd'])
-df_params['v0'] = df_params['v0_nd'] * lg
+# lg = calc_lg_v0nd(df_params.K, df_params.D, df_params.U, m, n, df_params['v0_nd'])
+# df_params['v0'] = df_params['v0_nd'] * lg
 
 # T+K generalised scales
 df_params['lc'] = calc_lc(df_params.K, df_params.D, df_params.U, m, n)
@@ -62,7 +65,7 @@ df_params['tg'] = calc_tg(df_params.K, df_params.D, df_params.U, m, n, df_params
 df_params['hg'] = calc_hg(df_params.K, df_params.D, df_params.U, m, n, df_params.v0)
 df_params['lg'] = calc_lg(df_params.K, df_params.D, df_params.U, m, n, df_params.v0)
 
-assert np.allclose(df_params['lg'].values, lg.values)
+# assert np.allclose(df_params['lg'].values, lg.values)
 
 df_params['Nx'] = Nx
 df_params['Ny'] = Ny
@@ -74,6 +77,5 @@ df_params['routing_method'] = routing_method
 df_params['r_condition'] = r_condition
 df_params['output_interval'] = 500
 df_params['BCs'] = 4141
-
 
 df_params.loc[ID].to_csv('parameters.csv', index=True)
