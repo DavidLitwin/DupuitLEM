@@ -5,7 +5,7 @@ Includes generalised characteristic scales (any m, n) from nondimensionalisation
 New Nov. 2023.
 
 """
-
+#%%
 import os
 import numpy as np
 import pandas as pd
@@ -18,8 +18,6 @@ def calc_hg(K, D, U, m, n, v0):
     return ((D**(n-m) * U**(2+m-n))/(v0**(2*m) * K**2))**(1/(m+n))
 def calc_lg(K, D, U, m, n, v0):
     return ((D**n * U**(1-n))/(v0**m * K))**(1/(m+n))
-def calc_lg_v0nd(K, D, U, m, n, v0_nd):
-    return ((D**n * U**(1-n))/(v0_nd**m * K))**(1/(2*m+n))
 
 # generalised characteristic scales from T+K (2018)
 def calc_tc(K, D, U, m, n):
@@ -32,50 +30,64 @@ def calc_lc(K, D, U, m, n):
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
-D_all = [1e-1, 1e-2]
-U_all = [1e-3, 1e-4]
-ksn_all = np.geomspace(1,36,5)
-# v0_nd_all = [0.5, 1.0, 2.0]
-v0_all = [10, 20, 50]
-Nx = 400
-Ny = 200
+Lx = 3000
+Ly = 6000
+
+D_all = [5e-3, 1e-2]
+U_all = [1e-4, 1e-3]
+Kp_all = np.linspace(9e-5,4e-4, 4)
 m = 0.5
 n = 1.0
+
+# K_all = np.linspace(2e-5, 8e-5, 10)
+# m = 0.8
+# n = 2.0
+
+# K_all = np.linspace(5e-5, 1e-4, 10)
+# m = 0.4
+# n = 0.6
+v0_all = [10, 20, 30]
+Nx = 400
+Ny = 200
 dt_nd = 0.05
 T_nd = 250
+
 routing_method = 'D8'
 r_condition = 0.0 #1e-8
 
-# prod = np.array(list(product(ksn_all, D_all, U_all, v0_nd_all)))
-# df_params = pd.DataFrame(prod, columns=['ksn', 'D', 'U', 'v0_nd'])
-prod = np.array(list(product(ksn_all, D_all, U_all, v0_all)))
-df_params = pd.DataFrame(prod, columns=['ksn', 'D', 'U', 'v0'])
+prod = np.array(list(product(Kp_all, D_all, U_all, v0_all)))
+df_params = pd.DataFrame(prod, columns=['Kp', 'D', 'U', 'v0'])
+df_params['K'] = df_params['Kp']/df_params['v0']**m
 
-df_params['K'] = df_params['U'] * df_params['ksn']**(-n)
-# lg = calc_lg_v0nd(df_params.K, df_params.D, df_params.U, m, n, df_params['v0_nd'])
-# df_params['v0'] = df_params['v0_nd'] * lg
+df_params['m'] = m
+df_params['n'] = n
 
-# T+K generalised scales
-df_params['lc'] = calc_lc(df_params.K, df_params.D, df_params.U, m, n)
-df_params['hc'] = calc_hc(df_params.K, df_params.D, df_params.U, m, n)
-df_params['tc'] = calc_tc(df_params.K, df_params.D, df_params.U, m, n)
+Nx = Lx//df_params['v0'] # grid Nx
+Ny = Ly//df_params['v0'] # grid Ny
 
 # generalised characteristic scales
-df_params['tg'] = calc_tg(df_params.K, df_params.D, df_params.U, m, n, df_params.v0)
-df_params['hg'] = calc_hg(df_params.K, df_params.D, df_params.U, m, n, df_params.v0)
-df_params['lg'] = calc_lg(df_params.K, df_params.D, df_params.U, m, n, df_params.v0)
+df_params['tg'] = calc_tg(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n, df_params.v0)
+df_params['hg'] = calc_hg(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n, df_params.v0)
+df_params['lg'] = calc_lg(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n, df_params.v0)
 
-# assert np.allclose(df_params['lg'].values, lg.values)
+# T+K generalised scales
+df_params['lc'] = calc_lc(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n)
+df_params['hc'] = calc_hc(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n)
+df_params['tc'] = calc_tc(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n)
+
+df_params['lc/v0'] = df_params['lc']/df_params['v0']
+df_params['lg/v0'] = df_params['lg']/df_params['v0']
+
+df_params['ksn_pred'] = (df_params['U']/df_params['K'])**(1/df_params['n'])
 
 df_params['Nx'] = Nx
 df_params['Ny'] = Ny
 df_params['T'] = T_nd * df_params['tg']
 df_params['dt'] = dt_nd * df_params['tg']
-df_params['m'] = m
-df_params['n'] = n
 df_params['routing_method'] = routing_method
 df_params['r_condition'] = r_condition
 df_params['output_interval'] = 500
 df_params['BCs'] = 4141
 
+#%%
 df_params.loc[ID].to_csv('parameters.csv', index=True)
