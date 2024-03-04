@@ -30,8 +30,8 @@ def calc_lc(K, D, U, m, n):
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
-Lx = 3000
-Ly = 6000
+Lx = 6000
+Ly = 3000
 
 D_all = [5e-3, 1e-2]
 U_all = [1e-4, 1e-3]
@@ -47,8 +47,6 @@ n = 1.0
 # m = 0.4
 # n = 0.6
 v0_all = [10, 20, 30]
-Nx = 400
-Ny = 200
 dt_nd = 0.05
 T_nd = 250
 
