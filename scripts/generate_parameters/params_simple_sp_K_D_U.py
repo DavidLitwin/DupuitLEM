@@ -36,13 +36,13 @@ U_all = [1e-4, 1e-3]
 # m = 0.5
 # n = 1.0
 
-K_all = np.linspace(2e-5, 8e-5, 10)
-m = 0.8
-n = 2.0
+# K_all = np.linspace(2e-5, 8e-5, 10)
+# m = 0.8
+# n = 2.0
 
-# K_all = np.linspace(5e-5, 1e-4, 10)
-# m = 0.4
-# n = 0.6
+K_all = np.linspace(5e-5, 1e-4, 10)
+m = 0.4
+n = 0.6
 v0_all = [10, 20, 50]
 Nx = 400
 Ny = 200
