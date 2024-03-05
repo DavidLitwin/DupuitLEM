@@ -5,7 +5,7 @@ Includes generalised characteristic scales (any m, n) from nondimensionalisation
 New Nov. 2023.
 
 """
-
+#%%
 import os
 import numpy as np
 import pandas as pd
@@ -32,13 +32,13 @@ ID = int(task_id)
 
 D_all = [5e-3, 1e-2]
 U_all = [1e-4, 1e-3]
-K_all = np.linspace(2e-5,8e-5, 10)
-m = 0.5
-n = 1.0
+# K_all = np.linspace(2e-5,8e-5, 10)
+# m = 0.5
+# n = 1.0
 
-# K_all = np.linspace(2e-5, 8e-5, 10)
-# m = 0.8
-# n = 2.0
+K_all = np.linspace(2e-5, 8e-5, 10)
+m = 0.8
+n = 2.0
 
 # K_all = np.linspace(5e-5, 1e-4, 10)
 # m = 0.4
@@ -69,8 +69,10 @@ df_params['tc'] = calc_tc(df_params.K, df_params.D, df_params.U, df_params.m, df
 
 df_params['lc/v0'] = df_params['lc']/df_params['v0']
 df_params['lg/v0'] = df_params['lg']/df_params['v0']
+# print('lg/v0:', min(df_params['lg/v0']),max(df_params['lg/v0']) )
 
 df_params['ksn_pred'] = (df_params['U']/df_params['K'])**(1/df_params['n'])
+# print('ksn:', min(df_params['ksn_pred']),max(df_params['ksn_pred']) )
 
 df_params['Nx'] = Nx
 df_params['Ny'] = Ny
@@ -81,5 +83,5 @@ df_params['r_condition'] = r_condition
 df_params['output_interval'] = 500
 df_params['BCs'] = 4141
 
-
+#%%
 df_params.loc[ID].to_csv('parameters.csv', index=True)
