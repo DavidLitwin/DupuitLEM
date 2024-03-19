@@ -32,17 +32,17 @@ ID = int(task_id)
 
 D_all = [5e-3, 1e-2]
 U_all = [1e-4, 1e-3]
-# K_all = np.linspace(2e-5,8e-5, 10)
-# m = 0.5
-# n = 1.0
+K_all = np.linspace(2e-5,8e-5, 5)
+m = 0.5
+n = 1.0
 
 # K_all = np.linspace(2e-5, 8e-5, 10)
 # m = 0.8
 # n = 2.0
 
-K_all = np.linspace(5e-5, 1e-4, 10)
-m = 0.4
-n = 0.6
+# K_all = np.linspace(5e-5, 1e-4, 10)
+# m = 0.4
+# n = 0.6
 v0_all = [10, 20, 50]
 Nx = 400
 Ny = 200
@@ -56,6 +56,7 @@ prod = np.array(list(product(K_all, D_all, U_all, v0_all)))
 df_params = pd.DataFrame(prod, columns=['K', 'D', 'U', 'v0'])
 df_params['m'] = m
 df_params['n'] = n
+df_params['Sc'] = 0.5
 
 # generalised characteristic scales
 df_params['tg'] = calc_tg(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n, df_params.v0)
