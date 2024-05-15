@@ -22,11 +22,12 @@ plt.rc('text', usetex=True)
 from generate_colormap import get_continuous_cmap
 
 
-directory = 'C:/Users/dgbli/Documents/Research Data/HPC output/DupuitLEMResults/post_proc'
-base_output_path = 'stoch_ai_sigma_10' #'stoch_gam_sigma_14' #
-model_runs = np.arange(35)
+# directory = 'C:/Users/dgbli/Documents/Research Data/HPC output/DupuitLEMResults/post_proc'
+directory = '/Users/dlitwin/Documents/Research Data/HPC output/DupuitLEMResults/post_proc'
+base_output_path = 'stoch_gam_sigma_15' #'stoch_ai_sigma_10' #
+model_runs = np.arange(25)
 nrows = 5
-ncols = 7
+ncols = 5
 
 #%% load results and parameters
 
@@ -654,7 +655,11 @@ for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
     n = np.where(plot_array==i)[1][0]
     
-    grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
+    try:
+        grid = from_netcdf('%s/%s/grid_%d.nc'%(directory, base_output_path, i))
+    except FileNotFoundError:
+        pass
+    
     sat_storm = grid.at_node['sat_mean_end_storm']
     sat_interstorm = grid.at_node['sat_mean_end_interstorm']
     sat_class = grid.at_node['saturation_class']
@@ -852,7 +857,7 @@ wetting_frac = (df_results['cum_recharge'] - df_results['qe_tot'])/df_results['c
 
 i_max = 0
 
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10,6)) #(8,6)
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(8,6)) #(10,6)
 
 for i in plot_runs:
     m = np.where(plot_array==i)[0][0]
