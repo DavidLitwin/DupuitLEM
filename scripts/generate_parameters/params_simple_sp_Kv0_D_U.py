@@ -29,8 +29,8 @@ def calc_hc(K, D, U, m, n):
 def calc_lc(K, D, U, m, n):
     return (K**(-1) * D**n * U**(1-n))**(1/(n+2*m))
 
-# task_id = os.environ['SLURM_ARRAY_TASK_ID']
-# ID = int(task_id)
+task_id = os.environ['SLURM_ARRAY_TASK_ID']
+ID = int(task_id)
 
 ksn_a_all = [1, 2, 4] # this ksn has a different meaning, assumes K is replaced with Ka = K v0^m
 v0_all = [10, 20, 50]
@@ -93,7 +93,7 @@ df_params['output_interval'] = 500
 df_params['BCs'] = 4141
 
 #%%
-# df_params.loc[ID].to_csv('parameters.csv', index=True)
+df_params.loc[ID].to_csv('parameters.csv', index=True)
 
 # %% plots to test how the results should look
 
