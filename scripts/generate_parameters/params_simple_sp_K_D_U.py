@@ -10,6 +10,8 @@ import os
 import numpy as np
 import pandas as pd
 from itertools import product
+import matplotlib.pyplot as plt
+import matplotlib
 
 # generalised characteristic scales from Litwin et al (2022)
 def calc_tg(K, D, U, m, n, v0):
@@ -30,11 +32,12 @@ def calc_lc(K, D, U, m, n):
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 
-D_all = [5e-3, 1e-2]
-U_all = [1e-4, 1e-3]
-K_all = np.linspace(2e-5,8e-5, 5)
-m = 0.5
-n = 1.0
+# old parameter combinations
+# D_all = [5e-3, 1e-2]
+# U_all = [1e-4, 1e-3]
+# K_all = np.linspace(2e-5,8e-5, 5)
+# m = 0.5
+# n = 1.0
 
 # K_all = np.linspace(2e-5, 8e-5, 10)
 # m = 0.8
@@ -43,7 +46,16 @@ n = 1.0
 # K_all = np.linspace(5e-5, 1e-4, 10)
 # m = 0.4
 # n = 0.6
+
+
+# K_all = [2.5e-5, 5e-5, 1e-4]
+ksn_all = [5, 10, 20]
 v0_all = [10, 20, 50]
+D_all = np.linspace(2e-3, 2e-2, 5)
+m_all = [0.5, 0.8, 0.4]
+U = 5e-4
+
+
 Nx = 400
 Ny = 200
 dt_nd = 0.05
@@ -52,11 +64,20 @@ T_nd = 250
 routing_method = 'D8'
 r_condition = 0.0 #1e-8
 
-prod = np.array(list(product(K_all, D_all, U_all, v0_all)))
-df_params = pd.DataFrame(prod, columns=['K', 'D', 'U', 'v0'])
-df_params['m'] = m
-df_params['n'] = n
-df_params['Sc'] = 0.5
+# prod = np.array(list(product(K_all, D_all, v0_all, m_all)))
+# df_params = pd.DataFrame(prod, columns=['K', 'D', 'v0', 'm'])
+
+prod = np.array(list(product(ksn_all, D_all, v0_all, m_all)))
+df_params = pd.DataFrame(prod, columns=['ksn_pred', 'D', 'v0', 'm'])
+
+n_from_m = {0.5:1, 0.8:2.0, 0.4:0.6}
+df_params['n'] = df_params['m'].map(n_from_m)
+df_params['U'] = U
+df_params['K'] = df_params['U']/df_params['ksn_pred']**df_params['n']
+
+# df_params['m'] = m
+# df_params['n'] = n
+# df_params['Sc'] = 0.0
 
 # generalised characteristic scales
 df_params['tg'] = calc_tg(df_params.K, df_params.D, df_params.U, df_params.m, df_params.n, df_params.v0)
@@ -72,7 +93,10 @@ df_params['lc/v0'] = df_params['lc']/df_params['v0']
 df_params['lg/v0'] = df_params['lg']/df_params['v0']
 # print('lg/v0:', min(df_params['lg/v0']),max(df_params['lg/v0']) )
 
-df_params['ksn_pred'] = (df_params['U']/df_params['K'])**(1/df_params['n'])
+# df_params['ksn_pred'] = (df_params['U']/df_params['K'])**(1/df_params['n'])
+df_params['ksn_pred_spld'] = df_params['ksn_pred'] * (df_params['lg/v0']+1)**(1/df_params.n)
+df_params['CI'] = (df_params.K * df_params.v0**df_params.m * (Nx * df_params.v0)**(df_params.m+df_params.n))/(df_params.D * df_params.U**(1-df_params.n))
+
 # print('ksn:', min(df_params['ksn_pred']),max(df_params['ksn_pred']) )
 
 df_params['Nx'] = Nx
@@ -86,3 +110,47 @@ df_params['BCs'] = 4141
 
 #%%
 df_params.loc[ID].to_csv('parameters.csv', index=True)
+
+# %% plots to test how the results should look
+
+# dfg = df_params.groupby(['m'])
+
+# fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(2,6))
+# i = 0
+# for m, g in dfg:
+    
+#     axs[i].scatter(g['lg/v0'], g['lc/v0'], s=3)
+#     axs[i].set_title(f'm={m[0]}')
+#     axs[i].set_xscale('log')
+#     axs[i].set_yscale('log')
+#     i+=1
+# plt.tight_layout()
+# # %%
+
+# dfg = df_params.groupby(['m', 'ksn_pred'])
+
+# cmap = matplotlib.colormaps['Reds']
+# colors1 = [cmap(i) for i in [0.3, 0.5, 0.7]]
+
+# fig, axs = plt.subplots(nrows=3, ncols=3, figsize=(9,7))
+# ax = axs.flatten()
+# i = 0
+# for (m, ksn), g in dfg:
+#     print(m,ksn)
+#     j = 0
+#     for v0, g1 in g.groupby('v0'):
+#         ax[i].plot(g1['D'], g1['ksn_pred_spld'], linestyle='-', color=colors1[j])
+#         ax[i].scatter(g1['D'], g1['ksn_pred_spld'], s=10, label=f'$v_0$={v0:.2f}', color=colors1[j])
+#         j+=1
+#     ax[i].axhline(ksn, color='k', linestyle='--', label='$k_{sn,pred}$')
+#     ax[i].set_title(f'm={m:.1f}, ksn={ksn:.0f}')
+#     ax[i].set_yscale('log')
+#     ax[i].set_xscale('log')
+#     ax[i].set_ylim((4,200))
+
+#     i += 1
+# ax[0].legend(frameon=False)
+# plt.tight_layout()
+
+
+# %%
