@@ -50,13 +50,16 @@ df_params_DR = pd.read_csv(f'{base_path}/Documents/Research Data/HPC output/Dupu
 df_params_BR = pd.read_csv(f'{base_path}/Documents/Research Data/HPC output/DupuitLEMResults/CaseStudy/CaseStudy_cross_2-1/parameters.csv', index_col=0)['1']
 
 hg = np.array([df_params_DR['hg'],df_params_BR['hg']])
+v0 = np.array([df_params_DR['v0'],df_params_BR['v0']])
+
 df_qstats['Qf/Q'] = 1 - df_qstats['Qb']/df_qstats['Q']
 df_qstats['R/hg'] = df_rstats['q50']/hg
 df_qstats['sat_var'] = [df_sat_DR.loc['sat_variable'][0],df_sat_BR.loc['sat_variable'][0]]
 
 #%% Dunne discussion -- get relief for all relevant model runs
 
-names = ['stoch_gam_sigma_14', 'stoch_gam_sigma_15', 'stoch_gam_sigma_16', 'CaseStudy_cross_2']
+base_output_path_2 = 'CaseStudy_cross_15'
+names = ['stoch_gam_sigma_14', 'stoch_gam_sigma_15', 'stoch_gam_sigma_16', base_output_path_2]
 num_runs = [25, 25, 25, 4]
 
 results_dict = {}
@@ -96,18 +99,18 @@ for k, base_output_path in enumerate(names):
 
 #%% Dunne discussion -- get LSDTT relief for CaseStudy model runs
 
-base_output_path_2 = 'CaseStudy_cross_2'
-path_2 = f'{base_path}/Documents/Research Data/HPC output/DupuitLEMResults/post_proc/{base_output_path_2}/'
 
-files_ht = ["%s-%d_pad_HilltopData_TN.csv"%(base_output_path_2, i) for i in range(4)]
+path_2 = f'{base_path}/Documents/Research Data/HPC output/DupuitLEMResults/post_proc/{base_output_path_2}/lsdtt/'
+
+files_ht = ["%s-%d_HilltopData_TN.csv"%(base_output_path_2, i) for i in range(4)]
 dfs_ht = [pd.read_csv(path_2 + file_ht) for file_ht in files_ht]
 names_ht = ['DR-DR', 'BR-BR', 'DR-BR', 'BR-DR'] # in order
 
 Lh = [df['Lh'].values for df in dfs_ht ]
 R = [df['R'].values for df in dfs_ht ]
 
-hg = params_dict['CaseStudy_cross_2']['hg']
-lg = params_dict['CaseStudy_cross_2']['lg']
+hg = params_dict[base_output_path_2]['hg']
+lg = params_dict[base_output_path_2]['lg']
 
 # df_lsdtt_case = pd.DataFrame(index=names_ht)
 # df_lsdtt_case['Lh q1'] = np.array([np.percentile(lh, 25) for lh in Lh])/lg
@@ -128,46 +131,50 @@ fig, ax = plt.subplots(figsize=(6,4.2))
 main_names = ['stoch_gam_sigma_14', 'stoch_gam_sigma_15', 'stoch_gam_sigma_16']
 for k, base_output_path in enumerate(main_names):
 
-    df_results = results_dict[base_output_path]
-    df_params = params_dict[base_output_path]
-
-    sc = ax.scatter(1-df_results['Qb/Q'],
-                df_results['mean_r_nd'],
-                c=df_results['sat_variable'],
-                cmap='plasma',vmin=0.0, vmax=1.0,
+    dfr = results_dict[base_output_path]
+    sc = ax.scatter(1-dfr['Qb/Q'],
+                dfr['mean_r_nd'],
+                c='0.75',
+                s=25,
+                # c=df_results['sat_variable'],
+                # cmap='plasma',vmin=0.0, vmax=1.0,
                 )
 
 # plot case study modeled results
-df_results = results_dict['CaseStudy_cross_2']
-df_params = params_dict['CaseStudy_cross_2']
-sc = ax.scatter(1-df_results['Qb/Q'],
-            df_results['mean_r_nd'],
-            c=df_results['sat_variable'],
-            cmap='plasma',vmin=0.0,vmax=1.0,
-            label='Modeled: Var',
-            marker='P',
-            )
+# df_results = results_dict['CaseStudy_cross_2']
+# df_params = params_dict['CaseStudy_cross_2']
+# sc = ax.scatter(1-df_results['Qb/Q'],
+#             df_results['mean_r_nd'],
+#             # c=df_results['sat_variable'],
+#             # cmap='plasma',vmin=0.0,vmax=1.0,
+#             label='Modeled: Var',
+#             marker='P',
+#             )
 
 # plot case study modeled results - LSDTT elevation
-sc = ax.scatter(1-df_results['Qb/Q'],
-            rnd_casestudy,
-            c=df_results['sat_variable'],
-            cmap='plasma',vmin=0.0,vmax=1.0,
-            label='Modeled: LSDTT',
-            marker='D',
+dfr = results_dict[base_output_path_2]
+sc = ax.scatter(1-dfr['Qb/Q'][0],
+            rnd_casestudy[0],
+            label='Modeled: DR',
+            marker='^',
+            color='firebrick'
+            )
+sc = ax.scatter(1-dfr['Qb/Q'][1],
+            rnd_casestudy[1],
+            label='Modeled: BR',
+            color='royalblue',
+            marker='^',
             )
 
 # plot based on quantities derived from data at DR and BR
 ax.scatter(df_qstats['Qf/Q']['DR'], 
             df_qstats['R/hg']['DR'], 
-            c=df_qstats['sat_var']['DR'], 
-            s=50, cmap='plasma', vmin=0.0, vmax=1.0, marker='^',
-            label='DR') 
+            s=50, marker='s', color='firebrick',
+            label='Field: DR') 
 ax.scatter(df_qstats['Qf/Q']['BR'], 
             df_qstats['R/hg']['BR'], 
-            c=df_qstats['sat_var']['BR'], 
-            s=50, cmap='plasma', vmin=0.0, vmax=1.0, marker='s',
-            label='BR')   
+            s=50, marker='s', color='royalblue',
+            label='Field: BR')   
      
 ax.set_xscale('log')
 ax.set_yscale('log')
@@ -176,6 +183,7 @@ ax.set_ylabel(r'$\overline{Z} / h_g$')
 ax.legend(frameon=False)
 fig.tight_layout()
 # plt.savefig('%s/%s/relief_qfi_hg_sat.pdf'%(directory, base_output_path), dpi=300) #_sat
+# plt.savefig('/Users/dlitwin/Documents/Papers/Ch3_oregon_ridge_soldiers_delight/relief_qfi_hg_sat.pdf', dpi=300)
 
 
 #%% get all hillslope numbers etc from existing model runs
