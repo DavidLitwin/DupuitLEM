@@ -148,6 +148,7 @@ class RegolithExponentialProduction(RegolithModel):
         characteristic_depth=1,
         regolith_production_rate=2e-12,
         uplift_rate=1e-12,
+        delta = 1e-3,
     ):
         """
         Parameters:
@@ -163,12 +164,16 @@ class RegolithExponentialProduction(RegolithModel):
         uplift_rate: float
             Constant uplift rate.
             Default: 1e-12
+        delta: float
+            Minimum allowable thickness.
+            Default 1e-3
         """
 
         super().__init__(grid)
         self.U = uplift_rate
         self.d_s = characteristic_depth
         self.w0 = regolith_production_rate
+        self.d = delta
 
     def run_step(self, dt_m):
         """Advance regolith model one step in time. Uplift topographic__elevation
@@ -182,6 +187,8 @@ class RegolithExponentialProduction(RegolithModel):
             Timestep for update.
         """
 
+        # first ensure that the thickness is positive to avoid later problems
+        self._base[self._elev - self.d <= self._base] = self._elev[self._elev - self.d <= self._base] - self.d 
         h = self._wt - self._base  # aquifer storage, assume const n
         b0 = self._elev - self._base  # current thickness
 
