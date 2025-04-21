@@ -234,6 +234,9 @@ class StreamPowerModel:
         for i in tqdm(range(self.N), desc="Completion"):
             self.run_step(self.dt_m, dt_m_max=self.dt_m_max)
 
+            if np.isnan(self._wt).any():
+                raise ValueError('NaN value found in water_table__elevation. This will cause unintended behavior.')
+            
             if self.save_output:
                 if i % self.output_interval == 0 or i == max(range(self.N)):
                     # save the specified grid fields
