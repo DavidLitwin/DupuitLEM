@@ -8,7 +8,11 @@ Author: David Litwin
 import numpy as np
 from tqdm import tqdm
 
-from landlab.io.netcdf import to_netcdf, from_netcdf
+from DupuitLEM.io import (
+    initialize_output_dataset,
+    write_output_step,
+)
+import xarray as xr
 
 
 class StreamPowerModel:
@@ -29,7 +33,6 @@ class StreamPowerModel:
         total_morphological_time=1e6 * 365 * 24 * 3600,
         maximum_morphological_dt=None,
         output_dict=None,
-        steady_state_condition=None,
         verbose=False,
     ):
         """
@@ -110,44 +113,45 @@ class StreamPowerModel:
 
         # configure outputs
         if output_dict:
+            
+            # set flag to save output, and store output dictionary
             self.save_output = True
+            self.output = output_dict
+
+            # store for easier access
             self.output_interval = output_dict["output_interval"]
             self.output_fields = output_dict["output_fields"]
             self.base_path = output_dict["base_output_path"]
             self.id = output_dict["run_id"]
+
+            # initialize output dataset
+            self._initialize_output()
+
         else:
             self.save_output = False
 
-        # configure stopping conditions
-        if steady_state_condition:
-            if not output_dict:
-                raise ValueError(
-                    "output_dict must be provided to run with steady_state_condition."
-                )
-
-            self.stop_cond = True
-            self.stop_rate = steady_state_condition["stop_at_rate"]
-
-            if steady_state_condition["how"] == "mean":
-                self.calc_rate_of_change = lambda elev, elev0, dtm, N: np.mean(
-                    abs(elev - elev0)
-                ) / (N * dtm)
-
-            elif steady_state_condition["how"] == "percentile":
-                c = steady_state_condition["percentile_value"]
-                self.calc_rate_of_change = lambda elev, elev0, dtm, N: np.percentile(
-                    abs(elev - elev0), c
-                ) / (N * dtm)
-
-            else:
-                raise ValueError(
-                    "stopping condition method %s is not supported"
-                    % steady_state_condition["how"]
-                )
-        else:
-            self.stop_cond = False
 
         self.verboseprint("Model initialized")
+
+
+    def _initialize_output(self):
+        n_output = self.N // self.output_interval # + 1 ## TO DO: how to save final step if not on interval?
+
+        self.output_times = (
+            np.arange(n_output) * self.output_interval * self.dt_m
+        )
+
+        self._output_ds = initialize_output_dataset(
+            self._grid,
+            self.output,
+            self.output_times,
+        )
+
+        self._output_path = self.base_path + f"{self.id}.nc"
+        self._output_ds.to_netcdf(self._output_path, mode="w")
+
+        self._output_index = 0
+
 
     def run_step(self, dt_m, dt_m_max=None):
         """
@@ -225,10 +229,9 @@ class StreamPowerModel:
     def run_model(self):
         """
         Run StreamPowerModel for full duration specified by total_morphological_time.
-        Record elevation change quantiles [0, 10, 50, 90, 100] and mean.
-        If output dictionary was provided, record output.
-        If output dictionary and steady state condition were provided, record output and stop when steady state condition is met.
+        If output dictionary was provided, record output as a netcdf file. 
         """
+
 
         # Run model forward
         for i in tqdm(range(self.N), desc="Completion"):
@@ -237,31 +240,15 @@ class StreamPowerModel:
             if np.isnan(self._wt).any():
                 raise ValueError('NaN value found in water_table__elevation. This will cause unintended behavior.')
             
-            if self.save_output:
-                if i % self.output_interval == 0 or i == max(range(self.N)):
-                    # save the specified grid fields
-                    filename = self.base_path + "%d_grid_%d.nc" % (self.id, i)
-                    to_netcdf(
-                        self._grid,
-                        filename,
-                        include=self.output_fields,
-                        format="NETCDF4",
-                    )
 
-                if self.stop_cond and i % self.output_interval == 0 and i > 0:
-                    # check stopping condition
-                    filename0 = self.base_path + "%d_grid_%d.nc" % (
-                        self.id,
-                        i - self.output_interval,
-                    )
-                    grid0 = from_netcdf(filename0)
-                    elev0 = grid0.at_node["topographic__elevation"]
-                    dzdt = self.calc_rate_of_change(
-                        self._elev, elev0, self.dt_m, self.output_interval
-                    )
+            if self.save_output and i % self.output_interval == 0:
+                write_output_step(
+                    self._output_ds,
+                    self._grid,
+                    self.output,
+                    self._output_index,
+                )
 
-                    if dzdt < self.stop_rate:
-                        self.verboseprint(
-                            "Stopping rate condition met, dzdt = %.4e" % dzdt
-                        )
-                        break
+                self._output_index += 1
+
+                self._output_ds.to_netcdf(self._output_path, mode="a")
