@@ -14,7 +14,9 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
-from landlab.io.netcdf import to_netcdf, from_netcdf, read_netcdf
+import xarray as xr
+from DupuitLEM.io import load_grid_from_dataset, load_fields_from_dataset
+from landlab.io.netcdf import to_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -35,10 +37,9 @@ grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 iteration = int(files[-1].split('_')[-1][:-3])
 
-try:
-    grid = from_netcdf(files[-1])
-except KeyError:
-    grid = read_netcdf(files[-1])
+ds = xr.open_dataset(files[-1])
+grid = load_grid_from_dataset(ds)
+load_fields_from_dataset(ds, grid)
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']

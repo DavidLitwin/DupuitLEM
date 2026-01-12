@@ -14,7 +14,7 @@ from landlab.components import (
     LinearDiffuser,
     FastscapeEroder,
 )
-from landlab.io.netcdf import from_netcdf
+
 from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
     HydrologySteadyStreamPower,
@@ -184,7 +184,7 @@ def test_stream_power_save_output_hex(tmpdir):
     ds = xr.open_dataset(mdl._output_path)
     mg1 = load_grid_from_dataset(ds)
     load_fields_from_dataset(ds, mg1)
-    
+
     keys = [
         "topographic__elevation",
         "aquifer_base__elevation",

@@ -55,7 +55,8 @@ import numpy as np
 import pandas
 
 from landlab import RasterModelGrid
-from landlab.io.netcdf import from_netcdf
+import xarray as xr
+from DupuitLEM.io import load_grid_from_dataset, load_fields_from_dataset
 from landlab.components import (
     GroundwaterDupuitPercolator,
     TaylorNonLinearDiffuser,
@@ -127,13 +128,11 @@ try:
     paths = glob.glob('*.nc')
     if len(paths) > 1:
         print("more than one grid available. Using last in list")
-    mg = from_netcdf(paths[-1])
-    z = mg.at_node['topographic__elevation']
-    zb = mg.at_node['aquifer_base__elevation']
-    zwt = mg.at_node['water_table__elevation']
-    print("Using supplied initial grid")
+    ds = xr.open_dataset(paths[-1])
+    grid = load_grid_from_dataset(ds)
+    load_fields_from_dataset(ds, grid)
 
-    grid = RasterModelGrid(mg.shape, xy_spacing=mg.dx)
+    # allow user to override BCs if specified, otherwise keep saved grid status
     bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
     if bc is not None:
         grid.set_status_at_node_on_edges(
@@ -141,21 +140,17 @@ try:
                 top=bc_dict[bc[1]],
                 left=bc_dict[bc[2]],
                 bottom=bc_dict[bc[3]],
-        )       
+        )
     else:
         grid.set_status_at_node_on_edges(
-                right=grid.BC_NODE_IS_CLOSED,
-                top=grid.BC_NODE_IS_CLOSED,
-                left=grid.BC_NODE_IS_FIXED_VALUE,
-                bottom=grid.BC_NODE_IS_CLOSED,
+        right=grid.BC_NODE_IS_CLOSED,
+        top=grid.BC_NODE_IS_CLOSED,
+        left=grid.BC_NODE_IS_FIXED_VALUE,
+        bottom=grid.BC_NODE_IS_CLOSED,
         )
-    elev = grid.add_zeros('node', 'topographic__elevation')
-    elev[:] = z.copy()
-    base = grid.add_zeros('node', 'aquifer_base__elevation')
-    base[:] = zb.copy()
-    wt = grid.add_zeros('node', 'water_table__elevation')
-    wt[:] = zwt.copy()
 
+    print("Using supplied initial grid")
+    
 except:
     print("Initial grid not present or could not be read. Initializing new grid.")
     try:

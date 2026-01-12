@@ -11,7 +11,9 @@ import pandas as pd
 from tqdm import tqdm
 
 from landlab import imshow_grid
-from landlab.io.netcdf import from_netcdf, to_netcdf
+import xarray as xr
+from DupuitLEM.io import load_grid_from_dataset, load_fields_from_dataset
+from landlab.io.netcdf import to_netcdf
 
 from landlab import RasterModelGrid, HexModelGrid, LinkStatus
 from landlab.components import (
@@ -36,7 +38,9 @@ grid_files = glob.glob('./data/*.nc')
 files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
 iteration = int(files[-1].split('_')[-1][:-3])
 
-mg = from_netcdf(files[-1])
+ds = xr.open_dataset(files[-1])
+mg = load_grid_from_dataset(ds)
+load_fields_from_dataset(ds, mg)
 elev = mg.at_node['topographic__elevation']
 base = mg.at_node['aquifer_base__elevation']
 wt = mg.at_node['water_table__elevation']
@@ -178,7 +182,9 @@ output_interval = int(files[1].split('_')[-1][:-3]) - int(files[0].split('_')[-1
 dt_nd = output_interval*dtg/tg
 relief_change = np.zeros(len(files))
 for i in range(1,len(files)):
-    grid = from_netcdf(files[i])
+    ds = xr.open_dataset(files[i])
+    grid = load_grid_from_dataset(ds)
+    load_fields_from_dataset(ds, grid)
     elev = grid.at_node['topographic__elevation']
     relief_change[i] = np.mean(elev[grid.core_nodes])
 

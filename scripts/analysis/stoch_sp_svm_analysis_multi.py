@@ -17,7 +17,9 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
-from landlab.io.netcdf import to_netcdf, from_netcdf, read_netcdf
+import xarray as xr
+from DupuitLEM.io import load_grid_from_dataset, load_fields_from_dataset
+from landlab.io.netcdf import to_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -40,7 +42,9 @@ all_iterations = np.array([int(file.split('_')[-1][:-3]) for file in files])
 ####### calculate relief
 relief = np.zeros(len(files))
 for i in range(len(files)):
-    grid = from_netcdf(files[i])
+    ds_i = xr.open_dataset(files[i])
+    grid = load_grid_from_dataset(ds_i)
+    load_fields_from_dataset(ds_i, grid)
     elev = grid.at_node['topographic__elevation']
     relief[i] = np.mean(elev[grid.core_nodes])
 
@@ -52,10 +56,9 @@ inds = [np.argmin(abs(relief-r)) for r in rt] # index corresponding to that reli
 iterations = all_iterations[inds]
 IT = iterations[task_id]
 
-try:
-    grid = from_netcdf(files[inds[task_id]])
-except KeyError:
-    grid = read_netcdf(files[inds[task_id]])
+ds = xr.open_dataset(files[inds[task_id]])
+grid = load_grid_from_dataset(ds)
+load_fields_from_dataset(ds, grid)
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
