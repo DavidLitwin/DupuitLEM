@@ -65,6 +65,7 @@ def initialize_output_dataset(mg, output, times):
     # spatial coordinates (useful for plotting & postprocessing)
     ds["x"] = ("node", mg.x_of_node)
     ds["y"] = ("node", mg.y_of_node)
+    ds["status_at_node"] = ("node", mg.status_at_node)
 
     # ---- data variables ----
     for field in output["output_fields"]:
@@ -149,6 +150,7 @@ def load_grid_from_dataset(ds):
             xy_spacing=ds.attrs["spacing"],
             xy_of_lower_left=ds.attrs.get("origin", (0.0, 0.0)),
         )
+        mg.status_at_node[:] = ds["status_at_node"].values
 
     elif grid_type == "HexModelGrid":
         mg = HexModelGrid(
@@ -158,6 +160,7 @@ def load_grid_from_dataset(ds):
             orientation=ds.attrs.get("orientation", "horizontal"),
             node_layout=ds.attrs.get("node_layout", "hex"),
         )
+        mg.status_at_node[:] = ds["status_at_node"].values
 
     else:
         raise ValueError(f"Unsupported grid type '{grid_type}'")
@@ -178,7 +181,7 @@ def load_fields_from_dataset(ds, mg, t_index=-1):
     """
 
     for var in ds.data_vars:
-        if "node" in ds[var].dims and var not in ("x", "y"):
+        if "node" in ds[var].dims and var not in ("x", "y", "status_at_node"):
             mg.add_field(
                 var,
                 ds[var].isel(time=t_index).values,

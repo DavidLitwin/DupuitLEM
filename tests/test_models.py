@@ -5,6 +5,7 @@ and are currently not recommended for use.
 Date: 8 Oct 2020
 """
 
+import xarray as xr
 from numpy.testing import assert_equal
 
 from landlab import HexModelGrid, RasterModelGrid
@@ -18,6 +19,10 @@ from DupuitLEM import StreamPowerModel
 from DupuitLEM.auxiliary_models import (
     HydrologySteadyStreamPower,
     RegolithConstantThickness,
+)
+from DupuitLEM.io import (
+    load_fields_from_dataset,
+    load_grid_from_dataset,
 )
 
 
@@ -93,13 +98,13 @@ def test_stream_power_save_output(tmpdir):
     rm = RegolithConstantThickness(mg, uplift_rate=0.0)
 
     output = {}
-    output["output_interval"] = 1000
+    output["output_interval"] = 10
     output["output_fields"] = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
     ]
-    output["base_output_path"] = tmpdir.strpath + "/"
+    output["base_output_path"] = tmpdir.strpath + "test_"
     output["run_id"] = 0  # make this task_id if multiple runs
 
     mdl = StreamPowerModel(
@@ -108,14 +113,16 @@ def test_stream_power_save_output(tmpdir):
         diffusion_model=ld,
         erosion_model=sp,
         regolith_model=rm,
-        total_morphological_time=1e8,
+        total_morphological_time=1e9,
         output_dict=output,
     )
 
     mdl.run_model()
 
-    file = tmpdir.join("0_grid_0.nc")
-    mg1 = from_netcdf(file.strpath)
+    ds = xr.open_dataset(mdl._output_path)
+    mg1 = load_grid_from_dataset(ds)
+    load_fields_from_dataset(ds, mg1)
+
     keys = [
         "topographic__elevation",
         "aquifer_base__elevation",
@@ -131,6 +138,7 @@ def test_stream_power_save_output_hex(tmpdir):
     Test that streampower model saves the output on a
     hexagonal grid.
     """
+
     mg = HexModelGrid((3, 3), node_layout="rect", spacing=10.0)
     mg.status_at_node[mg.status_at_node == 1] = 4
     mg.status_at_node[1] = 1
@@ -151,15 +159,14 @@ def test_stream_power_save_output_hex(tmpdir):
     )
     ld = LinearDiffuser(mg, linear_diffusivity=1e-10)
     rm = RegolithConstantThickness(mg, uplift_rate=0.0)
-
     output = {}
-    output["output_interval"] = 1000
+    output["output_interval"] = 10
     output["output_fields"] = [
         "at_node:topographic__elevation",
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
     ]
-    output["base_output_path"] = tmpdir.strpath + "/"
+    output["base_output_path"] = "test_hex_"
     output["run_id"] = 0  # make this task_id if multiple runs
 
     mdl = StreamPowerModel(
@@ -168,14 +175,16 @@ def test_stream_power_save_output_hex(tmpdir):
         diffusion_model=ld,
         erosion_model=sp,
         regolith_model=rm,
-        total_morphological_time=1e8,
+        total_morphological_time=1e9,
         output_dict=output,
     )
 
     mdl.run_model()
 
-    file = tmpdir.join("0_grid_0.nc")
-    mg1 = from_netcdf(file.strpath)
+    ds = xr.open_dataset(mdl._output_path)
+    mg1 = load_grid_from_dataset(ds)
+    load_fields_from_dataset(ds, mg1)
+    
     keys = [
         "topographic__elevation",
         "aquifer_base__elevation",
