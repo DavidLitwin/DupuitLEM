@@ -196,7 +196,7 @@ try:
     grid = load_grid_from_dataset(ds)
     load_fields_from_dataset(ds, grid)
 
-    # allow user to override BCs if specified, otherwise keep saved grid status
+    # allow user to override BCs if specified, otherwise keep saved grid status.  #TODO: saved grid status no longer a thing - load from field status_at_node
     bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
     if bc is not None:
         grid.set_status_at_node_on_edges(
