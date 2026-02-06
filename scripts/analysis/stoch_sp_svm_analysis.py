@@ -4,42 +4,36 @@ Analysis of results on HPC for stochastic stream power model runs.
 update for new stochastic models
 """
 
+#%%
 import os
 import glob
-import pickle
 import numpy as np
 import pandas as pd
-import richdem as rd
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 
 from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
 import xarray as xr
 from DupuitLEM.io import load_grid_from_dataset, load_fields_from_dataset
-from landlab.io.netcdf import to_netcdf
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
-    HeightAboveDrainageCalculator,
-    DrainageDensity,
-    ChiFinder,
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
 from DupuitLEM.grid_functions import bind_avg_exp_ksat, bind_avg_recip_ksat
+from DupuitLEM.io import initialize_output_dataset, write_output_step
 
+#%%
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 ID = int(task_id)
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
+dirname = os.path.dirname(__file__)
 
 ########## Load and basic plot
-grid_files = glob.glob('./data/*.nc')
-files = sorted(grid_files, key=lambda x:int(x.split('_')[-1][:-3]))
-iteration = int(files[-1].split('_')[-1][:-3])
-
-ds = xr.open_dataset(files[-1])
-grid = load_grid_from_dataset(ds)
-load_fields_from_dataset(ds, grid)
+files = sorted(glob.glob(os.path.join(dirname, 'data', '*.nc')))
+xr_ds = xr.open_dataset(files[-1])
+grid = load_grid_from_dataset(xr_ds)
+load_fields_from_dataset(xr_ds, grid)
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
@@ -47,19 +41,16 @@ wt = grid.at_node['water_table__elevation']
 # elevation
 plt.figure(figsize=(8,6))
 imshow_grid(grid, elev, cmap='gist_earth', colorbar_label='Elevation [m]', grid_units=('m','m'))
-plt.title('ID %d, Iteration %d'%(ID,iteration))
-plt.savefig('../post_proc/%s/elev_ID_%d.png'%(base_output_path, ID))
+plt.savefig(os.path.join('..', 'post_proc', base_output_path, f'elev_ID_{ID}.png'))
 plt.close()
 
 
 ########## Run hydrological model
 # load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
-try:
-    df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
-    df_params.to_csv('../post_proc/%s/params_ID_%d.csv'%(base_output_path,ID), index=True)
-except FileNotFoundError:
-    print('Could not find parameters.csv. Trying to find a 1D params file.')
-    df_params_1d = pd.read_csv('df_params_1d_%d.csv'%ID, index_col=0)[task_id]
+
+df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
+df_params.to_csv(os.path.join('..', 'post_proc', base_output_path, f'params_ID_{ID}.csv'), index=True)
+
 
 # get parameter types right
 for ind in df_params.index:
@@ -226,29 +217,6 @@ steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
 TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
 TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
 
-# richdem topo analysis
-# z = mg.at_node['topographic__elevation']
-# z[mg.boundary_nodes] = np.nan
-# zrd = rd.rdarray(z.reshape(mg.shape), no_data=-9999)
-# zrd.geotransform = [0.0, mg.dx, 0.0, 0.0, 0.0, mg.dx]
-
-# profile_curvature = rd.TerrainAttribute(zrd, attrib='profile_curvature')
-# planform_curvature = rd.TerrainAttribute(zrd, attrib='planform_curvature')
-# tot_curvature = rd.TerrainAttribute(zrd, attrib='curvature')
-# slope = rd.TerrainAttribute(zrd, attrib='slope_riserun')
-
-# slp = mg.add_zeros('node', "slope_rd")
-# slp[:] = slope.reshape(z.shape)
-
-# pro = mg.add_zeros('node', "profile_curvature_rd")
-# pro[:] = -profile_curvature.reshape(z.shape) #flip sign of profile curv
-
-# plan = mg.add_zeros('node', "planform_curvature_rd")
-# plan[:] = planform_curvature.reshape(z.shape)
-
-# curv = mg.add_zeros('node', "total_curvature_rd")
-# curv[:] = tot_curvature.reshape(z.shape)
-
 ######## Runoff generation
 df_output['cum_precip'] = hm.cum_precip
 df_output['cum_recharge'] = hm.cum_recharge
@@ -265,7 +233,9 @@ df_output['(P-Q-Qgw)/P'] = (hm.cum_precip - hm.cum_runoff - hm.cum_gw_export)/hm
 df_output['Q/P'] = hm.cum_runoff/hm.cum_precip
 
 #load the full storage discharge dataset that was just generated
-df = pd.read_csv('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), sep=',',header=None, names=['dt','r', 'qs', 'S', 'sat_nodes'])
+timeseries_path = os.path.join('..', 'post_proc', base_output_path, f'dt_qs_s_{ID}.csv')
+df = pd.read_csv(timeseries_path, sep=',',header=None, names=['dt','r', 'qs', 'S', 'sat_nodes'])
+
 # remove the first row (test row written by init of gdp)
 df.drop(0, inplace=True)
 df.reset_index(drop=True, inplace=True)
@@ -273,38 +243,6 @@ df.reset_index(drop=True, inplace=True)
 Atot = np.sum(mg.cell_area_at_node[mg.core_nodes])
 df['qs_star'] = df['qs']/(p*Atot)
 df['S_star'] = df['S']/(b*ne*Atot)
-
-##### recession
-def power_law(x, a, b, c):
-    return a*np.power(x, b) + c
-
-def linear_law(x,a,c):
-    return a*x + c
-
-# find recession periods
-rec_inds = np.where(np.diff(df['qs_star'], prepend=0.0) < 0.0)[0]
-Qrec = df['qs_star'][rec_inds]
-Srec = df['S_star'][rec_inds]
-
-# try to fit linear and power fits to Q-S relationship directly
-try:
-    pars, cov = curve_fit(f=power_law, xdata=Srec, ydata=Qrec, p0=[0, 1, 0], bounds=(-100, 100))
-    stdevs = np.sqrt(np.diag(cov))
-
-    pars_lin, cov_lin = curve_fit(f=linear_law, xdata=Srec, ydata=Qrec, p0=[0, 0], bounds=(-100, 100))
-    stdevs_lin = np.sqrt(np.diag(cov_lin))
-
-    df_output['rec_a'] = pars[0]
-    df_output['rec_b'] = pars[1]
-    df_output['rec_c'] = pars[2]
-    df_output['rec_a_std'] = stdevs[0]
-    df_output['rec_b_std'] = stdevs[1]
-    df_output['rec_a_linear'] = pars_lin[0]
-    df_output['rec_c_linear'] = pars_lin[1]
-    df_output['rec_a_std_linear'] = stdevs_lin[0]
-
-except:
-    print("error fitting recession")
 
 # find times with recharge. Note in df qs and S are at the end of the timestep.
 # i is at the beginning of the timestep.
@@ -394,165 +332,49 @@ df_output['sat_never'] = np.sum(sat_never[mg.core_nodes])/mg.number_of_core_node
 df_output['sat_variable'] = np.sum(sat_variable[mg.core_nodes])/mg.number_of_core_nodes
 df_output['sat_always'] = np.sum(sat_always[mg.core_nodes])/mg.number_of_core_nodes
 
-#### saturtion probability and entropy
-calc_entropy = lambda x: -x*np.log2(x) - (1-x)*np.log2(1-x)
+#%% ####### calculate relief change
 
-# first method: time weighted variability in saturation
-sat_prob = mg.add_zeros('node', 'saturation_probability')
-sat_entropy = mg.add_zeros('node', 'saturation_entropy')
-sat_prob[:] = np.sum((sat_all.T*dt)/np.sum(dt), axis=1)
-sat_entropy[:] = calc_entropy(sat_prob)
-sat_entropy[np.isnan(sat_entropy)] = 0.0
-df_output['sat_entropy'] = np.sum(sat_entropy[mg.core_nodes])
+z_mean = xr_ds['topographic__elevation'].mean('node')
+dzdt = np.diff(z_mean.values)/np.diff(xr_ds['time'].values)
 
-# second method: interstorm-storm unsat-sat probability
-sat_unsat_prob = mg.add_zeros('node', 'sat_unsat_union_probability')
-# P(sat_storm and unsat_interstorm) = P(sat_storm given unsat_interstorm)*P(unsat_interstorm)
-sat_storms = sat_all[intensity>0,:]; sat_interstorms = sat_all[intensity==0.0,:] # first storm record precedes interstorm record
-sat_storms = sat_storms[1:,:]; sat_interstorms = sat_interstorms[:-1,:] # adjust indices so that prev interstorm is aligned with storm
-p_unsat_interstorm = np.sum(~sat_interstorms, axis=0)/len(sat_interstorms) # prob unsaturated at the end of an interstorm
-p_cond_sat_storm_unsat_interstorm = np.sum(sat_storms*~sat_interstorms, axis=0)/np.sum(~sat_interstorms, axis=0) # prob that saturated at end of storm given that it's unsaturated at end of interstorm
-p_union_sat_storm_unsat_interstorm = p_cond_sat_storm_unsat_interstorm*p_unsat_interstorm # prob that unsaturated at end of interstorm and saturated at end of storm
-sat_unsat_prob[:] = p_union_sat_storm_unsat_interstorm
-
-
-##### channel network
-#find number of saturated cells
-count_sat_nodes = np.sum(sat_all,axis=1)
-# find median channel network at end of storm and end of interstorm
-network_id_sat_interstorm = np.where(count_sat_nodes == np.percentile(count_sat_nodes[intensity==0], 50, interpolation='nearest'))[0][0]
-
-#set fields
-network_curvature = mg.add_zeros('node', 'channel_mask_curvature')
-network_sat = mg.add_zeros('node', 'channel_mask_sat_interstorm')
-network_curvature[:] = curvature > 0
-network_sat[:] = sat_all[network_id_sat_interstorm,:]
-
-
-######## Calculate HAND
-hand_curvature = mg.add_zeros('node', 'hand_curvature')
-hand_sat = mg.add_zeros('node', 'hand_sat_interstorm')
-
-hd = HeightAboveDrainageCalculator(mg, channel_mask=network_curvature)
-try:
-    hd.run_one_step()
-    hand_curvature[:] = mg.at_node["height_above_drainage__elevation"].copy()
-    df_output['mean_hand_curvature'] = np.mean(hand_curvature[mg.core_nodes])
-
-    hd.channel_mask = network_sat
-    hd.run_one_step()
-    hand_sat[:] = mg.at_node["height_above_drainage__elevation"].copy()
-    df_output['mean_hand_sat_interstorm'] = np.mean(hand_sat[mg.core_nodes])
-
-except:
-    print('failed to calculate HAND')
-
-######## Calculate drainage density and chi
-dd = DrainageDensity(mg, channel__mask=np.uint8(network_curvature))
-try:
-    channel_mask = mg.at_node['channel__mask']
-    df_output['dd_curvature'] = dd.calculate_drainage_density()
-    df_output['mean hillslope len curvature'] = 1/(2*df_output['dd_curvature'])
-
-    channel_mask[:] = np.uint8(network_sat)
-    df_output['dd_sat_interstorm'] = dd.calculate_drainage_density()
-    df_output['mean hillslope len sat interstorm'] = 1/(2*df_output['dd_sat_interstorm'])
-
-    # chi
-    cf = ChiFinder(mg, min_drainage_area=mg.dx**2, reference_concavity=conc, reference_area=1)
-    cf.calculate_chi()
-
-except:
-    print('failed to calculate drainage density and chi')
-
-####### calculate elevation change
-try:
-    output_interval = df_params['output_interval']
-except KeyError:
-    print('output_interval not in params table. Using default.')
-    output_interval = (10/(dtg/tg)).round().astype(int)
-
-dt = output_interval*dtg
-
-z_change = np.zeros((len(files),6))
-relief_change = np.zeros((len(files), 2))
-try:
-    grid = from_netcdf(files[0])
-except KeyError:
-    grid = read_netcdf(files[0])
-elev0 = grid.at_node['topographic__elevation']
-relief_change[0,0] = np.sum(elev0*grid.cell_area_at_node)
-for i in range(1,len(files)):
-
-    try:
-        grid = from_netcdf(files[i])
-    except KeyError:
-        grid = read_netcdf(files[i])
-    elev = grid.at_node['topographic__elevation']
-
-    elev_diff = abs(elev-elev0)
-    z_change[i,0] = np.max(elev_diff)
-    z_change[i,1] = np.percentile(elev_diff,90)
-    z_change[i,2] = np.percentile(elev_diff,50)
-    z_change[i,3] = np.percentile(elev_diff,10)
-    z_change[i,4] = np.min(elev_diff)
-    z_change[i,5] = np.mean(elev_diff)
-
-    relief_change[i,0] = np.mean(elev[grid.core_nodes])
-    relief_change[i,1] = (relief_change[i,0]- relief_change[i-1,0])/dt
-
-    elev0 = elev.copy()
-
-df_z_change = pd.DataFrame(z_change,columns=['max', '90 perc', '50 perc', '10 perc', 'min', 'mean'])
 r_change = pd.DataFrame()
-r_change['r_nd'] = relief_change[:,0]/hg
-r_change['drdt_nd'] = relief_change[:,1]*(tg/hg)
-r_change['t_nd'] = np.arange(len(files))*(dt/tg)
+r_change['r_nd'] = z_mean/hg
+r_change['drdt_nd'] = dzdt*(tg/hg)
+r_change['t_nd'] = xr_ds['time']/tg
 
-
-####### save things
+#%% ####### save things
 
 output_fields = [
-        "at_node:topographic__elevation",
-        "at_node:aquifer_base__elevation",
-        'at_node:channel_mask_curvature',
-        'at_node:channel_mask_sat_interstorm',
-        'at_node:channel__chi_index',
-        'at_node:hand_curvature',
-        'at_node:hand_sat_interstorm',
-        'at_node:saturation_class',
-        'at_node:saturation_probability',
-        'at_node:saturation_entropy',
-        'at_node:sat_unsat_union_probability',
-        'at_node:topographic__index_D8',
-        'at_node:topographic__index_D4',
-        'at_node:slope_D8',
-        'at_node:slope_D4',
-        'at_node:drainage_area',
-        'at_node:curvature',
-        'at_node:steepness',
-        # 'at_node:slope_rd',
-        # 'at_node:profile_curvature_rd',
-        # 'at_node:planform_curvature_rd',
-        # 'at_node:total_curvature_rd',
-        'at_node:surface_water_effective__discharge',
-        'at_node:recharge_rate_mean_storm',
-        'at_node:wtrel_mean_end_storm',
-        'at_node:wtrel_mean_end_interstorm',
-        'at_node:wtrel_05',
-        'at_node:wtrel_95',
-        'at_node:sat_mean_end_storm',
-        'at_node:sat_mean_end_interstorm',
-        'at_node:Q_mean_end_storm',
-        'at_node:Q_mean_end_interstorm',
-        'at_node:flow__receiver_node',
-        ]
+    "at_node:topographic__elevation",
+    "at_node:aquifer_base__elevation",
+    "at_node:saturation_class",
+    "at_node:topographic__index_D8",
+    "at_node:topographic__index_D4",
+    "at_node:slope_D8",
+    "at_node:slope_D4",
+    "at_node:drainage_area",
+    "at_node:curvature",
+    "at_node:steepness",
+    "at_node:recharge_rate_mean_storm",
+    "at_node:wtrel_mean_end_storm",
+    "at_node:wtrel_mean_end_interstorm",
+    "at_node:wtrel_05",
+    "at_node:wtrel_95",
+    "at_node:sat_mean_end_storm",
+    "at_node:sat_mean_end_interstorm",
+    "at_node:Q_mean_end_storm",
+    "at_node:Q_mean_end_interstorm",
+    "at_node:flow__receiver_node",
+    ]
 
-filename = '../post_proc/%s/grid_%d.nc'%(base_output_path, ID)
-to_netcdf(mg, filename, include=output_fields, format="NETCDF4")
+base_file_name = os.path.join('..', 'post_proc', base_output_path)
+filename = os.path.join(base_file_name, f'grid_{ID}.nc')
+
+ds_out = initialize_output_dataset(mg, output_fields)
+write_output_step(ds_out, mg, output_fields, time_step=0)
+ds_out.to_netcdf(filename, format="NETCDF4")
 
 df_output = pd.DataFrame.from_dict(df_output, orient='index', columns=[ID])
-df_output.to_csv('../post_proc/%s/output_ID_%d.csv'%(base_output_path, ID))
-df.to_csv('../post_proc/%s/q_s_dt_ID_%d.csv'%(base_output_path, ID))
-df_z_change.to_csv('../post_proc/%s/z_change_%d.csv'%(base_output_path, ID))
-r_change.to_csv('../post_proc/%s/relief_change_%d.csv'%(base_output_path, ID))
+df_output.to_csv(os.path.join(base_file_name, f'output_ID_{ID}.csv'))
+df.to_csv(os.path.join(base_file_name, f'q_s_dt_ID_{ID}.csv'))
+r_change.to_csv(os.path.join(base_file_name, f'relief_change_{ID}.csv'))
