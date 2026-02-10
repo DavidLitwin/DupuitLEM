@@ -33,7 +33,7 @@ dirname = os.path.dirname(__file__)
 files = sorted(glob.glob(os.path.join(dirname, 'data', '*.nc')))
 xr_ds = xr.open_dataset(files[-1])
 grid = load_grid_from_dataset(xr_ds)
-load_fields_from_dataset(xr_ds, grid)
+load_fields_from_dataset(xr_ds, grid, last_non_nan=True)
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
