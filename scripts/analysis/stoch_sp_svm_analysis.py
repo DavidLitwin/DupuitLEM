@@ -31,7 +31,11 @@ dirname = os.path.dirname(__file__)
 
 ########## Load and basic plot
 files = sorted(glob.glob(os.path.join(dirname, 'data', '*.nc')))
-xr_ds = xr.open_dataset(files[-1])
+try:
+    xr_ds = xr.open_dataset(files[-1])
+except IndexError:
+    xr_ds = xr.open_dataset(files) # in case only one file
+    
 grid = load_grid_from_dataset(xr_ds)
 load_fields_from_dataset(xr_ds, grid, last_non_nan=True)
 elev = grid.at_node['topographic__elevation']
