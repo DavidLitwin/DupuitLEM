@@ -168,7 +168,7 @@ def load_grid_from_dataset(ds):
     return mg
 
 
-def load_fields_from_dataset(ds, mg, t_index=-1):
+def load_fields_from_dataset(ds, mg, t_index=-1, last_non_nan=False):
     """
     Load fields from a Dataset into an existing grid.
 
@@ -178,7 +178,12 @@ def load_fields_from_dataset(ds, mg, t_index=-1):
     mg : ModelGrid
     t_index : int, optional
         Time index to load (default: last timestep)
+    last_non_nan : bool, optional
+        If True, search backward from t_index to find the last non-NaN data (default: False)
     """
+
+    if last_non_nan:
+        t_index = _find_last_non_nan(ds, t_index)
 
     for var in ds.data_vars:
         if "node" in ds[var].dims and var not in ("x", "y", "status_at_node"):
@@ -187,7 +192,6 @@ def load_fields_from_dataset(ds, mg, t_index=-1):
                 ds[var].isel(time=t_index).values,
                 clobber=True,
             )
-
 
 # ------------------------------------------------------------
 # Internal helpers
@@ -216,3 +220,23 @@ def _grid_metadata_from_grid(mg):
         meta["node_layout"] = mg.node_layout
 
     return meta
+
+def _find_last_non_nan(ds, t_index):
+    """
+    Find the last time index where data variables are not all NaN.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+    t_index : int
+        Starting time index (searches backward from here)
+
+    Returns
+    -------
+    last_index : int
+        Last time index with non-NaN data
+    """
+    for i in range(t_index, -len(ds.time) - 1, -1):
+        if not np.isnan(ds.isel(time=i).to_array()).all():
+            return i
+    raise ValueError("No non-NaN data found in dataset")
