@@ -25,17 +25,14 @@ from DupuitLEM.io import initialize_output_dataset, write_output_step
 
 #%%
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
-ID = int(task_id)
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
-dirname = os.path.dirname(__file__)
+ID = int(task_id)
+
 
 ########## Load and basic plot
-files = sorted(glob.glob(os.path.join(dirname, 'data', '*.nc')))
-try:
-    xr_ds = xr.open_dataset(files[-1])
-except IndexError:
-    xr_ds = xr.open_dataset(files) # in case only one file
-    
+file = glob.glob('./data/*.nc')[0]
+xr_ds = xr.open_dataset(file)
+
 grid = load_grid_from_dataset(xr_ds)
 load_fields_from_dataset(xr_ds, grid, last_non_nan=True)
 elev = grid.at_node['topographic__elevation']
