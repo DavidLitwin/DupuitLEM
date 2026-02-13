@@ -340,7 +340,7 @@ dzdt = np.diff(z_mean.values)/np.diff(xr_ds['time'].values)
 
 r_change = pd.DataFrame()
 r_change['r_nd'] = z_mean/hg
-r_change['drdt_nd'] = dzdt*(tg/hg)
+r_change['drdt_nd'] = np.pad(dzdt*(tg/hg), (1,0), mode='constant', constant_values=0)
 r_change['t_nd'] = xr_ds['time']/tg
 
 #%% ####### save things
