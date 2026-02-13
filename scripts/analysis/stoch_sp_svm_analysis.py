@@ -372,7 +372,7 @@ output_fields = [
 
 base_file_name = os.path.join('..', 'post_proc', base_output_path)
 filename = os.path.join(base_file_name, f'grid_{ID}.nc')
-output = {'output_fields': output_fields}
+output = {'output_fields': output_fields, 'run_id': ID, 'output_interval': 1}
 
 ds_out = initialize_output_dataset(mg, output, [index])
 write_output_step(ds_out, mg, output, 0)

@@ -124,3 +124,19 @@ def test_create_output_dataset():
 
     # temp_file = 'temp_output.nc'
     # ds_out.to_netcdf(temp_file, format="NETCDF4")
+
+def test_write_netcdf():
+    """
+    Test that a dataset can be written to NetCDF format without errors.
+    """
+
+    mg = RasterModelGrid((5, 5), xy_spacing=1.0)
+    mg.add_field('topographic__elevation', np.random.rand(25), at='node')
+    output_fields = ['at_node:topographic__elevation']
+    output = {'output_fields': output_fields, 'run_id': 0, 'output_interval': 1}
+
+    ds_out = initialize_output_dataset(mg, output, [10])
+    write_output_step(ds_out, mg, output, 0)
+
+    temp_file = 'temp_output.nc'
+    ds_out.to_netcdf(temp_file, format="NETCDF4")
