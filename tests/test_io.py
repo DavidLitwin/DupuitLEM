@@ -5,11 +5,17 @@ that store model grid and field information.
 """
 
 
+from fileinput import filename
 import numpy as np
 import xarray as xr
 
 from landlab import RasterModelGrid, HexModelGrid
-from DupuitLEM.io import load_fields_from_dataset, load_grid_from_dataset, _find_last_non_nan
+from DupuitLEM.io import (load_fields_from_dataset, 
+                          load_grid_from_dataset, 
+                          _find_last_non_nan, 
+                          write_output_step,
+                          initialize_output_dataset,
+)
 from numpy.testing import assert_array_equal, assert_equal
 
 
@@ -96,3 +102,25 @@ def test_load_fields_from_dataset_specific_index():
     loaded_data = mg.at_node['topographic__elevation']
     
     assert_array_equal(loaded_data, expected_data)
+
+def test_create_output_dataset():
+
+    """
+    Test that an output dataset can be created and written to correctly.
+    """
+
+    mg = RasterModelGrid((5, 5), xy_spacing=1.0)
+    mg.add_field('topographic__elevation', np.random.rand(25), at='node')
+    mg.add_field('water__depth', np.random.rand(25), at='node')
+    output_fields = ['at_node:topographic__elevation', 'at_node:water__depth']
+    output = {'output_fields': output_fields}
+
+    ds_out = initialize_output_dataset(mg, output, [10])
+    write_output_step(ds_out, mg, output, 0)
+
+    np.testing.assert_array_equal(ds_out['topographic__elevation'].isel(time=0).values, mg.at_node['topographic__elevation'])
+    np.testing.assert_array_equal(ds_out['water__depth'].isel(time=0).values, mg.at_node['water__depth'])
+    np.testing.assert_array_equal(ds_out['time'].values, [10])
+
+    # temp_file = 'temp_output.nc'
+    # ds_out.to_netcdf(temp_file, format="NETCDF4")

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
 import xarray as xr
-from DupuitLEM.io import load_grid_from_dataset, load_fields_from_dataset
+from DupuitLEM.io import load_grid_from_dataset, load_fields_from_dataset, _find_last_non_nan
 from landlab.components import (
     GroundwaterDupuitPercolator,
     PrecipitationDistribution,
@@ -27,7 +27,7 @@ from DupuitLEM.io import initialize_output_dataset, write_output_step
 task_id = os.environ['SLURM_ARRAY_TASK_ID']
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 ID = int(task_id)
-
+#%%
 
 ########## Load and basic plot
 file = glob.glob('./data/*.nc')[0]
@@ -35,6 +35,8 @@ xr_ds = xr.open_dataset(file)
 
 grid = load_grid_from_dataset(xr_ds)
 load_fields_from_dataset(xr_ds, grid, last_non_nan=True)
+index = _find_last_non_nan(xr_ds, -1)
+
 elev = grid.at_node['topographic__elevation']
 base = grid.at_node['aquifer_base__elevation']
 wt = grid.at_node['water_table__elevation']
@@ -370,9 +372,10 @@ output_fields = [
 
 base_file_name = os.path.join('..', 'post_proc', base_output_path)
 filename = os.path.join(base_file_name, f'grid_{ID}.nc')
+output = {'output_fields': output_fields}
 
-ds_out = initialize_output_dataset(mg, output_fields)
-write_output_step(ds_out, mg, output_fields, time_step=0)
+ds_out = initialize_output_dataset(mg, output, [index])
+write_output_step(ds_out, mg, output, 0)
 ds_out.to_netcdf(filename, format="NETCDF4")
 
 df_output = pd.DataFrame.from_dict(df_output, orient='index', columns=[ID])
