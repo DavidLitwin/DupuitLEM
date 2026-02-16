@@ -82,7 +82,7 @@ bnd_rho = [0.05, 0.6]
 
 bnds = list(zip(bnd_gam, bnd_sigma, bnd_beta, bnd_alpha, bnd_ai, bnd_rho))
 sampler = qmc.LatinHypercube(d=len(bnds[0]), seed=2023) # gam, sigma, beta, alpha, Ai, rho
-sample = sampler.random(n=100)
+sample = sampler.random(n=75)
 
 scaled_sample = qmc.scale(sample, bnds[0], bnds[1])
 
@@ -90,18 +90,18 @@ sc = 1.25
 theta = 0.0 # don't use threshold model
 phi = 1.5
 lg = 15 # geomorphic length scale [m]
-tg = 22500*(365*24*3600) # geomorphic timescale [s]
+tg = 10000*(365*24*3600) # geomorphic timescale [s]
 v0 = 2.0*lg # contour width (also grid spacing) [m]
 ne = 0.1 # drainable porosity [-]
 p = 1.0/(365*24*3600) # average precip rate
 
 Tg_nd = 2000 # total duration in units of tg [-]
-dtg_max_nd = 2e-3 # maximum geomorphic timestep in units of tg [-]
+dtg_max_nd = 5e-3 # maximum geomorphic timestep in units of tg [-]
 ksf_base = 500 # morphologic scaling factor
 Th_nd = 25 # hydrologic time in units of (tr+tb) [-]
 
 bin_capacity_nd = 0.01 # bin capacity as a proportion of mean storm depth
-Nx = 125 # number of grid cells width and height
+Nx = 200 # number of grid cells width and height
 
 params = []
 for i in range(scaled_sample.shape[0]):
@@ -120,11 +120,12 @@ df_params['Nx'] = Nx
 df_params['td'] = (df_params['lg']*df_params['ne'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
 df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
-df_params['ksf'] = ksf_base/((df_params['tr']+df_params['tb'])/df_params['td']) # morphologic scaling factor
+# df_params['ksf'] = ksf_base/df_params['beta'] # morphologic scaling factor
 df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
-df_params['dtg'] = df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
-df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
-df_params['output_interval'] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
+df_params['dtg'] = dtg_max_nd*df_params['tg']#df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
+df_params['dtg_max'] = 200*365*24*3600 #dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
+df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
+df_params['output_interval'] = (20/(df_params['dtg']/df_params['tg'])).round().astype(int)
 
 
 #%%
