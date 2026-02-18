@@ -76,6 +76,7 @@ ds = df_params['ds'] #mean storm depth [m]
 T_h = 2000*(tr+tb) #20*df_params['Th'] #total hydrological time [s]
 sat_cond = 0.025 # distance from surface (units of hg) for saturation
 conc = 0.5 # reference concacvity for chi analysis
+Nz = int(df_params['Nz']) # number of bins in vadose zone model
 
 try:
     bc = list(str(df_params['BCs']))
@@ -159,7 +160,7 @@ svm = SchenkVadoseModel(
                 potential_evapotranspiration_rate=pet,
                  available_water_content=na,
                  profile_depth=b,
-                 num_bins=500,
+                 num_bins=Nz,
                  )
 svm.generate_state_from_analytical(ds, tb, random_seed=20220408)
 hm = HydrologyEventVadoseStreamPower(
