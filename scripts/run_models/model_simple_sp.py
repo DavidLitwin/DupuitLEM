@@ -67,7 +67,7 @@ except KeyError:
     r_condition = 0.0
 try:
     routing_method = df_params['routing_method']
-except ValueError:
+except KeyError:
     routing_method = 'D8'
 save_directory = './data'
 
