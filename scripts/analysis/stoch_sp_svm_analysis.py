@@ -282,12 +282,23 @@ df_output['Qb/W'] = df_output['qb_tot']/(df_output['cum_precip'] - df_output['qe
 df_output['Qb/Q'] = df_output['qb_tot']/df_output['qs_tot'] #baseflow index
 # df_output['RR'] = qe_tot/r_tot #runoff ratio
 
+# flow quantiles
+df_output['Q_50'] = np.quantile(df['qs'], 0.5)
+df_output['Q_95'] = np.quantile(df['qs'], 0.95)
+df_output['Q_90'] = np.quantile(df['qs'], 0.90)
+df_output['Q_5'] = np.quantile(df['qs'], 0.05)
+df_output['Q_10'] = np.quantile(df['qs'], 0.10)
+
 ###### spatial runoff related quantities
 
 # effective Qstar
 Q_all = hm.Q_all[1:,:]
 dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
+
+qstar = mg.add_zeros('node', 'Q_star')
+q_eff = mg.at_node["surface_water_effective__discharge"]
+qstar[:] = q_eff/(p*mg.at_node['drainage_area'])
 
 # recharge
 recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
@@ -368,6 +379,8 @@ output_fields = [
     "at_node:sat_mean_end_interstorm",
     "at_node:Q_mean_end_storm",
     "at_node:Q_mean_end_interstorm",
+    "at_node:surface_water_effective__discharge",
+    "at_node:Q_star",
     "at_node:flow__receiver_node",
     ]
 
