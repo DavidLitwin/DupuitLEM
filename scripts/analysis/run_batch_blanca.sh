@@ -5,8 +5,9 @@
 #SBATCH --nodes=1
 # number of tasks (processes) per node
 #SBATCH --ntasks-per-node=1
+#SBATCH --mem=16G
 #SBATCH --mail-type=begin,end
-#SBATCH --mail-user=dlitwin3@jhu.edu
+#SBATCH --mail-user=david.litwin@temple.edu
 #SBATCH -o /projects/dali4360/data/slurm/slurm-%A_%a.out
 #### load and unload modules you may need
 script=$1

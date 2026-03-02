@@ -3,7 +3,8 @@
 #SBATCH --time=1:0:0
 #SBATCH --nodes=1
 # number of tasks (processes) per node
-#SBATCH --ntasks-per-node=3
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem=16G
 #SBATCH --mail-type=begin,end
 #SBATCH --mail-user=dlitwin@gfz-potsdam.de
 #SBATCH -o ../../../../data/slurm/slurm-%A_%a.out
