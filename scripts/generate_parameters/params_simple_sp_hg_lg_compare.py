@@ -32,6 +32,7 @@ m = 0.5
 n = 1.0
 Nx = 200
 Ny = 200
+sc = 1.25 # 0.0
 r_condition = 0.0 #1e-8
 
 df_params = pd.DataFrame(hg_all, columns=['hg'])
@@ -47,6 +48,8 @@ df_params['T'] = T
 df_params['dt'] = dt
 df_params['m'] = m
 df_params['n'] = n
+df_params['alpha'] = df_params['hg']/df_params['lg']
+df_params['Sc'] = sc
 
 df_params['ksn_pred'] = (df_params['U']/df_params['K'])**(1/df_params['n'])
 
