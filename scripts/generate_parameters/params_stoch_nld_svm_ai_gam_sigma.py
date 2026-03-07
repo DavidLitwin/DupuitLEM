@@ -77,13 +77,13 @@ sigma_all = np.geomspace(8.0, 128.0, 3)
 gam_all = np.geomspace(1.0, 16.0, 3)
 ai_all = [0.2, 0.4, 0.8]
 
-alpha = 0.5
+alpha = 0.0375
 beta = 5.0
 sc = 1.25
 theta = 0.0
 rho = 0.1
 phi = 1.5
-lg = 15 # geomorphic length scale [m]
+lg = 200 # geomorphic length scale [m]
 hg = alpha * lg
 tg = 10000*(365*24*3600) # geomorphic timescale [s]
 v0 = 2.0*lg # contour width (also grid spacing) [m]
