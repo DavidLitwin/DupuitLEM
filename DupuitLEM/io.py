@@ -223,7 +223,7 @@ def _grid_metadata_from_grid(mg):
 
 def _find_last_non_nan(ds, t_index):
     """
-    Find the last time index where data variables are not all NaN.
+    Find the last time index where 'topographic__elevation' is not all NaN.
 
     Parameters
     ----------
@@ -237,6 +237,6 @@ def _find_last_non_nan(ds, t_index):
         Last time index with non-NaN data
     """
     for i in range(t_index, -len(ds.time) - 1, -1):
-        if not np.isnan(ds.isel(time=i).to_array()).all():
+        if not np.isnan(ds['topographic__elevation'].isel(time=i)).all():
             return i
     raise ValueError("No non-NaN data found in dataset")
