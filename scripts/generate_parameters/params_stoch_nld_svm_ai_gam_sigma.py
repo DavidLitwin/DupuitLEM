@@ -55,13 +55,17 @@ def tb_fun(hg, p, ne, gam, sigma, beta, rho):
 def pet_fun(p, rho, ai):
     return (ai*p)/(1-rho)
 
-def generate_parameters(p, ne, v0, hg, lg, tg, gam, beta, sigma, rho, ai, theta, phi):
+def p_fun(pet, rho, ai):
+    return pet*(1-rho)/ai
+
+def generate_parameters(pet, ne, v0, hg, lg, tg, gam, beta, sigma, rho, ai, theta, phi):
 
     K = K_fun(v0, lg, tg)
     D = D_fun(lg, tg)
     U = U_fun(hg, tg)
+    p = p_fun(pet, rho, ai)
+    # pet = pet_fun(p, rho, ai)
     ksat = ksat_fun(p, hg, lg, beta)
-    pet = pet_fun(p, rho, ai)
     na = phi*ne
     b = b_fun(hg, gam, beta)
     E0 = E0_fun(theta, hg, tg)
@@ -77,18 +81,19 @@ sigma_all = np.geomspace(8.0, 128.0, 3)
 gam_all = np.geomspace(1.0, 16.0, 3)
 ai_all = [0.2, 0.4, 0.8]
 
-alpha = 0.0375
+alpha = 0.5
 beta = 5.0
 sc = 1.25
 theta = 0.0
 rho = 0.1
 phi = 1.5
-lg = 200 # geomorphic length scale [m]
+lg = 15 # geomorphic length scale [m]
 hg = alpha * lg
 tg = 10000*(365*24*3600) # geomorphic timescale [s]
 v0 = 2.0*lg # contour width (also grid spacing) [m]
-ne = 0.1 # drainable porosity [-]
-p = 1.0/(365*24*3600) # average precip rate
+ne = 0.05 # drainable porosity [-]
+# p = 1.0/(365*24*3600) # average precip rate
+pet = 0.5/(365*24*3600) # average potential evapotranspiration rate [m/s]
 
 Tg_nd = 2000 # total duration in units of tg [-]
 dtg_max_nd = 5e-2 # maximum geomorphic timestep in units of tg [-]
@@ -100,7 +105,7 @@ Nx = 200 # number of grid cells width and height
 
 params = []
 for ai, gam, sigma in product(ai_all, gam_all, sigma_all):
-    params.append(generate_parameters(p, ne, v0, hg, lg, tg, gam, beta, sigma, rho, ai, theta, phi))
+    params.append(generate_parameters(pet, ne, v0, hg, lg, tg, gam, beta, sigma, rho, ai, theta, phi))
 
 df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'ne', 'na', 'v0', 'hg', 'lg', 'tg', 'E0', 'ds', 'tr', 'tb', 'alpha', 'gam', 'beta', 'sigma', 'rho', 'ai', 'theta', 'phi'])
 df_params['Sc'] = sc
