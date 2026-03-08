@@ -20,9 +20,9 @@ def U_fun(hg, tg):
     return hg/tg
 
 hg_all = [1.875, 3.75, 7.5]
-lg = 200
-tg = 1e4
-v0 = 30
+lg = 50
+tg = 5e4
+v0 = 10
 dt_nd = 0.05
 T_nd = 500
 
