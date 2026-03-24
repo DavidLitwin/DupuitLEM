@@ -1,7 +1,20 @@
 """
-Analysis of results on HPC for stochastic stream power model runs.
+This script processes output from Dupuit Landscape Evolution Model (LEM) runs with 
+stochastic stream power components. It performs the following analyses:
 
-update for new stochastic models
+1. Load and visualize model grid data (elevation, aquifer base, water table)
+2. Initialize and run hydrological models together (groundwater, precipitation, vadose zone)
+3. Compute topographic metrics (slope, curvature, steepness, topographic index)
+4. Analyze runoff generation and partitioning (recharge, baseflow, event runoff)
+5. Perform baseflow separation using linear interpolation during rain events
+6. Calculate flow quantiles and hydrologic partitioning ratios
+7. Generate spatial maps of effective discharge, recharge, and water table dynamics
+8. Classify saturation zones (never, variable, always saturated)
+9. Compute relief change rates over simulation time
+10. Export results to NetCDF grid files and CSV time series
+
+Requires environment variables SLURM_ARRAY_TASK_ID and BASE_OUTPUT_FOLDER.
+Outputs spatial fields and scalar metrics for each model run ID.
 """
 
 #%%
@@ -10,6 +23,7 @@ import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from numpy.linalg import inv
 
 from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
 import xarray as xr
@@ -19,8 +33,8 @@ from landlab.components import (
     PrecipitationDistribution,
     )
 from landlab.grid.mappers import map_downwind_node_link_max_to_node
-from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, SchenkVadoseModel
-from DupuitLEM.grid_functions import bind_avg_exp_ksat, bind_avg_recip_ksat
+from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, HydrologyEventVadoseThresholdStreamPower, SchenkVadoseModel
+from DupuitLEM.grid_functions import bind_avg_exp_ksat, bind_avg_recip_ksat, get_link_hydraulic_conductivity
 from DupuitLEM.io import initialize_output_dataset, write_output_step
 
 #%%
@@ -78,10 +92,19 @@ sat_cond = 0.025 # distance from surface (units of hg) for saturation
 conc = 0.5 # reference concacvity for chi analysis
 Nz = int(df_params['Nz']) # number of bins in vadose zone model
 
+# boundary conditions from a string
 try:
     bc = list(str(df_params['BCs']))
 except KeyError:
     bc = None
+
+# streampower threshold (so that time above threshold can be calculated here)
+try:
+    E0 = df_params['E0']
+    K = df_params['K']
+    Ksp = K/p
+except KeyError:
+    E0 = 0.0
 
 # hydraulic conductivity
 try:
@@ -105,11 +128,21 @@ try:
             ksat = bind_avg_exp_ksat(ks, k0, dk)
         except KeyError:
             print('could not find parameters ksurface, kdepth, and/or kdecay for ksat_type %s'%ksat_type)
+    
+    elif ksat_type == 'aniso':
+        try:
+            krot = df_params['k_rot']
+            kmax = df_params['kmax']
+            kmin = kmax * 1/(df_params['k_ratio'])
+        except KeyError:
+            print('could not find parameters k_rot, k_ratio, and/or kmax for ksat_type %s'%ksat_type)
+    
     else:
         print('Could not find ksat_type %s'%ksat_type)
         raise KeyError
 except KeyError:
     ksat = df_params['ksat']
+
 
 #initialize grid
 mg = RasterModelGrid(grid.shape, xy_spacing=grid.dx)
@@ -143,6 +176,13 @@ elif isinstance(mg, HexModelGrid):
 else:
     raise TypeError("grid should be Raster or Hex")
 
+if ksat_type == 'aniso':
+    # calculate link hydraulic conductivity
+    rot = np.array([[np.cos(krot), -np.sin(krot)],[np.sin(krot), np.cos(krot)]])
+    K_principal = np.array([[kmax,0.0],[0.0, kmin]])
+    K = rot @ K_principal @ inv(rot)
+    ksat = get_link_hydraulic_conductivity(mg, K)
+
 gdp = GroundwaterDupuitPercolator(mg,
                                   porosity=ne,
                                   hydraulic_conductivity=ksat,
@@ -163,14 +203,24 @@ svm = SchenkVadoseModel(
                  num_bins=Nz,
                  )
 svm.generate_state_from_analytical(ds, tb, random_seed=20220408)
-hm = HydrologyEventVadoseStreamPower(
-                                    mg,
-                                    precip_generator=pdr,
-                                    groundwater_model=gdp,
-                                    vadose_model=svm,
-                                    )
+if E0 > 0.0:
+    hm = HydrologyEventVadoseThresholdStreamPower(
+        mg,
+        precip_generator=pdr,
+        groundwater_model=gdp,
+        sp_threshold=E0,
+        sp_coefficient=Ksp,
+        )
+    print('Threshold E0>0 detected, using HydrologyEventVadoseThresholdStreamPower model!')
+else: 
+    hm = HydrologyEventVadoseStreamPower(
+                                        mg,
+                                        precip_generator=pdr,
+                                        groundwater_model=gdp,
+                                        vadose_model=svm,
+                                        )
 
-#run model
+#run model (spinup to be safe)
 hm.run_step()
 
 f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
