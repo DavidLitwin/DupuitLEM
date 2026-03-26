@@ -142,6 +142,7 @@ try:
         print('Could not find ksat_type %s'%ksat_type)
         raise KeyError
 except KeyError:
+    ksat_type = None
     ksat = df_params['ksat']
 
 def analyze_time(t_index):
