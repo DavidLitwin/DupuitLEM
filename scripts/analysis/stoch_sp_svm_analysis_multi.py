@@ -47,19 +47,24 @@ task_id = os.environ['SLURM_ARRAY_TASK_ID']
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 ID = int(task_id)
 
-# Specify list of time indices to analyze (e.g., [-1] for last, [-10, -20] for earlier times)
-t_indices = [-1]  # Modify this list as needed
+#%%
+
+file = glob.glob('./data/*.nc')[0]
+xr_ds = xr.open_dataset(file)
+
+mean_series = xr_ds['topographic__elevation'].mean(dim='node').values
+fracs = [0.1, 0.25, 0.5]
+inds = []
+for frac in fracs:
+    inds.append(np.argmin(abs(mean_series-frac*mean_series[-1]), axis=0))
+t_indices = [0] + inds #+ [-1]
 
 if len(sys.argv) > 1:
     t_indices = [int(sys.argv[1])]
 
-#%%
-
-########## Load and basic plot
-file = glob.glob('./data/*.nc')[0]
-xr_ds = xr.open_dataset(file)
-
 grid = load_grid_from_dataset(xr_ds)
+
+#%%
 
 # load parameters and save just this ID (useful because some runs in a group have been redone with diff parameters)
 df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
