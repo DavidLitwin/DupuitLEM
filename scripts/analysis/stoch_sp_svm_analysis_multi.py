@@ -130,17 +130,18 @@ try:
         except KeyError:
             print('could not find parameters ksurface, kdepth, and/or kdecay for ksat_type %s'%ksat_type)
 
-    elif ksat_type == 'aniso':
-        try:
-            krot = df_params['k_rot']
-            kmax = df_params['kmax']
-            kmin = kmax * 1/(df_params['k_ratio'])
-        except KeyError:
-            print('could not find parameters k_rot, k_ratio, and/or kmax for ksat_type %s'%ksat_type)
+    # elif ksat_type == 'aniso':
+    #     try:
+    #         krot = df_params['k_rot']
+    #         kmax = df_params['kmax']
+    #         kmin = kmax * 1/(df_params['k_ratio'])
+    #     except KeyError:
+    #         print('could not find parameters k_rot, k_ratio, and/or kmax for ksat_type %s'%ksat_type)
     
     else:
         print('Could not find ksat_type %s'%ksat_type)
         raise KeyError
+    
 except KeyError:
     ksat_type = None
     ksat = df_params['ksat']
@@ -193,12 +194,12 @@ def analyze_time(t_index):
     else:
         raise TypeError("grid should be Raster or Hex")
 
-    if ksat_type == 'aniso':
-        # calculate link hydraulic conductivity
-        rot = np.array([[np.cos(krot), -np.sin(krot)],[np.sin(krot), np.cos(krot)]])
-        K_principal = np.array([[kmax,0.0],[0.0, kmin]])
-        K = rot @ K_principal @ inv(rot)
-        ksat = get_link_hydraulic_conductivity(mg, K)
+    # if ksat_type == 'aniso':
+    #     # calculate link hydraulic conductivity
+    #     rot = np.array([[np.cos(krot), -np.sin(krot)],[np.sin(krot), np.cos(krot)]])
+    #     K_principal = np.array([[kmax,0.0],[0.0, kmin]])
+    #     K = rot @ K_principal @ inv(rot)
+    #     ksat = get_link_hydraulic_conductivity(mg, K)
 
     gdp = GroundwaterDupuitPercolator(mg,
                                       porosity=ne,
