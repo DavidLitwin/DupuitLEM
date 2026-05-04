@@ -69,9 +69,15 @@ from DupuitLEM.auxiliary_models import (
     RegolithConstantThickness,
     )
 
-#slurm info
-task_id = os.environ['SLURM_ARRAY_TASK_ID']
-ID = int(task_id)
+try:
+    #slurm info
+    task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    ID = int(task_id)
+except KeyError:
+    print("In testing mode. Using parameters from first row of parameters.csv")
+    task_id = '0'
+    ID = 0
+    test_mode = True
 
 try:
     df_params = pandas.read_csv('parameters.csv', index_col=0)[task_id]
@@ -120,7 +126,7 @@ output["output_fields"] = [
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
         ]
-output["base_output_path"] = './data/steady_sp_'
+output["base_output_path"] = './data/steady_sp_' if not test_mode else './test_steady_sp_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid

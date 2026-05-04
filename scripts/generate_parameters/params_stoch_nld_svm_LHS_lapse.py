@@ -148,11 +148,18 @@ cols_with_sec = ['tg', 'tr', 'tb', 'td', 'Tg', 'Th', 'dtg', 'dtg_max']
 cols_inverse_sec = ['p', 'pet', 'ksat', 'K', 'D', 'U', 'E0']
 
 df_params_yr = df_params.copy()
-df_params_yr[cols_with_sec] = df_params_yr[cols_with_sec].applymap(convert_sec_to_yr)
-df_params_yr[cols_inverse_sec] = df_params_yr[cols_inverse_sec].applymap(convert_inverse_sec_to_per_yr)
+df_params_yr[cols_with_sec] = df_params_yr[cols_with_sec].map(convert_sec_to_yr)
+df_params_yr[cols_inverse_sec] = df_params_yr[cols_inverse_sec].map(convert_inverse_sec_to_per_yr)
 
 #%%
-task_id = os.environ['SLURM_ARRAY_TASK_ID']
-ID = int(task_id)
-df_params.loc[ID].to_csv('parameters.csv', index=True)
 
+try:
+    task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    ID = int(task_id)
+    df_params.loc[ID].to_csv('parameters.csv', index=True)
+except KeyError:
+    print('In testing mode. Save first row of parameters to parameters.csv')
+    df_params.loc[0].to_csv('../run_models/parameters.csv', index=True)
+
+
+# %%

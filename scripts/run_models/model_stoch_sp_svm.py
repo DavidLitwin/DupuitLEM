@@ -63,7 +63,7 @@ at node.
 
 6 Dec 2021
 """
-
+#%%
 import os
 import glob
 import numpy as np
@@ -91,9 +91,16 @@ from DupuitLEM.grid_functions import (
     bind_avg_recip_ksat,
 )
 
-#slurm info
-task_id = os.environ['SLURM_ARRAY_TASK_ID']
-ID = int(task_id)
+#%%
+try:
+    #slurm info
+    task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    ID = int(task_id)
+except KeyError:
+    print("In testing mode. Using parameters from first row of parameters.csv")
+    task_id = '0'
+    ID = 0
+    test_mode = True
 
 try:
     df_params = pandas.read_csv('parameters.csv', index_col=0)[task_id]
@@ -222,7 +229,7 @@ output["output_fields"] = [
         "at_node:aquifer_base__elevation",
         "at_node:water_table__elevation",
         ]
-output["base_output_path"] = './data/stoch_sp_svm_'
+output["base_output_path"] = './data/stoch_sp_svm_' if not test_mode else './test_stoch_sp_svm_'
 output["run_id"] = ID #make this task_id if multiple runs
 
 #initialize grid
@@ -285,6 +292,8 @@ except:
     base[:] = elev - b
     wt = grid.add_zeros('node', 'water_table__elevation')
     wt[:] = elev.copy()
+
+#%%
 
 #initialize landlab components
 gdp = GroundwaterDupuitPercolator(grid,
@@ -355,3 +364,5 @@ mdl = StreamPowerModel(grid,
 )
 
 mdl.run_model()
+
+# %%
