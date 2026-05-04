@@ -206,7 +206,7 @@ def test_stoch_sp_vadose_record_state():
     )
 
     wt0 = wt.copy()
-    hm.run_step_record_state()
+    hm.run_step(record_state=True)
 
     times = np.array(
         [
@@ -239,7 +239,7 @@ def test_stoch_sp_vadose_record_state():
 def test_stoch_sp_vadose_methods_same():
     """
     Initialize HydrologyEventVadoseStreamPower on a raster grid.
-    Use several storm-interstorm pairs and make sure run_step_record_state
+    Use several storm-interstorm pairs and make sure run_step(record_state=True)
     method gives the same answer as run_step method.
     """
 
@@ -275,7 +275,7 @@ def test_stoch_sp_vadose_methods_same():
         groundwater_model=gdp,
         vadose_model=svm,
     )
-    hm.run_step_record_state()
+    hm.run_step(record_state=True)
 
     mg1 = RasterModelGrid((3, 3), xy_spacing=10.0)
     mg1.set_status_at_node_on_edges(
@@ -312,6 +312,90 @@ def test_stoch_sp_vadose_methods_same():
     hm1.run_step()
 
     assert_equal(hm.q_eff, hm1.q_eff)
+
+def test_stoch_sp_vadose_lapse_rate():
+    """
+    Initialize HydrologyEventVadoseStreamPower on a raster grid.
+    Use several storm-interstorm pairs and make sure that the lapse rate
+    parameter changes the q_eff as expected.
+    """
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg.add_ones("node", "topographic__elevation")
+    mg.at_node["topographic__elevation"][4] += 1000.0  # make center node higher to test lapse rate
+    mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, porosity=0.2)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=1000,
+    )
+    pd.seed_generator(seedval=1)
+    svm = SchenkVadoseModel(
+        potential_evapotranspiration_rate=1e-4,
+        profile_depth=1.0,
+        num_bins=int(1e4),
+    )
+    svm.sat_profile[:] = 1.0  # start initially saturated
+    hm1 = HydrologyEventVadoseStreamPower(
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        vadose_model=svm,
+        precip_lapse_function=lambda p, elev: p * (0.5 + 1.5/(1+np.exp(-np.mean(elev)/1000))), # p at low elev, 2*p at high elev
+        pet_lapse_function=lambda pet, elev: pet * (1.5 - 1/(1+np.exp(-np.mean(elev)/1000))) # pet at low elev, 0.5*pet at high elev
+    )
+    hm1.run_step(record_state=True)
+
+    # second grid with same seed but no lapse rate, so should be different
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg.add_ones("node", "topographic__elevation")
+    mg.at_node["topographic__elevation"][:] += 10000.0 # approach limit of lapse functions
+    mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, porosity=0.2)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=1000,
+    )
+    pd.seed_generator(seedval=1)
+    svm = SchenkVadoseModel(
+        potential_evapotranspiration_rate=1e-4,
+        profile_depth=1.0,
+        num_bins=int(1e4),
+    )
+    svm.sat_profile[:] = 1.0  # start initially saturated
+    hm2 = HydrologyEventVadoseStreamPower(
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        vadose_model=svm,
+    )
+    hm2.run_step(record_state=True)
+
+    assert np.all(hm1.intensities > hm2.intensities)
+    assert np.all(hm1.q_eff >= hm2.q_eff)
+    assert hm1.cum_pet < hm2.cum_pet
 
 
 # HydrologyEventVadoseThresholdStreamPower

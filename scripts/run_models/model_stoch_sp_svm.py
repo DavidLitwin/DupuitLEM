@@ -128,27 +128,65 @@ Th = df_params['Th']
 Tg = df_params['Tg']
 ksf = df_params['ksf']
 
-# try the arguments that might be present
-try:
-    dtg_max = df_params['dtg_max']
-except KeyError:
-    dtg_max = None
-try:
-    E0 = df_params['E0']
-except KeyError:
-    E0 = 0.0
-try:
-    Sc = df_params['Sc']
-except KeyError:
-    Sc = 0.0
-try:
-    n_sp = df_params['n_sp']
-except KeyError:
-    n_sp = 1.0
+# boundary conditions from a string
 try:
     bc = list(str(df_params['BCs']))
 except KeyError:
     bc = None
+
+# try the arguments that might be present
+dtg_max = df_params.get('dtg_max', None)
+E0 = df_params.get('E0', 0.0)
+Sc = df_params.get('Sc', 0.0)
+n_sp = df_params.get('n_sp', 1.0)
+precip_lapse_function = df_params.get('precip_lapse_function', None)
+pet_lapse_function = df_params.get('pet_lapse_function', None)
+
+if precip_lapse_function == 'linear':
+    cutoff_elev = df_params.get('precip_lapse_cutoff_elev', 2000.0)
+    precip_slope = df_params.get('precip_lapse_slope', 9e-12)
+    print('Applying linear precipitation lapse function with slope %1.2e m/s per m and cutoff elevation %1.1f m'%(precip_slope, cutoff_elev))
+
+    def precip_fun(precip, elev, cutoff_elev=cutoff_elev, precip_slope=precip_slope):
+        """Calculate the predicted precipitation based on the fitted linear relationship with elevation.
+        Parameters:
+        precip (float): (m/s or m) Precipitation value at baselevel
+        elev (array-like): (m) An array of mean elevation values for which to calculate the predicted precipitation.
+        cutoff_elev (float): (m) elevation above which precipitation is assumed constant (i.e., the relationship with elevation breaks down). Default is 2000 m.
+        precip_slope (float): (m/s per m) slope of the linear relationship between precipitation and elevation. Default is 9e-12 m/s per m (~250 mm/yr/km), based on the fitted model for the southeastern US subset of CAMELS.
+        """
+        zmean = min(np.mean(elev), cutoff_elev)
+        return precip_slope * zmean + precip
+elif precip_lapse_function is not None:
+     print('precip_lapse_function %s not recognized. No precipitation lapse rate will be applied.'%precip_lapse_function)
+     precip_fun = None
+else:
+    precip_fun = None    
+
+if pet_lapse_function == 'linear':
+    cutoff_elev = df_params.get('pet_lapse_cutoff_elev', 2000.0)
+    pet_slope = df_params.get('pet_lapse_slope', -5e-12)
+    pet_min = df_params.get('pet_lapse_min', 1e-9)
+    print('Applying linear PET lapse function with slope %1.2e m/s per m, cutoff elevation %1.1f m, and minimum PET %1.2e m/s'%(pet_slope, cutoff_elev, pet_min))
+
+    def pet_fun(pet, elev, cutoff_elev=cutoff_elev, pet_slope=pet_slope, pet_min=pet_min):
+        """Calculate the predicted PET based on the fitted linear relationship with elevation.
+        Parameters:
+        pet (float): (m/s) PET value at baselevel
+        elev (array-like): (m) An array of mean elevation values for which to calculate the predicted PET.
+        cutoff_elev (float): (m) elevation above which PET is assumed constant (i.e., the relationship with elevation breaks down). Default is 2000 m.
+        pet_slope (float): (m/s per m) slope of the linear relationship between PET and elevation. Default is -5e-12 m/s per m (~150 mm/yr/km), based on the fitted model for the southeastern US subset of CAMELS.
+        pet_min (float): (m/s) Minimum PET value. Default is 1e-9 m/s (~30 mm/year).
+        """
+        zmean = min(np.mean(elev), cutoff_elev)
+        return max(pet_slope * zmean + pet, pet_min)
+elif pet_lapse_function is not None:
+     print('pet_lapse_function %s not recognized. No PET lapse rate will be applied.'%pet_lapse_function)
+     pet_fun = None
+else: 
+    pet_fun = None
+
+# see if ksat is specified as a constant or a function of depth
 try:
     ksat_type = df_params['ksat_type']
 
@@ -284,11 +322,15 @@ if E0 > 0.0:
                                         sp_threshold=E0,
                                         sp_coefficient=Ksp
     )
+    print('Threshold E0>0 detected, using HydrologyEventVadoseThresholdStreamPower model!')
+    print('Note: lapse functions are not currently implemented for the threshold stream power model, so any specified lapse functions will be ignored.')
 else:
     hm = HydrologyEventVadoseStreamPower(grid,
                                         precip_generator=pdr,
                                         groundwater_model=gdp,
                                         vadose_model=svm,
+                                        precip_lapse_function=precip_fun,
+                                        pet_lapse_function=pet_fun,
     )
 # m_sp is set to 1, but in our forumulation, the norm discharge
 # field results in the form E = K Q* A^1/2 S^n_sp
