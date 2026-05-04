@@ -96,6 +96,7 @@ try:
     #slurm info
     task_id = os.environ['SLURM_ARRAY_TASK_ID']
     ID = int(task_id)
+    test_mode = False
 except KeyError:
     print("In testing mode. Using parameters from first row of parameters.csv")
     task_id = '0'
