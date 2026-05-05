@@ -109,11 +109,7 @@ except FileNotFoundError:
     print("Supply a parameter file, 'parameters.csv' with column title equal to TASK_ID")
 
 # get dtypes right
-for ind in df_params.index:
-    try:
-        df_params[ind] = float(df_params[ind])
-    except ValueError:
-        df_params[ind] = str(df_params[ind])
+df_params = df_params.apply(lambda x: pandas.to_numeric(x, errors='coerce')).fillna(df_params)
 
 # pull values for this run
 p = df_params['p']

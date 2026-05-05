@@ -86,6 +86,9 @@ try:
 except FileNotFoundError:
     print("Supply a parameter file, 'parameters.csv' with column title equal to TASK_ID")
 
+# get dtypes right
+df_params = df_params.apply(lambda x: pandas.to_numeric(x, errors='coerce')).fillna(df_params)
+
 # pull values for this run
 ksat = df_params['ksat']
 p = df_params['p']
@@ -101,19 +104,9 @@ hg = df_params['hg']
 Th = df_params['Th']
 Tg = df_params['Tg']
 ksf = df_params['ksf']
-try:
-    RE = df_params['RE']
-except KeyError:
-    print("no recharge efficiency 'RE' provided. Using RE = 1.0")
-    RE = 1.0
-try:
-    E0 = df_params['E0']
-except KeyError:
-    E0 = 0.0
-try:
-    Sc = df_params['Sc']
-except KeyError:
-    Sc = 0.0
+RE = df_params.get('RE', 1.0)
+E0 = df_params.get('E0', 0.0)
+Sc = df_params.get('Sc', 0.0)
 try:
     bc = list(str(df_params['BCs']))
 except KeyError:

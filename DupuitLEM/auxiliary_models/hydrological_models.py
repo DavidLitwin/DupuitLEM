@@ -239,9 +239,9 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
         self.precip_lapse_function = precip_lapse_function
         self.pet_lapse_function = pet_lapse_function
 
-    def generate_exp_precip(self):
+    def generate_precip(self):
         """
-        Generate all storms ahead of time. Used with run_step_record_state.
+        Generate all storms ahead of time.
         """
 
         storm_dts = []
@@ -301,7 +301,7 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
             self.pd._mean_storm_depth = mean_p * (self.pd._mean_interstorm_duration + self.pd._mean_storm_duration)
 
         # generate new precip time series
-        self.generate_exp_precip()
+        self.generate_precip()
 
         # find and route flow if there are pits
         self.dfr._find_pits()
@@ -356,6 +356,7 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
             )
 
             if record_state:
+                # if recording state, accumulate flow to get discharge at end of event, and record state
                 _, q = self.fa.accumulate_flow(update_flow_director=False)
                 q1 = q.copy()
                 self.max_substeps_storm = max(
@@ -386,6 +387,7 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
             )
 
             if record_state:
+                # if recording state, accumulate flow to get discharge at end of interevent, and record state
                 _, q = self.fa.accumulate_flow(update_flow_director=False)
                 q2 = q.copy()
                 self.max_substeps_interstorm = max(
@@ -625,7 +627,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
         cores = self._grid.core_nodes
 
         # generate new precip time series
-        self.generate_exp_precip()
+        self.generate_precip()
 
         # find and route flow if there are pits
         self.dfr._find_pits()
