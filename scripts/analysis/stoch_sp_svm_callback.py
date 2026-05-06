@@ -152,6 +152,6 @@ def write_wt(grid, r, dt, file=None):
 
 gdp.callback_fun = write_wt
 
-hm.run_step_record_state()
+hm.run_step(record_state=True)
 f.close()
 f1.close()

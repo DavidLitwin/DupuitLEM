@@ -288,7 +288,7 @@ def write_SQ(grid, r, dt, file=f):
     file.write('%f, %f, %f, %f, %f\n'%(dt, r_tot, qs_tot, storage, sat_nodes))
 gdp.callback_fun = write_SQ
 
-hm.run_step_record_state()
+hm.run_step(record_state=True)
 f.close()
 
 ##########  Analysis
