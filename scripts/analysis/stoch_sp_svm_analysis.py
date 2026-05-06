@@ -68,13 +68,8 @@ plt.close()
 df_params = pd.read_csv('parameters.csv', index_col=0)[task_id]
 df_params.to_csv(os.path.join('..', 'post_proc', base_output_path, f'params_ID_{ID}.csv'), index=True)
 
-
-# get parameter types right
-for ind in df_params.index:
-    try:
-        df_params[ind] = float(df_params[ind])
-    except ValueError:
-        df_params[ind] = str(df_params[ind])
+# get dtypes right
+df_params = df_params.apply(lambda x: pd.to_numeric(x, errors='coerce')).fillna(df_params)
 
 ne = df_params['ne'] #drainable porosity [-]
 b = df_params['b'] #characteristic depth  [m]
