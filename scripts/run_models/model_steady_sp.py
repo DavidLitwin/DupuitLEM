@@ -129,7 +129,7 @@ try:
     if len(paths) > 1:
         print("more than one grid available. Using last in list")
     nc_ds = xr.open_dataset(paths[-1])
-    grid = load_grid_from_dataset(nc_ds)
+    grid = load_grid_from_dataset(nc_ds, last_non_nan=True)
     load_fields_from_dataset(nc_ds, grid)
 
     # allow user to override BCs if specified, otherwise keep saved grid status #TODO: saved grid status no longer a thing - load from field status_at_node
