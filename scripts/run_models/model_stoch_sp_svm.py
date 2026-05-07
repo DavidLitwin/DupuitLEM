@@ -234,9 +234,9 @@ try:
     paths = glob.glob('*.nc')
     if len(paths) > 1:
         print("more than one grid available. Using last in list")
-    ds = xr.open_dataset(paths[-1])
-    grid = load_grid_from_dataset(ds)
-    load_fields_from_dataset(ds, grid)
+    nc_ds = xr.open_dataset(paths[-1])
+    grid = load_grid_from_dataset(nc_ds)
+    load_fields_from_dataset(nc_ds, grid, last_non_nan=True)
 
     # allow user to override BCs if specified, otherwise keep saved grid status.  #TODO: saved grid status no longer a thing - load from field status_at_node
     bc_dict = {'4':grid.BC_NODE_IS_CLOSED, '1':grid.BC_NODE_IS_FIXED_VALUE}
