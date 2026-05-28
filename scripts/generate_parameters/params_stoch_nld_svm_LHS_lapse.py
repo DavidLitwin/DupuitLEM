@@ -76,7 +76,7 @@ def generate_parameters(p, ne, v0, lg, tg, alpha, gam, beta, sigma, rho, ai, the
 bnd_gam = [1.0, 10.0]
 bnd_sigma = [10.0, 100.0]
 bnd_beta = [0.5, 10.0]
-bnd_alpha = [0.05, 0.5]
+bnd_alpha = [0.1, 1.0]
 # bnd_ai = [0.2, 0.8]
 bnd_rho = [0.05, 0.6]
 
@@ -87,7 +87,7 @@ sample = sampler.random(n=75)
 scaled_sample = qmc.scale(sample, bnds[0], bnds[1])
 
 sc = 1.25
-ai = 0.75 # proportion of precip that goes to PET
+ai = 0.85 # proportion of precip that goes to PET
 theta = 0.0 # don't use threshold model
 phi = 1.5
 lg = 15 # geomorphic length scale [m]
@@ -115,10 +115,10 @@ for i in range(scaled_sample.shape[0]):
 
 df_params = pandas.DataFrame(np.array(params),columns=['K', 'D', 'U', 'ksat', 'p', 'pet', 'b', 'ne', 'na', 'v0', 'hg', 'lg', 'tg', 'E0', 'ds', 'tr', 'tb', 'alpha', 'gam', 'beta', 'sigma', 'rho', 'ai', 'theta', 'phi'])
 df_params['precip_lapse_function'] = 'linear'
-df_params['precip_lapse_slope'] = 9e-12
+df_params['precip_lapse_slope'] = 1e-10 #9e-12
 df_params['precip_lapse_cutoff_elev'] = 2000.0
 df_params['pet_lapse_function'] = 'linear'
-df_params['pet_lapse_slope'] = -5e-12
+df_params['pet_lapse_slope'] = -5e-11 #-5e-12
 df_params['pet_lapse_cutoff_elev'] = 2000.0
 df_params['pet_lapse_min'] = 1e-9
 
