@@ -82,13 +82,13 @@ bnd_rho = [0.05, 0.6]
 
 bnds = list(zip(bnd_gam, bnd_sigma, bnd_beta, bnd_alpha, bnd_rho))
 sampler = qmc.LatinHypercube(d=len(bnds[0]), seed=2023) # gam, sigma, beta, alpha, rho
-sample = sampler.random(n=75)
+sample = sampler.random(n=40)
 
 scaled_sample = qmc.scale(sample, bnds[0], bnds[1])
 
 sc = 1.25
 ai = 0.85 # proportion of precip that goes to PET
-theta = 0.0 # don't use threshold model
+theta = 40 # E = 1e-9 for alpha=0.5, lg=15# K * Qstar * A * S # Only if using threshold model
 phi = 1.5
 lg = 15 # geomorphic length scale [m]
 tg = 10000*(365*24*3600) # geomorphic timescale [s]

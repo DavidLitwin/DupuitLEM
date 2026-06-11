@@ -329,7 +329,6 @@ if E0 > 0.0:
                                         sp_coefficient=Ksp
     )
     print('Threshold E0>0 detected, using HydrologyEventVadoseThresholdStreamPower model!')
-    print('Note: lapse functions are not currently implemented for the threshold stream power model, so any specified lapse functions will be ignored.')
 else:
     hm = HydrologyEventVadoseStreamPower(grid,
                                         precip_generator=pdr,
