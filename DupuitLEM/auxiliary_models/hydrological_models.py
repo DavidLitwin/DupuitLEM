@@ -166,13 +166,13 @@ class HydrologySteadyStreamPower(HydrologicalModel):
 
 class HydrologyEventVadoseStreamPower(HydrologicalModel):
     """ "
-    This model expands HydrologyEventStreamPower for the case where
-    there is vadose zone storage and evapotranspiration. The SchenkVadoseModel
-    is used to determine recharge of water to the water
-    table in storm events and interevents respectively. One vadose profile is
-    tracked and this is used to map recharge and extraction rates based on
-    depth to water table across grid. Field "recharge_rate"
-    is added as recharge can vary spatially.
+    This model considers stochastic storm event duration, interevent duration, and intensity
+    for the case where there is vadose zone storage and evapotranspiration. The SchenkVadoseModel
+    is used to determine recharge of water to the water table in storm events and interevents r
+    espectively. One vadose profile is tracked and this is used to map recharge and extraction rates based on
+    depth to water table across grid. Field "recharge_rate" is added as recharge can vary spatially.
+    Mean precipitation and contant PET can vary with elevation if lapse functions are supplied, but 
+    still must be single values. 
     """
 
     def __init__(
@@ -365,8 +365,8 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
                 qgw1 = self.gdp.calc_gw_flux_out()
 
                 # record event
-                self.time[i * 2 + 1] = self.time[i * 2] + self.storm_dts[i]
-                self.intensity[i * 2] = self.intensities[i]
+                self.time[i * 2 + 1] = self.time[i * 2] + storm_dt
+                self.intensity[i * 2] = intensity
                 self.r_all[i * 2, :] = self._grid.at_node["recharge_rate"]
                 self.Q_all[i * 2 + 1, :] = self._grid.at_node["surface_water__discharge"]
                 self.wt_all[i * 2 + 1, :] = self._grid.at_node["water_table__elevation"]
@@ -396,7 +396,7 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
                 qgw2 = self.gdp.calc_gw_flux_out()
 
                 # record interevent
-                self.time[i * 2 + 2] = self.time[i * 2 + 1] + self.interstorm_dts[i]
+                self.time[i * 2 + 2] = self.time[i * 2 + 1] + interstorm_dt
                 self.Q_all[i * 2 + 2, :] = self._grid.at_node["surface_water__discharge"]
                 self.wt_all[i * 2 + 2, :] = self._grid.at_node["water_table__elevation"]
                 self.qs_all[i * 2 + 2, :] = self._grid.at_node[
@@ -408,15 +408,11 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
                 self.bool_recharge_profile += self.svm.recharge_at_depth > 0.0
 
                 # record precip/recharge spatially-averaged characteristics
-                self.cum_precip += np.sum(self.intensities[i] * areas) * self.storm_dts[i]
-                self.cum_pet += np.sum(self.svm.pet * areas) * self.interstorm_dts[i]
-                self.cum_recharge += np.sum(self.r[cores] * areas) * self.storm_dts[i]
-                self.cum_runoff += np.sum(
-                    q1[obn] * self.storm_dts[i] + q2[obn] * self.interstorm_dts[i]
-                )
-                self.cum_gw_export += np.sum(
-                    qgw1 * self.storm_dts[i] + qgw2 * self.interstorm_dts[i]
-                )
+                self.cum_precip += np.sum(intensity * areas) * storm_dt
+                self.cum_pet += np.sum(self.svm.pet * areas) * interstorm_dt
+                self.cum_recharge += np.sum(self.r[cores] * areas) * storm_dt
+                self.cum_runoff += np.sum(q1[obn] * storm_dt + q2[obn] * interstorm_dt)
+                self.cum_gw_export += np.sum(qgw1 * storm_dt + qgw2 * interstorm_dt)
 
         # set effective runoff rates
         self.qs[:] = q_total / self.T_h
@@ -442,10 +438,15 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
 
 class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
     """
-    This model combines additions to the HydrologyEventStreamPower model for
-    cases where there is a streampower incision threshold and vadose
-    storate/evapotranspiration. As with HydrologyEventThresholdStreamPower,
-    rather than tracking discharge at storms and interstorms, erosion-producing
+    This model considers stochastic storm event duration, interevent duration, and intensity
+    for the case where there is vadose zone storage and evapotranspiration, adding the effect of 
+    thresholds for fluvial erosion. The SchenkVadoseModel is used to determine recharge of water to 
+    the water table in storm events and interevents respectively. One vadose profile is tracked and 
+    this is used to map recharge and extraction rates based on depth to water table across grid. Field 
+    "recharge_rate" is added as recharge can vary spatially. Mean precipitation and contant PET can 
+    vary with elevation if lapse functions are supplied, but still must be single values. 
+
+    Rather than tracking discharge at storms and interstorms, erosion-producing
     discharge Q-Q0 is tracked, and returned in a fashion that is correctly
     averaged with threshold accounted for in the field "surface_water_effective__discharge".
     CONSEQUENTLY ONE SHOULD LEAVE THE INCISION THRESHOLD FIELD OF
@@ -464,6 +465,8 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
         vadose_model=None,
         sp_threshold=0.0,
         sp_coefficient=1e-5,
+        precip_lapse_function=None,
+        pet_lapse_function=None,
     ):
         """
         Parameters
@@ -498,9 +501,19 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             coefficient, with units 1/T, and p is the mean precipitation rate with
             units L/T.
             Default: 1e-5
+        precip_lapse_function: function
+            A function that takes in mean storm depth and elevation, and
+            returns a modified mean storm depth. This allows for the
+            inclusion of a lapse rate for precip. The function should take the form
+            f(mean_storm_depth, elevation) and return modified_mean_storm_depth. Default: None
+        pet_lapse_function: function
+            A function that takes in the potential evapotranspiration rate and elevation, and
+            returns a modified potential evapotranspiration rate. This allows for the
+            inclusion of a lapse rate for pet. The function should take the form
+            f(pet, elevation) and return modified_pet. Default: None
         """
 
-        super().__init__(grid, routing_method, precip_generator, groundwater_model, vadose_model)
+        super().__init__(grid, routing_method, precip_generator, groundwater_model, vadose_model, precip_lapse_function, pet_lapse_function )
 
         self.E0 = sp_threshold
         self.Ksp = sp_coefficient
@@ -512,86 +525,8 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
         else:
             self._calc_grad = self._grid.calc_grad_at_link
 
-    def run_step(self):
-        """ "
-        Run hydrological model for series of event-interevent pairs, calculate
-        flow rates at end of events and interevents over total_hydrological_time.
-        Initially generate exponential precip, fill pits, find flow directions,
-        calculate critical erosion rate. Through storm-interstorm pairs,
-        update vadose model state, calculate recharge, update groundwater state,
-        route flow, calculate additional erosion-generating flow. After, calculate
-        surface_water_effective__discharge and surface_water_area_norm__discharge.
-        """
-        cores = self._grid.core_nodes
-
-        # find and route flow if there are pits
-        self.dfr._find_pits()
-        if self.dfr._number_of_pits > 0:
-            self.lmb.run_one_step()
-
-        # update flow directions
-        self.fd.run_one_step()
-
-        # calculate critical_erosion__discharge
-        dzdx = self._calc_grad(self._elev)
-        S = abs(dzdx[self._receivers])  # slope is in direction of flow
-        _, _ = self.fa.accumulate_flow(update_flow_director=False)  # to update area
-        self.Q0[:] = np.divide(
-            self.E0 * np.sqrt(self.area),
-            self.Ksp * S,
-            where=S > 0.0,
-            out=np.zeros_like(S),
-        )
-
-        self.max_substeps_storm = 0
-        self.max_substeps_interstorm = 0
-        q_total_vol = np.zeros_like(self.q_eff)
-        for storm_dt, interstorm_dt in self.pd.yield_storms():
-            intensity = float(self._grid.at_grid["rainfall__flux"])
-            # run event:
-            ## run vadose model, calculate recharge based on depth to wt
-            self.svm.run_event(intensity * storm_dt)
-            wt_from_surface = self._elev[cores] - self._wt[cores]
-            wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
-            self.r[cores] = self.svm.calc_recharge_rate(wt_from_surface, storm_dt)
-
-            ## set recharge, run groundwater model, accumulate flow
-            self.gdp.recharge = self.r
-            self.gdp.run_with_adaptive_time_step_solver(storm_dt)
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q1 = np.maximum(q - self.Q0, 0.0)
-            # print('storm q:%f, q1:%f'%(q[4], q1[4]))
-            self.max_substeps_storm = max(
-                self.max_substeps_storm, self.gdp.number_of_substeps
-            )
-
-            # run interevent:
-            interstorm_dt = max(interstorm_dt, 1e-15)  # avoid some nans
-            self.svm.run_interevent(interstorm_dt)
-
-            # set run groundwater model, accumulate flow
-            self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(interstorm_dt)
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q2 = np.maximum(q - self.Q0, 0.0)
-            # print('interstorm q:%f, q2:%f'%(q[4], q2[4]))
-            self.max_substeps_interstorm = max(
-                self.max_substeps_interstorm, self.gdp.number_of_substeps
-            )
-
-            # volume of runoff contributed during timestep
-            q_total_vol += q1 * storm_dt + q2 * interstorm_dt
-            # print('storm dt:%f'%storm_dt)
-
-        self.q_eff[:] = q_total_vol / self.T_h
-        self.q_an[:] = np.divide(
-            self.q_eff,
-            np.sqrt(self.area),
-            where=self.area > 0,
-            out=np.zeros_like(self.q_eff),
-        )
-
-    def run_step_record_state(self):
+    
+    def run_step(self, record_state=False):
         """
         Run hydrological model for series of event-interevent pairs, calculate
         flow rates at end of events and interevents over total_hydrological_time.
@@ -600,6 +535,8 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
         update vadose model state, calculate recharge, update groundwater state,
         route flow, calculate additional erosion-generating flow. After, calculate
         surface_water_effective__discharge and surface_water_area_norm__discharge.
+
+        Optional recording of state:
 
         track the state of the model:
             time: (s)
@@ -626,6 +563,16 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
         """
         cores = self._grid.core_nodes
 
+        # if pet lapse function, update pet in vadose model
+        if self.pet_lapse_function is not None:
+            pet = self.pet_lapse_function(self._base_pet, self._elev)
+            self.svm.pet = pet
+
+        # if precip lapse function, update mean storm depth in precip generator and regenerate storms
+        if self.precip_lapse_function is not None:
+            mean_p = self.precip_lapse_function(self._base_p, self._elev)
+            self.pd._mean_storm_depth = mean_p * (self.pd._mean_interstorm_duration + self.pd._mean_storm_duration)
+
         # generate new precip time series
         self.generate_precip()
 
@@ -648,107 +595,114 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             out=np.zeros_like(S),
         )
 
-        # fields to record:
-        Ns = 2 * len(self.storm_dts) + 1
-        N = len(self.q_eff)
-        self.time = np.zeros(Ns)
-        self.intensity = np.zeros(Ns)
-        # all discharge
-        self.Q_all = np.zeros((Ns, N))
-        # water table elevation
-        self.wt_all = np.zeros((Ns, N))
-        self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
-        # all surface water specific discharge
-        self.qs_all = np.zeros((Ns, N))
-        self.r_all = np.zeros((Ns, N))
+        if record_state:
+            # fields to record:
+            Ns = 2 * len(self.storm_dts) + 1
+            N = len(self.q_eff)
+            self.time = np.zeros(Ns)
+            self.intensity = np.zeros(Ns)
+            # all discharge
+            self.Q_all = np.zeros((Ns, N))
+            # water table elevation
+            self.wt_all = np.zeros((Ns, N))
+            self.wt_all[0, :] = self._grid.at_node["water_table__elevation"].copy()
+            # all surface water specific discharge
+            self.qs_all = np.zeros((Ns, N))
+            self.r_all = np.zeros((Ns, N))
 
-        # vadose profile properties
-        self.cum_recharge_profile = np.zeros_like(self.svm.depths)
-        self.bool_recharge_profile = np.zeros_like(self.svm.depths)
+            # vadose profile properties
+            self.cum_recharge_profile = np.zeros_like(self.svm.depths)
+            self.bool_recharge_profile = np.zeros_like(self.svm.depths)
 
-        # precip/recharge spatially-averaged properties
-        areas = self._grid.cell_area_at_node[cores]
-        obn = self._grid.open_boundary_nodes
-        self.cum_precip = 0.0
-        self.cum_recharge = 0.0
-        self.cum_runoff = 0.0
+            # precip/recharge spatially-averaged properties
+            areas = self._grid.cell_area_at_node[cores]
+            obn = self._grid.open_boundary_nodes
+            self.cum_precip = 0.0
+            self.cum_recharge = 0.0
+            self.cum_runoff = 0.0
+            self.cum_gw_export = 0.0
+            self.cum_pet = 0.0
 
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
 
         q_total_vol = np.zeros_like(self.q_eff)
         # q2 = np.zeros_like(self.q_eff)
-        for i in range(len(self.storm_dts)):
+        for i, (storm_dt, interstorm_dt, intensity) in enumerate(zip(self.storm_dts, self.interstorm_dts, self.intensities)):
             # q0 = q2.copy()  # save prev end of interstorm flow rate
 
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
-            self.svm.run_event(self.intensities[i] * self.storm_dts[i])
+            self.svm.run_event(intensity * storm_dt)
             wt_from_surface = self._elev[cores] - self._wt[cores]
             wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.r[cores] = self.svm.calc_recharge_rate(
-                wt_from_surface, self.storm_dts[i]
+                wt_from_surface, storm_dt
             )
 
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
-            self.gdp.run_with_adaptive_time_step_solver(self.storm_dts[i])
+            self.gdp.run_with_adaptive_time_step_solver(storm_dt)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q1 = np.maximum(q - self.Q0, 0.0)
-            # print('storm q:%f, q1:%f'%(q[4], q1[4]))
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
 
-            # record event
-            self.time[i * 2 + 1] = self.time[i * 2] + self.storm_dts[i]
-            self.intensity[i * 2] = self.intensities[i]
-            self.r_all[i * 2, :] = self._grid.at_node["recharge_rate"]
-            self.Q_all[i * 2 + 1, :] = self._grid.at_node["surface_water__discharge"]
-            self.wt_all[i * 2 + 1, :] = self._grid.at_node["water_table__elevation"]
-            self.qs_all[i * 2 + 1, :] = self._grid.at_node[
-                "average_surface_water__specific_discharge"
-            ]
+            if record_state:
+                Qgw1 = self.gdp.calc_gw_flux_out()
+
+                # record event
+                self.time[i * 2 + 1] = self.time[i * 2] + storm_dt
+                self.intensity[i * 2] = intensity
+                self.r_all[i * 2, :] = self._grid.at_node["recharge_rate"]
+                self.Q_all[i * 2 + 1, :] = self._grid.at_node["surface_water__discharge"]
+                self.wt_all[i * 2 + 1, :] = self._grid.at_node["water_table__elevation"]
+                self.qs_all[i * 2 + 1, :] = self._grid.at_node[
+                    "average_surface_water__specific_discharge"
+                ]
 
             # run interevent:
             ## run vadose model, calculate the extraction below the water table
             ## due to ET.
-            self.interstorm_dts[i] = max(
-                self.interstorm_dts[i], 1e-15
+            interstorm_dts = max(
+                interstorm_dt, 1e-15
             )  # avoid some nans
-            self.svm.run_interevent(self.interstorm_dts[i])
+            self.svm.run_interevent(interstorm_dts)
 
             # set run groundwater model, accumulate flow
             self.gdp.recharge = 0.0
-            self.gdp.run_with_adaptive_time_step_solver(self.interstorm_dts[i])
+            self.gdp.run_with_adaptive_time_step_solver(interstorm_dts)
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q2 = np.maximum(q - self.Q0, 0.0)
-            # print('interstorm q:%f, q2:%f'%(q[4], q2[4]))
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
 
             # record interevent
-            self.time[i * 2 + 2] = self.time[i * 2 + 1] + self.interstorm_dts[i]
-            self.Q_all[i * 2 + 2, :] = self._grid.at_node["surface_water__discharge"]
-            self.wt_all[i * 2 + 2, :] = self._grid.at_node["water_table__elevation"]
-            self.qs_all[i * 2 + 2, :] = self._grid.at_node[
-                "average_surface_water__specific_discharge"
-            ]
+            if record_state:
+                Qgw2 = self.gdp.calc_gw_flux_out()
 
-            # record vadose characteristics
-            self.cum_recharge_profile += self.svm.recharge_at_depth
-            self.bool_recharge_profile += self.svm.recharge_at_depth > 0.0
+                self.time[i * 2 + 2] = self.time[i * 2 + 1] + interstorm_dts
+                self.Q_all[i * 2 + 2, :] = self._grid.at_node["surface_water__discharge"]
+                self.wt_all[i * 2 + 2, :] = self._grid.at_node["water_table__elevation"]
+                self.qs_all[i * 2 + 2, :] = self._grid.at_node[
+                    "average_surface_water__specific_discharge"
+                ]
 
-            # record precip/recharge spatially-averaged characteristics
-            self.cum_precip += np.sum(self.intensities[i] * areas) * self.storm_dts[i]
-            self.cum_recharge += np.sum(self.r[cores] * areas) * self.storm_dts[i]
-            self.cum_runoff += np.sum(
-                q1[obn] * self.storm_dts[i] + q2[obn] * self.interstorm_dts[i]
-            )
+                # record vadose characteristics
+                self.cum_recharge_profile += self.svm.recharge_at_depth
+                self.bool_recharge_profile += self.svm.recharge_at_depth > 0.0
+
+                # record precip/recharge spatially-averaged characteristics
+                self.cum_precip += np.sum(intensity * areas) * storm_dt
+                self.cum_recharge += np.sum(self.r[cores] * areas) * storm_dt
+                self.cum_runoff += np.sum(q1[obn] * storm_dt + q2[obn] * interstorm_dts)
+                self.cum_pet += np.sum(self.svm.pet * areas) * interstorm_dts
+                self.cum_gw_export += np.sum(Qgw2 * interstorm_dts) + np.sum(Qgw1 * storm_dt)
 
             # volume of runoff contributed during timestep
-            q_total_vol += q1 * self.storm_dts[i] + q2 * self.interstorm_dts[i]
+            q_total_vol += q1 * storm_dt + q2 * interstorm_dts
 
         self.q_eff[:] = q_total_vol / self.T_h
         self.q_an[:] = np.divide(
@@ -758,10 +712,11 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             out=np.zeros_like(self.q_eff),
         )
 
-        # derived properties
-        # mean recharge at each vadose profile
-        self.mean_recharge_depth = (
-            self.cum_recharge_profile / self.bool_recharge_profile
-        )
-        # frequency of recharge in vadose profile
-        self.recharge_frequency = self.bool_recharge_profile / self.T_h
+        if record_state:
+            # derived properties
+            # mean recharge at each vadose profile
+            self.mean_recharge_depth = (
+                self.cum_recharge_profile / self.bool_recharge_profile
+            )
+            # frequency of recharge in vadose profile
+            self.recharge_frequency = self.bool_recharge_profile / self.T_h
