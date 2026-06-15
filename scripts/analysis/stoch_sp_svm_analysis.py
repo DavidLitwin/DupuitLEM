@@ -254,9 +254,11 @@ if E0 > 0.0:
         groundwater_model=gdp,
         sp_threshold=E0,
         sp_coefficient=Ksp,
+        vadose_model=svm,
+        precip_lapse_function=precip_fun,
+        pet_lapse_function=pet_fun,
         )
     print('Threshold E0>0 detected, using HydrologyEventVadoseThresholdStreamPower model!')
-    print('Note: lapse functions are not currently implemented for the threshold stream power model, so any specified lapse functions will be ignored.')
 else: 
     hm = HydrologyEventVadoseStreamPower(
                                         mg,
