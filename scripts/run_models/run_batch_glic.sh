@@ -13,6 +13,7 @@ output_folder=$2
 savedir=~/data/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 mkdir $savedir/data
 cd ~/code/DupuitLEM
+git pull
 git rev-parse HEAD > $savedir/lem_script_id.txt
 cd ~/code/landlab
 git rev-parse HEAD > $savedir/lem_gdp_id.txt

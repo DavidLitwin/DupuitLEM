@@ -12,6 +12,7 @@
 script=$1
 output_folder=$2
 export BASE_OUTPUT_FOLDER=$2
+git pull
 mkdir ~/data/DupuitLEMResults/post_proc/$output_folder
 cd ~/data/DupuitLEMResults/$output_folder-$SLURM_ARRAY_TASK_ID
 echo $SLURM_JOBID-$SLURM_ARRAY_TASK_ID > analysis_slurm.txt
