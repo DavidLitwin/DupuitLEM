@@ -626,7 +626,8 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
 
-        q_total_vol = np.zeros_like(self.q_eff)
+        # initialize total volume above threshold for each node, to be divided by total time at end
+        q_total_vol_t = np.zeros_like(self.q_eff)
         # q2 = np.zeros_like(self.q_eff)
         for i, (storm_dt, interstorm_dt, intensity) in enumerate(zip(self.storm_dts, self.interstorm_dts, self.intensities)):
             # q0 = q2.copy()  # save prev end of interstorm flow rate
@@ -643,8 +644,8 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
             self.gdp.run_with_adaptive_time_step_solver(storm_dt)
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q1 = np.maximum(q - self.Q0, 0.0)
+            _, q1 = self.fa.accumulate_flow(update_flow_director=False)
+            q1_t = np.maximum(q1 - self.Q0, 0.0)
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
@@ -673,8 +674,8 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             # set run groundwater model, accumulate flow
             self.gdp.recharge = 0.0
             self.gdp.run_with_adaptive_time_step_solver(interstorm_dts)
-            _, q = self.fa.accumulate_flow(update_flow_director=False)
-            q2 = np.maximum(q - self.Q0, 0.0)
+            _, q2 = self.fa.accumulate_flow(update_flow_director=False)
+            q2_t = np.maximum(q2 - self.Q0, 0.0)
             self.max_substeps_interstorm = max(
                 self.max_substeps_interstorm, self.gdp.number_of_substeps
             )
@@ -701,10 +702,10 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
                 self.cum_pet += np.sum(self.svm.pet * areas) * interstorm_dts
                 self.cum_gw_export += np.sum(Qgw2 * interstorm_dts) + np.sum(Qgw1 * storm_dt)
 
-            # volume of runoff contributed during timestep
-            q_total_vol += q1 * storm_dt + q2 * interstorm_dts
+            # volume of runoff contributed during timestep above threshold
+            q_total_vol_t += q1_t * storm_dt + q2_t * interstorm_dts
 
-        self.q_eff[:] = q_total_vol / self.T_h
+        self.q_eff[:] = q_total_vol_t / self.T_h
         self.q_an[:] = np.divide(
             self.q_eff,
             np.sqrt(self.area),
