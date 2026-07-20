@@ -3,4 +3,5 @@ DupuitLEM.egg-info
 __pycache__
 .DS_store
 .github/
+.vscode/
 Build/
