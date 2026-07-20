@@ -46,7 +46,9 @@ base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 ID = int(task_id)
 #%%
 
-grid_id = random.randint(0, 74) # length of the 75 runs in stoch_LHS_1
+rng = np.random.default_rng(10110) # set seed so that grids are selected with replacement
+grid_ids = rng.permutation(75) # length of stoch_LHS_1 runs
+grid_id = grid_ids[ID]
 
 ########## Load and basic plot
 file = glob.glob(f'../{base_output_path}-{grid_id}/data/*.nc')[0]
