@@ -210,7 +210,7 @@ else:
 z = mg.add_zeros('node', 'topographic__elevation')
 z[:] = elev
 zb = mg.add_zeros('node', 'aquifer_base__elevation')
-zb[:] = base
+zb[:] = elev - b # use the thickness from the parameters, not from the grid.
 zwt = mg.add_zeros('node', 'water_table__elevation')
 zwt[:] = wt
 
