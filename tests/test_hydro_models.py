@@ -398,6 +398,89 @@ def test_stoch_sp_vadose_lapse_rate():
     assert hm1.cum_pet < hm2.cum_pet
 
 
+def _make_stoch_sp_vadose(ksat_z):
+    """Helper to build a single-storm HydrologyEventVadoseStreamPower model."""
+
+    mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+    mg.set_status_at_node_on_edges(
+        right=mg.BC_NODE_IS_CLOSED,
+        top=mg.BC_NODE_IS_CLOSED,
+        left=mg.BC_NODE_IS_CLOSED,
+        bottom=mg.BC_NODE_IS_FIXED_VALUE,
+    )
+    mg.add_ones("node", "topographic__elevation")
+    mg.add_zeros("node", "aquifer_base__elevation")
+    mg.add_ones("node", "water_table__elevation")
+
+    gdp = GroundwaterDupuitPercolator(mg, porosity=0.2)
+    pd = PrecipitationDistribution(
+        mg,
+        mean_storm_duration=10,
+        mean_interstorm_duration=100,
+        mean_storm_depth=1e-3,
+        total_t=100,
+    )
+    pd.seed_generator(seedval=1)
+    svm = SchenkVadoseModel(
+        potential_evapotranspiration_rate=0.0,
+        profile_depth=1.0,
+        num_bins=int(1e6),
+    )
+    svm.sat_profile[:] = 1.0  # start initially saturated
+    hm = HydrologyEventVadoseStreamPower(
+        mg,
+        precip_generator=pd,
+        groundwater_model=gdp,
+        vadose_model=svm,
+        ksat_z=ksat_z,
+    )
+    hm.run_step()
+    return hm
+
+
+def test_stoch_sp_vadose_horton_intensity_below_ksat_z_no_effect():
+    """
+    When ksat_z exceeds the storm intensity, Horton excess should never
+    activate. Recharge and routed discharge should be numerically identical
+    to the case where no ksat_z is specified (all rainfall infiltrates).
+    """
+
+    hm_null = _make_stoch_sp_vadose(ksat_z=None)
+    intensity = hm_null.intensities[0]
+    hm_below = _make_stoch_sp_vadose(ksat_z=intensity * 2)  # ksat_z well above intensity
+
+    assert_equal(hm_below.qh, np.zeros(9))
+    assert_almost_equal(hm_below.r, hm_null.r)
+    assert_almost_equal(hm_below.q_eff, hm_null.q_eff)
+    assert_almost_equal(hm_below.q_an, hm_null.q_an)
+
+
+def test_stoch_sp_vadose_horton_intensity_above_ksat_z_reduces_recharge():
+    """
+    When ksat_z is less than the storm intensity, Horton excess should
+    activate: recharge into the vadose zone/gdp is reduced to ksat_z, and
+    the excess appears in the "horton_excess__runoff" field. Because the
+    aquifer here is fully saturated to the surface throughout (so the gdp
+    passes recharge straight through as saturation excess), the split
+    between the two runoff-generating mechanisms should not change the
+    total mass reaching the routed outlet.
+    """
+
+    hm_null = _make_stoch_sp_vadose(ksat_z=None)
+    intensity = hm_null.intensities[0]
+    hm_above = _make_stoch_sp_vadose(ksat_z=intensity / 2)  # ksat_z well below intensity
+
+    # recharge is reduced, and horton excess is registered
+    assert hm_above.r[4] < hm_null.r[4]
+    assert hm_above.qh[4] > 0.0
+
+    # but the mass that would have gone to recharge is still accounted for
+    # in the routed output, just partitioned into direct Horton runoff
+    # instead of gdp saturation excess
+    assert_almost_equal(hm_above.q_eff[4], hm_null.q_eff[4], decimal=5)
+    assert_almost_equal(hm_above.q_an[4], hm_null.q_an[4], decimal=6)
+
+
 # HydrologyEventVadoseThresholdStreamPower
 def test_stoch_sp_vadose_threshold_raster_null():
     """

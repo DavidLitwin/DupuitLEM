@@ -182,6 +182,7 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
         precip_generator=None,
         groundwater_model=None,
         vadose_model=None,
+        ksat_z=None,
         precip_lapse_function=None,
         pet_lapse_function=None,
     ):
@@ -206,6 +207,12 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
         vadose_model: SchenkVadoseModel
             Auxiliary model called SchenkVadoseModel, instantiated for a depth profile
             equal to the permeable thickness.
+            Default: None
+        ksat_z: float or None
+            Vertical saturated hydraulic conductivity (m/s) for Horton (infiltration-excess) 
+            overland flow, assuming a unit head gradient. If None, no Horton excess is
+            calculated (all rainfall is assumed to infiltrate). Must be
+            a scalar: the SchenkVadoseModel tracks a single lumped vadose column.
             Default: None
         precip_lapse_function: function
             A function that takes in mean storm depth and elevation, and
@@ -235,6 +242,15 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
         self.r = self._grid.add_zeros("node", "recharge_rate")
         self._elev = self._grid.at_node["topographic__elevation"]
         self._wt = self._grid.at_node["water_table__elevation"]
+
+        if ksat_z is not None and not np.isscalar(ksat_z):
+            raise TypeError(
+                "ksat_z must be a scalar: the SchenkVadoseModel tracks a single "
+                "lumped vadose column and cannot handle spatially variable "
+                "infiltration."
+            )
+        self.ksat_z = ksat_z
+        self.qh = self._grid.add_zeros("node", "horton_excess__runoff")
 
         self.precip_lapse_function = precip_lapse_function
         self.pet_lapse_function = pet_lapse_function
@@ -339,18 +355,31 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
         self.max_substeps_storm = 0
         self.max_substeps_interstorm = 0
         q_total = np.zeros_like(self.q_eff)
+        horton_total = np.zeros_like(self.qh)
         for i, (storm_dt, interstorm_dt, intensity) in enumerate(zip(self.storm_dts, self.interstorm_dts, self.intensities)):
+
+            # horton (infiltration-excess) runoff: intensity above ksat_z becomes
+            # immediate runoff, svm receives remaining as infiltration
+            if self.ksat_z is not None:
+                self.qh[:] = np.maximum(0.0, intensity - self.ksat_z)
+                infiltration_rate = np.minimum(intensity, self.ksat_z)
+            else:
+                infiltration_rate = intensity
 
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
-            self.svm.run_event(intensity * storm_dt)
+            self.svm.run_event(infiltration_rate * storm_dt)
             wt_from_surface = self._elev[cores] - self._wt[cores]
             self.r[cores] = self.svm.calc_recharge_rate(wt_from_surface, storm_dt)
 
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
             self.gdp.run_with_adaptive_time_step_solver(storm_dt)
+
+            # runoff from infiltration excess plus runoff from saturation excess
+            self.qs += self.qh
             q_total += self.qs * storm_dt
+            horton_total += self.qh * storm_dt
             self.max_substeps_storm = max(
                 self.max_substeps_storm, self.gdp.number_of_substeps
             )
@@ -416,7 +445,8 @@ class HydrologyEventVadoseStreamPower(HydrologicalModel):
 
         # set effective runoff rates
         self.qs[:] = q_total / self.T_h
-        _, Q = self.fa.accumulate_flow(update_flow_director=False)
+        self.qh[:] = horton_total / self.T_h
+        _, Q = self.fa.accumulate_flow(update_flow_director=False) # accumulates qs = saturation excess + infiltration excess
 
         self.q_eff[:] = Q
         self.q_an[:] = np.divide(
@@ -463,6 +493,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
         precip_generator=None,
         groundwater_model=None,
         vadose_model=None,
+        ksat_z=None,
         sp_threshold=0.0,
         sp_coefficient=1e-5,
         precip_lapse_function=None,
@@ -490,6 +521,12 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             Auxiliary model called SchenkVadoseModel, instantiated for a depth profile
             equal to the permeable thickness.
             Default: None
+        ksat_z: float or None
+            Vertical saturated hydraulic conductivity (m/s) for Horton (infiltration-excess) 
+            overland flow, assuming a unit head gradient. If None, no Horton excess is
+            calculated (all rainfall is assumed to infiltrate). Must be
+            a scalar: the SchenkVadoseModel tracks a single lumped vadose column.
+            Default: None
         sp_threshold: float
             the streampower incision threshold E0 in the equation
             E = K Q* sqrt(a v0) S - E0, where Q*=Q/(pA). Units: L/T
@@ -513,7 +550,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             f(pet, elevation) and return modified_pet. Default: None
         """
 
-        super().__init__(grid, routing_method, precip_generator, groundwater_model, vadose_model, precip_lapse_function, pet_lapse_function )
+        super().__init__(grid, routing_method, precip_generator, groundwater_model, vadose_model, ksat_z, precip_lapse_function, pet_lapse_function )
 
         self.E0 = sp_threshold
         self.Ksp = sp_coefficient
@@ -628,13 +665,23 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
 
         # initialize total volume above threshold for each node, to be divided by total time at end
         q_total_vol_t = np.zeros_like(self.q_eff)
+        horton_total = np.zeros_like(self.qh)
         # q2 = np.zeros_like(self.q_eff)
         for i, (storm_dt, interstorm_dt, intensity) in enumerate(zip(self.storm_dts, self.interstorm_dts, self.intensities)):
             # q0 = q2.copy()  # save prev end of interstorm flow rate
 
+            # horton (infiltration-excess) runoff: intensity above ksat_z becomes
+            # immediate runoff, so the svm only receives the infiltrating
+            # fraction of the storm.
+            if self.ksat_z is not None:
+                self.qh[:] = np.maximum(0.0, intensity - self.ksat_z)
+                infiltration_rate = np.minimum(intensity, self.ksat_z)
+            else:
+                infiltration_rate = intensity
+
             # run event:
             ## run vadose model, calculate recharge based on depth to wt
-            self.svm.run_event(intensity * storm_dt)
+            self.svm.run_event(infiltration_rate * storm_dt)
             wt_from_surface = self._elev[cores] - self._wt[cores]
             wt_from_surface[wt_from_surface > self.svm.b] = self.svm.b - 1e-15
             self.r[cores] = self.svm.calc_recharge_rate(
@@ -644,6 +691,11 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             ## set recharge, run groundwater model, accumulate flow
             self.gdp.recharge = self.r
             self.gdp.run_with_adaptive_time_step_solver(storm_dt)
+
+            # runoff from infiltration excess plus runoff from saturation excess
+            self.qs += self.qh
+            horton_total += self.qh * storm_dt
+
             _, q = self.fa.accumulate_flow(update_flow_director=False)
             q1 = q.copy()
             q1_t = np.maximum(q1 - self.Q0, 0.0)
@@ -706,6 +758,7 @@ class HydrologyEventVadoseThresholdStreamPower(HydrologyEventVadoseStreamPower):
             q_total_vol_t += q1_t * storm_dt + q2_t * interstorm_dt
 
         self.q_eff[:] = q_total_vol_t / self.T_h
+        self.qh[:] = horton_total / self.T_h
         self.q_an[:] = np.divide(
             self.q_eff,
             np.sqrt(self.area),
