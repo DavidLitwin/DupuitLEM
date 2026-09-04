@@ -468,17 +468,94 @@ def test_stoch_sp_vadose_horton_intensity_above_ksat_z_reduces_recharge():
 
     hm_null = _make_stoch_sp_vadose(ksat_z=None)
     intensity = hm_null.intensities[0]
-    hm_above = _make_stoch_sp_vadose(ksat_z=intensity / 2)  # ksat_z well below intensity
+    ksat_z = intensity / 2
+    hm_above = _make_stoch_sp_vadose(ksat_z=ksat_z)  # ksat_z well below intensity
 
     # recharge is reduced, and horton excess is registered
     assert hm_above.r[4] < hm_null.r[4]
     assert hm_above.qh[4] > 0.0
+
+    # the amount subtracted from recharge is exactly the amount added to
+    # horton overland flow, i.e. the precipitation rate above ksat_z
+    # (within svm bin-rounding error)
+    recharge_reduction = hm_null.r[4] - hm_above.r[4]
+    assert_almost_equal(recharge_reduction, intensity - ksat_z, decimal=6)
+
+    # qh is stored as an average over the full hydrological timestep T_h,
+    # not the instantaneous storm rate, so compare on that basis
+    storm_dt = hm_above.storm_dts[0]
+    expected_qh_avg = (intensity - ksat_z) * storm_dt / hm_above.T_h
+    assert_almost_equal(hm_above.qh[4], expected_qh_avg)
 
     # but the mass that would have gone to recharge is still accounted for
     # in the routed output, just partitioned into direct Horton runoff
     # instead of gdp saturation excess
     assert_almost_equal(hm_above.q_eff[4], hm_null.q_eff[4], decimal=5)
     assert_almost_equal(hm_above.q_an[4], hm_null.q_an[4], decimal=6)
+
+
+def test_stoch_sp_vadose_horton_runoff_reaches_outlet():
+    """
+    Horton overland flow must actually be routed to the outlet, not just
+    added to a diagnostic field. Use a deep initial water table so that the
+    gdp cannot generate any saturation excess over the single short storm
+    (all recharge is absorbed into aquifer storage): with no ksat_z, no
+    discharge should reach the outlet at all. With ksat_z active, the
+    Horton excess is the only source of runoff, so the routed discharge at
+    the outlet should equal exactly the Horton excess rate times its
+    contributing area.
+    """
+
+    def make(ksat_z):
+        mg = RasterModelGrid((3, 3), xy_spacing=10.0)
+        mg.set_status_at_node_on_edges(
+            right=mg.BC_NODE_IS_CLOSED,
+            top=mg.BC_NODE_IS_CLOSED,
+            left=mg.BC_NODE_IS_CLOSED,
+            bottom=mg.BC_NODE_IS_FIXED_VALUE,
+        )
+        mg.add_ones("node", "topographic__elevation")
+        mg.add_zeros("node", "aquifer_base__elevation")
+        mg.add_zeros("node", "water_table__elevation")  # deep wt: no room to saturate
+
+        gdp = GroundwaterDupuitPercolator(mg, porosity=0.2)
+        pd = PrecipitationDistribution(
+            mg,
+            mean_storm_duration=10,
+            mean_interstorm_duration=100,
+            mean_storm_depth=1e-3,
+            total_t=100,
+        )
+        pd.seed_generator(seedval=1)
+        svm = SchenkVadoseModel(
+            potential_evapotranspiration_rate=0.0,
+            profile_depth=1.0,
+            num_bins=int(1e6),
+        )
+        svm.sat_profile[:] = 1.0  # start initially saturated
+        hm = HydrologyEventVadoseStreamPower(
+            mg,
+            precip_generator=pd,
+            groundwater_model=gdp,
+            vadose_model=svm,
+            ksat_z=ksat_z,
+        )
+        hm.run_step()
+        return hm, mg
+
+    hm_null, mg_null = make(ksat_z=None)
+    intensity = hm_null.intensities[0]
+    hm_above, mg_above = make(ksat_z=intensity / 2)
+
+    # with no horton excess and a deep water table, no runoff is generated
+    assert_almost_equal(hm_null.q_eff[4], 0.0)
+
+    # with horton excess active, the outlet receives exactly the horton
+    # runoff generated upstream, routed through drainage area
+    assert hm_above.qh[4] > 0.0
+    assert_almost_equal(
+        hm_above.q_eff[4], hm_above.qh[4] * mg_above.cell_area_at_node[4]
+    )
 
 
 # HydrologyEventVadoseThresholdStreamPower
