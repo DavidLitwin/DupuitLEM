@@ -108,10 +108,10 @@ Nx = 200 # number of grid cells width and height
 params = []
 for i in range(scaled_sample.shape[0]):
 
-    beta = scaled_sample[i,2]
-    alpha = scaled_sample[i,3]
-    ai = scaled_sample[i,4]
-    rho = scaled_sample[i,5]
+    beta = scaled_sample[i,0]
+    alpha = scaled_sample[i,1]
+    ai = scaled_sample[i,2]
+    rho = scaled_sample[i,3]
 
     gam = alpha * 20
     sigma = alpha * 200
