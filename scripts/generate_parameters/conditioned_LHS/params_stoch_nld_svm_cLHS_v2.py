@@ -1,8 +1,8 @@
 """
-Generate parameters for StreamPowerModel with from conditioned latin hypercube sampling on 
-U (erosion rate), K (rock strength), P and PET from global watersheds. Other parameters are 
-chosen by straight latin hypercube sampling based on known parameter ranges
-and then the dimensionless parameters are calculated later. 
+Generate parameters for StreamPowerModel with from conditioned latin hypercube sampling on
+U (erosion rate), P and PET from global watersheds. Other parameters are chosen by pure latin
+hypercube sampling based on known parameter ranges, varying a mix of dimensioned and dimensionless
+parameters to capture realistic parameter values: alpha, rho, lg, b, transmissivity, ds.
 
 -- HydrologyEventVadoseStreamPower
 -- FastscapeEroder
@@ -19,7 +19,7 @@ rho = tr / (tr + tb)
 ai = (pet tb) / (p (tr + tb))
 phi = na / ne
 
-3 Sept. 2026
+Adapted from params_stoch_nld_svm_cLHS.py, 6 Sept. 2026
 """
 
 #%%
@@ -112,8 +112,11 @@ def theta_fun(E0, hg, tg):
     return E0 / (hg / tg)
 
 # import the pre-built conditioned LHS samples
-dfc = pandas.read_csv('P_PET_E_params_sample_clhs.csv')
+dfc = pandas.read_csv('P_PET_E_params_sample_clhs2.csv')
 
+# shuffle to remove any latent row structure
+dfc = dfc.sample(frac=1, random_state=2026, ignore_index=True)
+dfc
 
 #%%
 
@@ -121,22 +124,18 @@ dfc.describe()
 
 #%%
 
-bnd_logK = [-13.5, -12.5] # 1/s # 1e-6 to 1e-5 /yr
-bnd_logD = [-10.5, -9.5] # m/s # 1e-3 to 1e-2 m2/yr
+bnd_logalpha = [np.log10(0.05), np.log10(1)] # (-) dissection ratio hg/lg
+bnd_loglg = [np.log10(15), np.log10(50)] # m # geomorphic length scale
 bnd_logb = [-0.3, 1.5] # m
 bnd_logT = [-5, -4] # m2/s
 bnd_logds = [-3, -2] # m
 bnd_logrho = [-1.5, -0.3] # (-)
 
-bnds = list(zip(bnd_logK, bnd_logD, bnd_logb, bnd_logT, bnd_logds, bnd_logrho))
+bnds = list(zip(bnd_logalpha, bnd_loglg, bnd_logb, bnd_logT, bnd_logds, bnd_logrho))
 
-sampler = qmc.LatinHypercube(d=len(bnds[0]), seed=2023) # alpha, beta, gam, sigma, rho
+sampler = qmc.LatinHypercube(d=len(bnds[0]), seed=2023) # alpha, lg, b, T, ds, rho
 sample = sampler.random(n=len(dfc))
 scaled_sample = qmc.scale(sample, bnds[0], bnds[1])
-
-# lg = 15 # geomorphic length scale [m]
-# tg = 10000*(365*24*3600) # geomorphic timescale [s]
-# v0 = 2.0*lg # contour width (also grid spacing) [m]
 
 v0 = 30 # contour width (also grid spacing) [m]
 sc = 1.0
@@ -146,8 +145,10 @@ na = 0.15
 phi = na/ne
 
 Tg_nd = 500 # total duration in units of tg [-]
-dtg_max_nd = 1e-3 # maximum geomorphic timestep in units of tg [-]
-ksf_base = 200 # morphologic scaling factor
+dtg_nd = 1e-2 # target outer (morphologic-scaling) geomorphic timestep, in units of tg [-]
+              # equivalent to an uplift-per-step target of dtg_nd*hg
+dtg_max_nd = 2e-3 # maximum geomorphic substep, in units of tg [-]; subdivides dtg for
+                   # numerical accuracy (~dtg_nd/dtg_max_nd substeps per outer step)
 Th_nd = 25 # hydrologic time in units of (tr+tb) [-]
 
 bin_capacity_nd = 0.01 # bin capacity as a proportion of mean storm depth
@@ -156,12 +157,14 @@ Nx = 200 # number of grid cells width and height
 params = []
 for i in range(scaled_sample.shape[0]):
 
-    K = 10**scaled_sample[i,0]
-    D = 10**scaled_sample[i,1]
+    alpha = 10**scaled_sample[i,0]
+    lg = 10**scaled_sample[i,1]
     U = 10**dfc['log10E'].iloc[i] / (3600*24*365) # m/s
 
+    D = lg * U / alpha
+    K = U / (alpha * np.sqrt(v0 * lg))
+
     hg = hg_fun(K, D, U, v0)
-    lg = lg_fun(K, D, v0)
     tg = tg_fun(K, D, v0)
 
     b = 10**scaled_sample[i,2]
@@ -178,7 +181,6 @@ for i in range(scaled_sample.shape[0]):
     tr = rho * (ds/p)
     tb = (1-rho) * (ds/p)
 
-    alpha = hg/lg
     beta = beta_fun(hg, lg, ksat, p)
     gamma = gamma_fun(hg, lg, ksat, p, b)
     sigma = sigma_fun(p, b, ne, tr, tb)
@@ -193,12 +195,15 @@ df_params['Nz'] = round((df_params['b']*df_params['na'])/(bin_capacity_nd*df_par
 df_params['Nx'] = Nx
 df_params['td'] = (df_params['lg']*df_params['ne'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer drainage time [s]
 df_params['ha'] = (df_params['p']*df_params['lg'])/(df_params['ksat']*df_params['hg']/df_params['lg']) # characteristic aquifer thickness [m]
-df_params['Tg'] = 100e6 * (365*24*3600) #Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
-df_params['ksf'] = 5000 #ksf_base/((df_params['tr']+df_params['tb'])/df_params['td']) # morphologic scaling factor
+df_params['Tg'] = Tg_nd*df_params['tg'] # Total geomorphic simulation time [s]
 df_params['Th'] = Th_nd*(df_params['tr']+df_params['tb']) # hydrologic simulation time [s]
-df_params['dtg'] = df_params['ksf']*df_params['Th'] # geomorphic timestep [s]
+df_params['dtg'] = dtg_nd*df_params['tg'] # target outer geomorphic timestep [s] (= ksf*Th)
+df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor, solved so ksf*Th = dtg
 df_params['dtg_max'] = dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['output_interval'] = (10/(df_params['dtg']/df_params['tg'])).round().astype(int)
+# with dtg, dtg_max, Tg all fixed fractions of tg, the number of outer steps
+# (Tg/dtg = Tg_nd/dtg_nd) and substeps per step (dtg_nd/dtg_max_nd) are constant
+# across every parameter combination, regardless of U, K, or D.
 
 #%%
 
@@ -215,6 +220,7 @@ df_params_yr = df_params.copy()
 df_params_yr[cols_with_sec] = df_params_yr[cols_with_sec].map(convert_sec_to_yr)
 df_params_yr[cols_inverse_sec] = df_params_yr[cols_inverse_sec].map(convert_inverse_sec_to_per_yr)
 
+
 #%%
 
 try:
@@ -225,3 +231,7 @@ except KeyError:
     print('In testing mode. Save first row of parameters to parameters.csv')
     df_params.loc[0].to_csv('../run_models/parameters.csv', index=True)
 
+#%%
+
+# df_params_yr['ai_corrected'] = df_params_yr['ai'] * (1-df_params_yr['rho'])
+# %%
