@@ -384,11 +384,12 @@ df_output['Qb/Q'] = df_output['qb_tot']/df_output['qs_tot'] #baseflow index
 # df_output['RR'] = qe_tot/r_tot #runoff ratio
 
 # flow quantiles
-df_output['Q_50'] = np.quantile(df['qs'], 0.5)
-df_output['Q_95'] = np.quantile(df['qs'], 0.95)
-df_output['Q_90'] = np.quantile(df['qs'], 0.90)
-df_output['Q_5'] = np.quantile(df['qs'], 0.05)
-df_output['Q_10'] = np.quantile(df['qs'], 0.10)
+df_output['Q_50'] = np.quantile(df['qs'], 0.5, weights=df['dt'], method="inverted_cdf")
+df_output['Q_95'] = np.quantile(df['qs'], 0.95, weights=df['dt'], method="inverted_cdf")
+df_output['Q_90'] = np.quantile(df['qs'], 0.90, weights=df['dt'], method="inverted_cdf")
+df_output['Q_5'] = np.quantile(df['qs'], 0.05, weights=df['dt'], method="inverted_cdf")
+df_output['Q_10'] = np.quantile(df['qs'], 0.10, weights=df['dt'], method="inverted_cdf")
+
 
 ###### spatial runoff related quantities
 
