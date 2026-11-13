@@ -13,7 +13,7 @@ stochastic stream power components. It performs the following analyses:
 9. Compute relief change rates over simulation time
 10. Export results to NetCDF grid files and CSV time series
 
-Requires environment variables SLURM_ARRAY_TASK_ID and BASE_OUTPUT_FOLDER.
+Requires environment variables BASE_OUTPUT_FOLDER, SOURCE_RUN_ID and VARIANT_INDEX (see below).
 Outputs spatial fields and scalar metrics for each model run ID.
 
 THIS SCRIPT INTENTIONALLY KEEPS KSAT CONSTANT ACROSS MODEL RUNS, FOR COMPARISON TO COEVOLVED MODEL RUNS.
@@ -25,13 +25,14 @@ topography), and the (spatially constant) permeable thickness b, with b0 = df_pa
   'fixed': b = b0 for all s,
   'prop' : b = b0*s (permeable thickness increases with the scaled std of elevation), or
   'inv'  : b = b0/s (permeable thickness decreases with the scaled std of elevation).
-A job post-processes ONE original coevolved run (one base folder and run ID); SLURM array task i
-is variant i of VARIANTS (see below), so the array is 0..len(VARIANTS)-1. Run separate jobs for
-different base runs, each with its own output folder.
+A job post-processes ONE (original coevolved run, variant) pair. run_batch_glic_scaled.sh maps a flat
+SLURM array over all runs and variants: task t = run*N + variant, with N = len(VARIANTS) (7 for the
+default scales 0.75, 1.0, 1.25), so runs 0-26 need --array=0-188. All results go in one output folder,
+named by f'{run}_v{variant}'.
 
-Requires environment variables SLURM_ARRAY_TASK_ID, BASE_OUTPUT_FOLDER (post_proc output folder) and
-SOURCE_RUN_ID (ID of the original coevolved run, i.e. its column in parameters.csv). Launch with
-run_batch_glic_scaled.sh, which sets these and runs this script in the original run's folder.
+Requires environment variables BASE_OUTPUT_FOLDER (post_proc output folder), SOURCE_RUN_ID (ID of the
+original coevolved run, i.e. its column in parameters.csv) and VARIANT_INDEX, set by the batch script
+which also runs this script in the original run's folder.
 """
 
 #%%
@@ -55,14 +56,15 @@ from DupuitLEM.grid_functions import bind_avg_exp_ksat, bind_avg_recip_ksat, get
 from DupuitLEM.io import initialize_output_dataset, write_output_step
 
 #%%
-array_id = int(os.environ['SLURM_ARRAY_TASK_ID']) # variant index; used to name outputs
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
 task_id = os.environ['SOURCE_RUN_ID'] # column of parameters.csv for the original coevolved run
-ID = array_id
+variant_index = int(os.environ['VARIANT_INDEX']) # index into VARIANTS
+ID = f'{task_id}_v{variant_index}' # names all outputs; unique per (run, variant)
 
-# variants applied to the base run. Edit here (array is 0..len(VARIANTS)-1).
+# variants applied to each base run. SCALES can be overridden with a comma-separated
+# environment variable, e.g. SCALES=0.5,0.75,1.0,1.25,1.5 (then change N in the sbatch array).
 # b0 is the run's own permeable thickness, df_params['b'], set below once parameters are loaded.
-SCALES = [0.5, 0.75, 1.0, 1.25, 1.5] # factors on the standard deviation of elevation
+SCALES = [float(x) for x in os.environ.get('SCALES', '0.75,1.0,1.25').split(',')] # factors on std of elevation
 B_MODES = ['fixed', 'prop', 'inv']
 VARIANTS = []
 for s_ in SCALES:
@@ -70,7 +72,10 @@ for s_ in SCALES:
         if s_ == 1.0 and m_ != 'fixed':
             continue # b is identical to 'fixed' when s=1
         VARIANTS.append((s_, m_))
-scale, b_mode = VARIANTS[array_id]
+if 'N_VARIANTS' in os.environ:
+    assert int(os.environ['N_VARIANTS']) == len(VARIANTS), \
+        'N_VARIANTS=%s but VARIANTS has %d entries'%(os.environ['N_VARIANTS'], len(VARIANTS))
+scale, b_mode = VARIANTS[variant_index]
 #%%
 
 ########## Load and basic plot
@@ -318,7 +323,7 @@ else:
 #run model (spinup to be safe)
 hm.run_step()
 
-f = open('../post_proc/%s/dt_qs_s_%d.csv'%(base_output_path, ID), 'w')
+f = open('../post_proc/%s/dt_qs_s_%s.csv'%(base_output_path, ID), 'w')
 def write_SQ(grid, r, dt, file=f):
     cores = grid.core_nodes
     h = grid.at_node["aquifer__thickness"]
@@ -538,6 +543,12 @@ ds_out = initialize_output_dataset(mg, output, [index])
 write_output_step(ds_out, mg, output, 0)
 ds_out.to_netcdf(filename, format="NETCDF4")
 
+# record the variant alongside the results
+df_output['source_run'] = task_id
+df_output['scale'] = scale
+df_output['b_mode'] = b_mode
+df_output['b0'] = b0
+df_output['b'] = b
 df_output = pd.DataFrame.from_dict(df_output, orient='index', columns=[ID])
 df_output.to_csv(os.path.join(base_file_name, f'output_ID_{ID}.csv'))
 df.to_csv(os.path.join(base_file_name, f'q_s_dt_ID_{ID}.csv'))

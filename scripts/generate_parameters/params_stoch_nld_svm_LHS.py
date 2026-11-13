@@ -23,6 +23,7 @@ import os
 import numpy as np
 from scipy.stats import qmc
 import pandas
+import matplotlib.pyplot as plt
 
 #%%
 #dim equations
@@ -126,6 +127,18 @@ df_params['dtg'] = dtg_max_nd*df_params['tg']#df_params['ksf']*df_params['Th'] #
 df_params['dtg_max'] = 200*365*24*3600 #dtg_max_nd*df_params['tg'] # the maximum duration of a geomorphic substep [s]
 df_params['ksf'] = df_params['dtg']/df_params['Th'] # morphologic scaling factor
 df_params['output_interval'] = (20/(df_params['dtg']/df_params['tg'])).round().astype(int)
+
+#%%
+
+
+# pandas.plotting.scatter_matrix(df_params[['gam','sigma', 'beta', 'alpha', 'ai', 'rho']])
+pandas.plotting.scatter_matrix(df_params[['b','ksat', 'pet', 'tr', 'tb', 'ds', 'U']])
+# plt.tight_layout()
+
+#%%
+
+plt.figure()
+plt.hist(df_params['ksat']*df_params['b'], bins=15)
 
 
 #%%
