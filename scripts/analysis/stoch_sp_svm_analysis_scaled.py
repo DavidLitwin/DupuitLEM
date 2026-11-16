@@ -4,7 +4,7 @@ stochastic stream power components. It performs the following analyses:
 
 1. Load and visualize model grid data (elevation, aquifer base, water table)
 2. Initialize and run hydrological models together (groundwater, precipitation, vadose zone)
-3. Compute topographic metrics (slope, curvature, steepness, topographic index)
+3. Compute topographic metrics (slope, curvature, relief, roughness)
 4. Analyze runoff generation and partitioning (recharge, baseflow, event runoff)
 5. Perform baseflow separation using linear interpolation during rain events
 6. Calculate flow quantiles and hydrologic partitioning ratios
@@ -16,12 +16,10 @@ stochastic stream power components. It performs the following analyses:
 Requires environment variables BASE_OUTPUT_FOLDER, SOURCE_RUN_ID and VARIANT_INDEX (see below).
 Outputs spatial fields and scalar metrics for each model run ID.
 
-THIS SCRIPT INTENTIONALLY KEEPS KSAT CONSTANT ACROSS MODEL RUNS, FOR COMPARISON TO COEVOLVED MODEL RUNS.
-
-SCALED-TOPOGRAPHY VERSION: a coevolved run (e.g. high or low drainage density) is used as the base
-case. Its coevolved topography is stretched about the baselevel elevation so that the
-standard deviation of elevation changes by a factor s (s=1 is the unmodified coevolved
-topography), and the (spatially constant) permeable thickness b, with b0 = df_params['b'], is either
+SCALED-TOPOGRAPHY VERSION: a coevolved run is used as the base case. Its coevolved topography is 
+stretched about the baselevel elevation so that the standard deviation of elevation changes by a 
+factor s (s=1 is the unmodified coevolved topography), and the (spatially constant) permeable 
+thickness b, with b0 = df_params['b'], is either
   'fixed': b = b0 for all s,
   'prop' : b = b0*s (permeable thickness increases with the scaled std of elevation), or
   'inv'  : b = b0/s (permeable thickness decreases with the scaled std of elevation).
@@ -42,6 +40,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from numpy.linalg import inv
+from sklearn.linear_model import LinearRegression
+from numpy.lib.stride_tricks import sliding_window_view
 
 from landlab import imshow_grid, RasterModelGrid, HexModelGrid, LinkStatus
 import xarray as xr
@@ -54,6 +54,125 @@ from landlab.grid.mappers import map_downwind_node_link_max_to_node
 from DupuitLEM.auxiliary_models import HydrologyEventVadoseStreamPower, HydrologyEventVadoseThresholdStreamPower, SchenkVadoseModel
 from DupuitLEM.grid_functions import bind_avg_exp_ksat, bind_avg_recip_ksat, get_link_hydraulic_conductivity
 from DupuitLEM.io import initialize_output_dataset, write_output_step
+
+
+def calc_mean_relief(grid):
+    elev = grid.at_node['topographic__elevation']
+    x = np.unique(grid.x_of_node)
+    varline = np.zeros(len(x))
+    
+    for i, xi in enumerate(x):
+        row = np.where(grid.x_of_node == xi)[0][1:-1]
+        zrow = elev[row]
+        varline[i] = np.var(zrow)
+    
+    return np.sqrt(np.nanmean(varline))
+
+def calc_mean_roughness(grid, window_size=8):
+    """use numpy.lib.stride_tricks to calculate the mean roughness"""
+
+    z = grid.at_node['topographic__elevation'].reshape(grid.shape)
+    # Create sliding windows of the elevation grid
+    windows = sliding_window_view(z, (window_size, window_size))
+    # Compute variance in each window
+    var_field = np.var(windows, axis=(-2, -1))
+    # Compute mean of the variance field
+    mean_var = np.nanmean(var_field)
+    # Return the square root (mean roughness)
+    return np.sqrt(mean_var)
+
+
+def run_recession_analysis(grid, df, plot=True, save_path=None):
+    """nonlinear recession analysis using mm/hr discharge and linear regression
+    on dQ/dt vs Qavg pointcloud.
+
+    dQ/dt = -a Qavg ^ b
+    
+    returns:
+    a: coefficient (from exp of linear regression intercept)
+    b: exponent (from linear regression coefficient)
+    k_eq: equivalent time constant (1/hr) from a, b, and mean recession discharge.
+    """
+    df = df.copy()
+    A_tot = np.sum(grid.cell_area_at_node[grid.core_nodes])
+    Q  = df['qs'].values / A_tot * 3600 * 1000   # mm/hr
+    dt = df['dt'].values / 3600                   # hr  (assumes dt[i] = step i -> i+1)
+    r  = df['r'].values
+
+    Q1, Q2, dth = Q[:-1], Q[1:], dt[:-1]
+    dQdt = -(Q2 - Q1) / dth
+    with np.errstate(divide='ignore', invalid='ignore'):
+        Qm = np.where(np.isclose(Q1, Q2), 0.5*(Q1+Q2), (Q1 - Q2) / np.log(Q1 / Q2))  # log-mean
+
+    cond = (dQdt > 0) & (r[:-1] == 0) & (Q1 > 0) & (Q2 > 0)
+    X = np.log(Qm[cond]).reshape(-1, 1)
+    y = np.log(dQdt[cond])
+    ols = LinearRegression().fit(X, y)
+    a, b = np.exp(ols.intercept_), ols.coef_[0]
+
+    Qref = np.exp(np.mean(np.log(Qm[cond])))       # geometric mean
+    k_eq = a*(2-b)*Qref**(b-1) if b < 2 else np.nan  # Q/S turnover rate, 1/hr
+
+    if plot:
+        plt.figure()
+        sc = plt.scatter(df['Qavg'][cond], df['-dQ/dt'][cond], alpha=0.3)
+        q_fit = np.linspace(df.loc[cond, 'Qavg'].min(), df.loc[cond, 'Qavg'].max(), 200)
+        X_fit = np.log(q_fit).reshape(-1, 1)
+        plt.plot(q_fit, np.exp(ols.predict(X_fit)), 'k--', label='OLS')
+        plt.legend()
+        plt.yscale('log')
+        plt.xscale('log')
+
+        if save_path:
+            plt.savefig(save_path)
+            plt.close()
+
+    a = np.exp(ols.intercept_)
+    b = ols.coef_[0]
+
+    return a, b, k_eq
+
+def run_recession_analysis_SQ(grid, df, plot=True, save_path=None):
+
+    df = df.copy()
+    A_tot = np.sum(grid.cell_area_at_node[grid.core_nodes])
+    S = df['S'].values/A_tot * 1000
+    Q  = df['qs'].values / A_tot * 3600 * 1000   # mm/hr
+    dt = df['dt'].values / 3600                   # hr  (assumes dt[i] = step i -> i+1)
+    r  = df['r'].values
+
+    Q1, Q2, dth = Q[:-1], Q[1:], dt[:-1]
+    dQdt = -(Q2 - Q1) / dth
+    cond = (dQdt > 0) & (r[:-1] == 0) & (Q1 > 0) & (Q2 > 0)
+    cond_pad = np.append(cond, False)
+
+    X = np.log(S[cond_pad]).reshape(-1, 1)
+    y = np.log(Q[cond_pad])
+    ols = LinearRegression().fit(X, y)
+    k, n = np.exp(ols.intercept_), ols.coef_[0]
+
+    Qref = np.exp(np.mean(np.log(S[cond_pad])))       # geometric mean
+    k_eq = k**(1/n) * Qref**(1-1/n) # Q/S turnover rate, 1/hr
+
+    if plot:
+        plt.figure()
+        sc = plt.scatter(S[cond_pad], Q[cond_pad], alpha=0.3)
+        s_fit = np.linspace(S[cond_pad].min(), S[cond_pad].max(), 200)
+        X_fit = np.log(s_fit).reshape(-1, 1)
+        plt.plot(s_fit, np.exp(ols.predict(X_fit)), 'k--', label='OLS')
+        plt.legend()
+        plt.yscale('log')
+        plt.xscale('log')
+
+        if save_path:
+            plt.savefig(save_path)
+            plt.close()
+
+    k = np.exp(ols.intercept_)
+    n = ols.coef_[0]
+
+    return k, n, k_eq
+
 
 #%%
 base_output_path = os.environ['BASE_OUTPUT_FOLDER']
@@ -217,7 +336,7 @@ try:
         raise KeyError
 except KeyError:
     ksat_type = None
-    ksat = 1.19e-6 #df_params['ksat'] # median of stoch_LHS_1
+    ksat = df_params['ksat']
 
 
 #initialize grid
@@ -349,17 +468,14 @@ f.close()
 #dataframe for output
 df_output = {}
 
-##### steepness, curvature, and topographic index
+##### slope and curvature
 S8 = mg.add_zeros('node', 'slope_D8')
 S4 = mg.add_zeros('node', 'slope_D4')
 curvature = mg.add_zeros('node', 'curvature')
-steepness = mg.add_zeros('node', 'steepness')
-TI8 = mg.add_zeros('node', 'topographic__index_D8')
-TI4 = mg.add_zeros('node', 'topographic__index_D4')
 
-#slope for steepness is the absolute value of D8 gradient associated with
+#D8 slope is the absolute value of D8 gradient associated with
 #flow direction. Same as FastscapeEroder. curvature is divergence of gradient.
-#Same as LinearDiffuser. TI is done both ways.
+#Same as LinearDiffuser.
 dzdx_D8 = mg.calc_grad_at_d8(elev)
 dzdx_D4 = mg.calc_grad_at_link(elev)
 dzdx_D4[mg.status_at_link == LinkStatus.INACTIVE] = 0.0
@@ -367,9 +483,17 @@ S8[:] = abs(dzdx_D8[mg.at_node['flow__link_to_receiver_node']])
 S4[:] = map_downwind_node_link_max_to_node(mg, dzdx_D4)
 
 curvature[:] = mg.calc_flux_div_at_node(dzdx_D4)
-steepness[:] = np.sqrt(mg.at_node['drainage_area'])*S8
-TI8[:] = mg.at_node['drainage_area']/(S8*mg.dx)
-TI4[:] = mg.at_node['drainage_area']/(S4*mg.dx)
+
+roughness_window_size = 8
+df_output['mean_elev'] = np.mean(elev[mg.core_nodes])
+df_output['max_elev'] = np.max(elev[mg.core_nodes])
+df_output['mean_rough'] = calc_mean_roughness(mg, window_size=roughness_window_size)
+df_output['mean_rel'] = calc_mean_relief(mg)
+df_output['elev_std'] = np.std(elev[mg.core_nodes])
+df_output['mean_slope'] = S8[mg.core_nodes].mean()
+df_output['median_slope'] = np.median(S8[mg.core_nodes])
+df_output['mean_curv'] = curvature[mg.core_nodes].mean()
+
 
 ######## Runoff generation
 df_output['cum_precip'] = hm.cum_precip
@@ -440,20 +564,38 @@ df_output['Q_5'] = np.quantile(df['qs'], 0.05, weights=df['dt'], method="inverte
 df_output['Q_10'] = np.quantile(df['qs'], 0.10, weights=df['dt'], method="inverted_cdf")
 
 
+df['S_mm'] = df['S']/Atot * 1000
+df_output['S_max_mm'] = df['S_mm'].max()
+df_output['S_range_mm'] = df['S_mm'].max() - df['S_mm'].min()
+df_output['S_mean_mm'] = np.average(df['S_mm'].values, weights=df['dt'])
+df_output['S_std_mm'] = np.sqrt(np.average((df['S_mm'] - df_output['S_mean_mm'])**2, weights=df['dt']))
+df_output['S_5_mm'] = np.quantile(df['S_mm'].values, 0.05, weights=df['dt'], method="inverted_cdf")
+df_output['S_95_mm'] = np.quantile(df['S_mm'].values, 0.95, weights=df['dt'], method="inverted_cdf")
+df_output['S_5_95_mm'] = df_output['S_95_mm'] - df_output['S_5_mm']
+
+# recession
+rec_a, rec_b, k_eq = run_recession_analysis(mg, df, plot=False) # do not overwrite b (permeable thickness)
+df_output['rec_a'] = rec_a
+df_output['rec_b'] = rec_b
+df_output['rec_k_eq_1/hr'] = k_eq
+
+rec_k, rec_n, k_eq_S = run_recession_analysis_SQ(mg, df, plot=False)
+df_output['rec_n'] = rec_n
+df_output['rec_k'] = rec_k
+df_output['rec_k_eq_S_1/hr'] = k_eq_S
+
+
+df_output['q_avg_mm/hr'] = np.average(df['qs'].values, weights=df['dt']) / Atot * 1000 * 3600
+
+
 ###### spatial runoff related quantities
 
 # effective Qstar
-Q_all = hm.Q_all[1:,:]
-dt = np.diff(hm.time)
 intensity = hm.intensity[:-1]
 
 qstar = mg.add_zeros('node', 'Q_star')
 q_eff = mg.at_node["surface_water_effective__discharge"]
 qstar[:] = q_eff/(p*mg.at_node['drainage_area'])
-
-# recharge
-recharge_event = mg.add_zeros('node', 'recharge_rate_mean_storm')
-recharge_event[:] = np.mean(hm.r_all[range(0,hm.r_all.shape[0],2),:], axis=0)
 
 # mean and variance of water table
 wt_all = hm.wt_all[1:,:]
@@ -472,19 +614,8 @@ wtrel_95[:] = wtrel_all[quan[1], :]
 
 # water table and saturation at end of storm and interstorm
 sat_all = (elev_all-wt_all) < sat_cond*hg
-wtrel_end_interstorm = mg.add_zeros('node', 'wtrel_mean_end_interstorm')
-wtrel_end_storm = mg.add_zeros('node', 'wtrel_mean_end_storm')
-sat_end_interstorm = mg.add_zeros('node', 'sat_mean_end_interstorm')
-sat_end_storm = mg.add_zeros('node', 'sat_mean_end_storm')
-Q_end_interstorm = mg.add_zeros('node', 'Q_mean_end_interstorm')
-Q_end_storm = mg.add_zeros('node', 'Q_mean_end_storm')
-
-wtrel_end_storm[:] = np.mean(wtrel_all[intensity>0,:], axis=0)
-wtrel_end_interstorm[:] = np.mean(wtrel_all[intensity==0.0,:], axis=0)
-sat_end_storm[:] = np.mean(sat_all[intensity>0,:], axis=0)
-sat_end_interstorm[:] = np.mean(sat_all[intensity==0.0,:], axis=0)
-Q_end_storm[:] = np.mean(Q_all[intensity>0,:], axis=0)
-Q_end_interstorm[:] = np.mean(Q_all[intensity==0.0,:], axis=0)
+sat_end_storm = np.mean(sat_all[intensity>0,:], axis=0)
+sat_end_interstorm = np.mean(sat_all[intensity==0.0,:], axis=0)
 
 # classify zones of saturation
 sat_class = mg.add_zeros('node', 'saturation_class')
@@ -498,41 +629,18 @@ df_output['sat_never'] = np.sum(sat_never[mg.core_nodes])/mg.number_of_core_node
 df_output['sat_variable'] = np.sum(sat_variable[mg.core_nodes])/mg.number_of_core_nodes
 df_output['sat_always'] = np.sum(sat_always[mg.core_nodes])/mg.number_of_core_nodes
 
-#%% ####### calculate relief change
-
-z_mean = xr_ds['topographic__elevation'].mean('node')
-dzdt = np.diff(z_mean.values)/np.diff(xr_ds['time'].values)
-
-r_change = pd.DataFrame()
-r_change['r_nd'] = z_mean/hg
-r_change['drdt_nd'] = np.pad(dzdt*(tg/hg), (1,0), mode='constant', constant_values=0)
-r_change['t_nd'] = xr_ds['time']/tg
-
 #%% ####### save things
 
 output_fields = [
     "at_node:topographic__elevation",
     "at_node:aquifer_base__elevation",
     "at_node:saturation_class",
-    "at_node:topographic__index_D8",
-    "at_node:topographic__index_D4",
     "at_node:slope_D8",
     "at_node:slope_D4",
-    "at_node:drainage_area",
     "at_node:curvature",
-    "at_node:steepness",
-    "at_node:recharge_rate_mean_storm",
-    "at_node:wtrel_mean_end_storm",
-    "at_node:wtrel_mean_end_interstorm",
     "at_node:wtrel_05",
     "at_node:wtrel_95",
-    "at_node:sat_mean_end_storm",
-    "at_node:sat_mean_end_interstorm",
-    "at_node:Q_mean_end_storm",
-    "at_node:Q_mean_end_interstorm",
-    "at_node:surface_water_effective__discharge",
     "at_node:Q_star",
-    "at_node:flow__receiver_node",
     ]
 
 base_file_name = os.path.join('..', 'post_proc', base_output_path)
@@ -552,4 +660,3 @@ df_output['b'] = b
 df_output = pd.DataFrame.from_dict(df_output, orient='index', columns=[ID])
 df_output.to_csv(os.path.join(base_file_name, f'output_ID_{ID}.csv'))
 df.to_csv(os.path.join(base_file_name, f'q_s_dt_ID_{ID}.csv'))
-r_change.to_csv(os.path.join(base_file_name, f'relief_change_{ID}.csv'))
